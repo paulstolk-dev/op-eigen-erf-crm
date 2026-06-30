@@ -72,20 +72,75 @@ const CHECKLIST: {
 
 const CONCLUSIES = ["groen", "oranje", "rood"] as const;
 
+type Suggestie = {
+  waarde?: string;
+  zekerheid?: string;
+  bron?: string;
+  detail?: string;
+  url?: string;
+};
+
+const ZEKERHEID: Record<string, { label: string; style: string }> = {
+  hoog: { label: "bron-zeker", style: "bg-green-100 text-green-800 ring-green-600/20" },
+  indicatie: {
+    label: "indicatie — controleer",
+    style: "bg-amber-100 text-amber-800 ring-amber-600/20",
+  },
+  handmatig: { label: "handmatig", style: "bg-slate-100 text-slate-600 ring-slate-500/20" },
+  klant: { label: "vraag aan klant", style: "bg-blue-100 text-blue-800 ring-blue-600/20" },
+};
+
+function SuggestieInfo({ s }: { s: Suggestie }) {
+  const z = ZEKERHEID[s.zekerheid ?? ""] ?? ZEKERHEID.handmatig;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+      <span
+        className={`inline-flex items-center rounded-full px-1.5 py-0.5 font-medium ring-1 ring-inset ${z.style}`}
+      >
+        {z.label}
+      </span>
+      {s.bron && <span>{s.bron}</span>}
+      {s.detail && <span className="text-slate-400">· {s.detail}</span>}
+      {s.url && (
+        <a
+          href={s.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-slate-500 underline hover:text-slate-900"
+        >
+          bron
+        </a>
+      )}
+    </div>
+  );
+}
+
 export function ErfscanReview({
   leadId,
   initialTier3,
   initialConclusie,
   leadPostcode,
   leadHuisnummer,
+  suggesties = {},
 }: {
   leadId: string;
   initialTier3: Record<string, string>;
   initialConclusie: string | null;
   leadPostcode: string;
   leadHuisnummer: string;
+  suggesties?: Record<string, Suggestie>;
 }) {
-  const [tier3, setTier3] = useState<Tier3>(initialTier3 ?? {});
+  // Pre-fill onbevestigde velden met de automatische suggestie.
+  const [tier3, setTier3] = useState<Tier3>(() => {
+    const base: Record<string, string> = { ...(initialTier3 ?? {}) };
+    for (const f of CHECKLIST) {
+      if (!base[f.key]) {
+        const sv = suggesties[f.key]?.waarde;
+        if (sv) base[f.key] = sv;
+      }
+    }
+    return base;
+  });
   const [conclusie, setConcl] = useState<string | null>(initialConclusie);
   const [postcode, setPostcode] = useState(leadPostcode);
   const [huisnummer, setHuisnummer] = useState(leadHuisnummer);
@@ -166,19 +221,22 @@ export function ErfscanReview({
       {/* Tier-3 checklist */}
       <div className="space-y-3">
         {CHECKLIST.map((f) => (
-          <div key={f.key} className="flex items-center justify-between gap-3">
-            <label className="text-sm text-slate-700">{f.label}</label>
-            <select
-              value={tier3[f.key] ?? ""}
-              onChange={(e) => update(f.key, e.target.value)}
-              className="min-w-[180px] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
-            >
-              {f.options.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+          <div key={f.key} className="border-b border-slate-50 pb-2 last:border-0">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm text-slate-700">{f.label}</label>
+              <select
+                value={tier3[f.key] ?? ""}
+                onChange={(e) => update(f.key, e.target.value)}
+                className="min-w-[180px] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+              >
+                {f.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {suggesties[f.key] && <SuggestieInfo s={suggesties[f.key]} />}
           </div>
         ))}
         <div>

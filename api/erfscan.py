@@ -32,6 +32,10 @@ PDOK_LUCHTFOTO_WMS = "https://service.pdok.nl/hwh/luchtfotorgb/wms/v1_0"
 BAG_API_BASE = "https://api.bag.kadaster.nl/lvbag/individuelebevragingen/v2"
 BAG_API_KEY = os.environ.get("BAG_API_KEY", "")  # Tier 2 — gratis bij Kadaster
 
+# Tier 2 — open bronnen voor automatische Tier-3 suggesties (geen sleutel)
+RCE_WFS = "https://services.rce.geovoorziening.nl/rce/wfs"  # rijksmonumenten + gezichten
+CBS_KERNEN_WFS = "https://service.pdok.nl/cbs/bevolkingskernen/2011/wfs/v1_0"
+
 SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 ERFSCAN_SECRET = os.environ.get("ERFSCAN_SECRET", "")
@@ -308,6 +312,150 @@ def get_bag_pand(pand_id: str) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# TIER 2 — ERFGOED & BEBOUWDE KOM  (open WFS, geen sleutel)
+# Levert automatische SUGGESTIES voor de Tier-3 checklist. De mens bevestigt.
+# --------------------------------------------------------------------------- #
+def _wfs_features(url: str, type_name: str, rd_x: float, rd_y: float, half: float, count: int = 20):
+    params = {
+        "service": "WFS",
+        "version": "2.0.0",
+        "request": "GetFeature",
+        "typeNames": type_name,
+        "outputFormat": "application/json",
+        "srsName": "EPSG:28992",
+        "count": count,
+        "bbox": f"{rd_x-half},{rd_y-half},{rd_x+half},{rd_y+half},urn:ogc:def:crs:EPSG::28992",
+    }
+    r = requests.get(url, params=params, headers=UA, timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json().get("features", [])
+
+
+def check_erfgoed(rd_x: float, rd_y: float) -> dict:
+    """Rijksmonument / beschermd stads-/dorpsgezicht / werelderfgoed (RCE)."""
+    out: dict = {"rijksmonument": False, "beschermd_gezicht": False, "werelderfgoed": False}
+    pt = Point(rd_x, rd_y)
+    try:
+        pts = _wfs_features(RCE_WFS, "rce:NationalListedMonumentPoints", rd_x, rd_y, 12)
+        polys = _wfs_features(RCE_WFS, "rce:NationalListedMonumentPolygons", rd_x, rd_y, 12)
+        near_pt = [f for f in pts if shape(f["geometry"]).distance(pt) <= 10]
+        in_poly = [f for f in polys if shape(f["geometry"]).contains(pt)]
+        if near_pt or in_poly:
+            out["rijksmonument"] = True
+            props = (near_pt or in_poly)[0]["properties"]
+            out["rijksmonument_detail"] = (
+                props.get("aard_monument") or props.get("hoofdcategorie") or "rijksmonument"
+            )
+            out["rijksmonument_url"] = props.get("rijksmonumenturl")
+
+        town = _wfs_features(RCE_WFS, "rce:Townscapes", rd_x, rd_y, 3)
+        in_town = [f for f in town if shape(f["geometry"]).contains(pt)]
+        if in_town:
+            out["beschermd_gezicht"] = True
+            out["gezicht_naam"] = in_town[0]["properties"].get("NAAM")
+
+        wh = _wfs_features(RCE_WFS, "rce:WorldHeritage", rd_x, rd_y, 3)
+        in_wh = [f for f in wh if shape(f["geometry"]).contains(pt)]
+        if in_wh:
+            out["werelderfgoed"] = True
+            out["werelderfgoed_naam"] = in_wh[0]["properties"].get("NAAM")
+    except Exception as e:
+        out["error"] = str(e)
+    return out
+
+
+def indicatie_bebouwde_kom(rd_x: float, rd_y: float) -> Optional[str]:
+    """Indicatie binnen/buiten bebouwde kom via CBS bevolkingskernen (proxy)."""
+    try:
+        pt = Point(rd_x, rd_y)
+        feats = _wfs_features(
+            CBS_KERNEN_WFS, "bevolkingskernen:cbsbevolkingskernen2011", rd_x, rd_y, 2
+        )
+        binnen = any(shape(f["geometry"]).contains(pt) for f in feats)
+        return "binnen" if binnen else "buiten"
+    except Exception:
+        return None
+
+
+def build_tier3_suggesties(loc: dict, ruimtelijk: dict) -> dict:
+    """Stelt per Tier-3 item een suggestie samen: waarde + zekerheid + bron.
+    zekerheid: 'hoog' (bron-zeker) | 'indicatie' | 'handmatig' | 'klant'."""
+    sug: dict = {}
+
+    # Beschermd dorpsgezicht / monument (RCE — hoog, alleen rijksniveau)
+    erf = check_erfgoed(loc["rd_x"], loc["rd_y"]) if loc.get("rd_x") else {}
+    is_erfgoed = bool(
+        erf.get("rijksmonument") or erf.get("beschermd_gezicht") or erf.get("werelderfgoed")
+    )
+    detail_parts = []
+    if erf.get("rijksmonument"):
+        detail_parts.append(f"rijksmonument ({erf.get('rijksmonument_detail')})")
+    if erf.get("beschermd_gezicht"):
+        detail_parts.append(f"beschermd gezicht ({erf.get('gezicht_naam')})")
+    if erf.get("werelderfgoed"):
+        detail_parts.append(f"werelderfgoed ({erf.get('werelderfgoed_naam')})")
+    sug["beschermd_dorpsgezicht"] = {
+        "waarde": "ja" if is_erfgoed else "nee",
+        "zekerheid": "handmatig" if erf.get("error") else "hoog",
+        "bron": "Rijksdienst Cultureel Erfgoed (rijksniveau)",
+        "detail": "; ".join(detail_parts)
+        or "Geen rijksmonument/gezicht op dit adres. Let op: gemeentelijke monumenten/gezichten apart checken.",
+        "url": erf.get("rijksmonument_url")
+        or "https://www.cultureelerfgoed.nl/onderwerpen/monumenten",
+    }
+
+    # Bebouwde kom (CBS — indicatie)
+    kom = indicatie_bebouwde_kom(loc["rd_x"], loc["rd_y"]) if loc.get("rd_x") else None
+    sug["bebouwde_kom"] = {
+        "waarde": kom or "",
+        "zekerheid": "indicatie" if kom else "handmatig",
+        "bron": "CBS bevolkingskernen 2011 (proxy)",
+        "detail": "Indicatie buiten de kom → max. 100 m² verplaatsbare voorziening."
+        if kom == "buiten"
+        else "Indicatie binnen de kom."
+        if kom == "binnen"
+        else "Niet bepaald — handmatig controleren.",
+        "url": "",
+    }
+
+    # Vergunningvrij (eigen staffel — indicatie)
+    maxm2 = ruimtelijk.get("max_vergunningvrij_m2")
+    sug["vergunningcheck"] = {
+        "waarde": "vergunningvrij",
+        "zekerheid": "indicatie",
+        "bron": "Eigen staffel (Bbl) + achtererf-indicatie",
+        "detail": (
+            f"Indicatie vergunningvrij tot ± {maxm2} m² (bijbehorend bouwwerk in achtererfgebied). "
+            if maxm2
+            else "Indicatie: bijbehorend bouwwerk in achtererfgebied vaak vergunningvrij; exacte m² na BAG-footprint. "
+        )
+        + "Bevestig via de officiële Vergunningcheck.",
+        "url": "https://omgevingswet.overheid.nl/vergunningcheck/",
+    }
+
+    # Welstand — handmatig (geen landelijke laag)
+    sug["welstand_principeverzoek"] = {
+        "waarde": "",
+        "zekerheid": "handmatig",
+        "bron": "Gemeentelijke welstandsnota",
+        "detail": "Geen landelijke bron — check de welstandsnota van de gemeente.",
+        "url": loc.get("gemeente")
+        and f"https://www.{(loc.get('gemeente') or '').lower().replace(' ', '')}.nl"
+        or "",
+    }
+
+    # Zorgvraag — klant
+    sug["zorgvraag"] = {
+        "waarde": "",
+        "zekerheid": "klant",
+        "bron": "Klant",
+        "detail": "Niet af te leiden uit data — vraag aan de klant (bepaalt mantelzorgroute).",
+        "url": "",
+    }
+    return sug
+
+
+# --------------------------------------------------------------------------- #
 # DEEPLINKS (Tier 3 mens-in-de-lus)
 # --------------------------------------------------------------------------- #
 def deeplinks(loc: dict) -> dict:
@@ -413,6 +561,11 @@ def run_erfscan(
 
             if perceel.get("geometry"):
                 dossier["ruimtelijk"] = estimate_achtererf(perceel["geometry"], pand_geom)
+
+            # Automatische Tier-3 suggesties (RCE-erfgoed, CBS-kom, staffel)
+            dossier["tier3_suggesties"] = build_tier3_suggesties(
+                loc, dossier.get("ruimtelijk", {})
+            )
 
         a = assess(lead, perceel)
         dossier["kansen"] = a["kansen"] + dossier.get("kansen", [])

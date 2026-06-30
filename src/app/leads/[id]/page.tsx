@@ -135,6 +135,19 @@ export default async function LeadDetailPage({
                   initialConclusie={erfscan.conclusie}
                   leadPostcode={lead.postcode ?? ""}
                   leadHuisnummer={lead.huisnummer ?? ""}
+                  suggesties={
+                    ((erfscan.dossier as { tier3_suggesties?: unknown })
+                      ?.tier3_suggesties ?? {}) as Record<
+                      string,
+                      {
+                        waarde?: string;
+                        zekerheid?: string;
+                        bron?: string;
+                        detail?: string;
+                        url?: string;
+                      }
+                    >
+                  }
                 />
               </>
             ) : (
