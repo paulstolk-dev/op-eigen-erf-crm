@@ -60,7 +60,7 @@ export async function generateReportContent(
   lead: Lead,
   erfscan: Erfscan,
 ): Promise<ReportContent> {
-  const model = process.env.REPORT_MODEL || "anthropic/claude-sonnet-4-6";
+  const model = process.env.REPORT_MODEL || "anthropic/claude-haiku-4-5";
   const { object } = await generateObject({
     model,
     schema: reportSchema,
