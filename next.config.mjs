@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // Server Actions are enabled by default in Next 15; nothing extra needed.
-  },
+  // react-pdf is een zware Node-only lib; niet meebundelen.
+  serverExternalPackages: ["@react-pdf/renderer"],
 };
 
 export default nextConfig;

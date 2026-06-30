@@ -9,6 +9,7 @@ import { StatusSelect } from "./status-select";
 import { NotesSection } from "./notes-section";
 import { ErfscanPanel } from "./erfscan-panel";
 import { ErfscanReview } from "./erfscan-review";
+import { ReportPanel } from "./report-panel";
 import type { Lead, LeadNote, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,19 @@ export default async function LeadDetailPage({
       luchtfotoUrl = signed?.signedUrl ?? null;
     } catch {
       luchtfotoUrl = null; // service-role key ontbreekt of file weg
+    }
+  }
+
+  let reportPdfUrl: string | null = null;
+  if (erfscan?.report_pdf_path) {
+    try {
+      const admin = createAdminClient();
+      const { data: signed } = await admin.storage
+        .from("erfscans")
+        .createSignedUrl(erfscan.report_pdf_path, 3600);
+      reportPdfUrl = signed?.signedUrl ?? null;
+    } catch {
+      reportPdfUrl = null;
     }
   }
 
@@ -148,6 +162,14 @@ export default async function LeadDetailPage({
                       }
                     >
                   }
+                />
+                <ReportPanel
+                  leadId={lead.id}
+                  status={erfscan.status}
+                  draftSubject={erfscan.draft_email_subject ?? ""}
+                  draftBody={erfscan.draft_email_body ?? ""}
+                  pdfUrl={reportPdfUrl}
+                  leadEmail={lead.email}
                 />
               </>
             ) : (
