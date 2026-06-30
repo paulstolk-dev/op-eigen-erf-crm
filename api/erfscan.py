@@ -311,6 +311,29 @@ def get_bag_pand(pand_id: str) -> dict:
     }
 
 
+def get_bag_pand_ids(postcode: str, huisnummer: str) -> list:
+    """Pand-id('s) bij een adres via BAG /adressen (de locatieserver geeft ze
+    niet altijd mee). Vereist BAG_API_KEY; geeft [] terug zonder sleutel/fout."""
+    if not BAG_API_KEY:
+        return []
+    pc = (postcode or "").replace(" ", "").upper()
+    num = "".join(ch for ch in str(huisnummer or "") if ch.isdigit())
+    if not (pc and num):
+        return []
+    try:
+        r = requests.get(
+            f"{BAG_API_BASE}/adressen",
+            params={"postcode": pc, "huisnummer": num},
+            headers={**UA, "X-Api-Key": BAG_API_KEY, "Accept": "application/hal+json", "Accept-Crs": "epsg:28992"},
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        ads = r.json().get("_embedded", {}).get("adressen", [])
+        return ads[0].get("pandIdentificaties", []) if ads else []
+    except Exception:
+        return []
+
+
 # --------------------------------------------------------------------------- #
 # TIER 2 — ERFGOED & BEBOUWDE KOM  (open WFS, geen sleutel)
 # Levert automatische SUGGESTIES voor de Tier-3 checklist. De mens bevestigt.
@@ -554,8 +577,9 @@ def run_erfscan(
                 dossier.setdefault("flags", []).append(f"Luchtfoto mislukt: {e}")
 
             pand_geom = None
-            if loc.get("pand_ids"):
-                bag = get_bag_pand(loc["pand_ids"][0])
+            pand_ids = loc.get("pand_ids") or get_bag_pand_ids(pc, hn)
+            if pand_ids:
+                bag = get_bag_pand(pand_ids[0])
                 dossier["bag"] = {k: v for k, v in bag.items() if k != "geometry"}
                 pand_geom = bag.get("geometry")
 

@@ -14,7 +14,12 @@ type Dossier = {
     oppervlakte_m2?: number | string;
     status?: string;
   };
-  ruimtelijk?: Record<string, unknown>;
+  bag?: { bouwjaar?: number | string; status_pand?: string };
+  ruimtelijk?: {
+    max_vergunningvrij_m2?: number | string;
+    bebouwingsgebied_m2?: number | string;
+    footprint_hoofdgebouw_m2?: number | string;
+  };
   adres_invoer?: { postcode?: string; huisnummer?: string; toevoeging?: string };
   kansen?: string[];
   flags?: string[];
@@ -134,6 +139,22 @@ export function ErfscanPanel({
           </dt>
           <dd className="mt-0.5 text-slate-900">
             {d.perceel?.oppervlakte_m2 ? `${d.perceel.oppervlakte_m2} m²` : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-slate-400">
+            Bouwjaar
+          </dt>
+          <dd className="mt-0.5 text-slate-900">{d.bag?.bouwjaar || "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-slate-400">
+            Vergunningvrij (indicatie)
+          </dt>
+          <dd className="mt-0.5 text-slate-900">
+            {d.ruimtelijk?.max_vergunningvrij_m2
+              ? `± ${d.ruimtelijk.max_vergunningvrij_m2} m²`
+              : "—"}
           </dd>
         </div>
       </dl>
