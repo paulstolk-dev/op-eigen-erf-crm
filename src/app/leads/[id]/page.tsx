@@ -8,6 +8,7 @@ import { typeLabel, erfscanStatusLabel, ERFSCAN_STATUS_STYLES } from "@/lib/cons
 import { StatusSelect } from "./status-select";
 import { NotesSection } from "./notes-section";
 import { ErfscanPanel } from "./erfscan-panel";
+import { ErfscanReview } from "./erfscan-review";
 import type { Lead, LeadNote, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -124,7 +125,18 @@ export default async function LeadDetailPage({
           {/* Lead info */}
           <section className="md:col-span-2 space-y-6">
             {erfscan ? (
-              <ErfscanPanel erfscan={erfscan} luchtfotoUrl={luchtfotoUrl} />
+              <>
+                <ErfscanPanel erfscan={erfscan} luchtfotoUrl={luchtfotoUrl} />
+                <ErfscanReview
+                  leadId={lead.id}
+                  initialTier3={
+                    (erfscan.tier3 ?? {}) as unknown as Record<string, string>
+                  }
+                  initialConclusie={erfscan.conclusie}
+                  leadPostcode={lead.postcode ?? ""}
+                  leadHuisnummer={lead.huisnummer ?? ""}
+                />
+              </>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">
                 Nog geen erfscan voor deze lead.
