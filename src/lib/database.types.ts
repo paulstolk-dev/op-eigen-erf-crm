@@ -18,6 +18,33 @@ export type Database = {
         Update: { created_at?: string; email?: string }
         Relationships: []
       }
+      ad_spend: {
+        Row: {
+          date: string
+          cost_eur: number
+          clicks: number | null
+          impressions: number | null
+          currency: string
+          synced_at: string
+        }
+        Insert: {
+          date: string
+          cost_eur?: number
+          clicks?: number | null
+          impressions?: number | null
+          currency?: string
+          synced_at?: string
+        }
+        Update: {
+          date?: string
+          cost_eur?: number
+          clicks?: number | null
+          impressions?: number | null
+          currency?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
       lead_notes: {
         Row: {
           author_email: string | null

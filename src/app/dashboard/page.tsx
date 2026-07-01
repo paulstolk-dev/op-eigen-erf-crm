@@ -40,7 +40,7 @@ function StatCard({
   tone,
 }: {
   label: string;
-  value: number;
+  value: string | number;
   sub?: string;
   tone?: "erf" | "groen" | "rood";
 }) {
@@ -76,6 +76,7 @@ export default async function DashboardPage() {
     .limit(1000);
 
   const { data: erfscans } = await supabase.from("erfscans").select("*");
+  const { data: adSpend } = await supabase.from("ad_spend").select("date,cost_eur");
   const erfscanByLead = new Map<string, Erfscan>(
     (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
   );
@@ -92,6 +93,27 @@ export default async function DashboardPage() {
   const gewonnen = rows.filter((r) => r.lead.status === "gewonnen").length;
   const verloren = rows.filter((r) => r.lead.status === "verloren").length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+
+  // Marketing: kosten per lead over de laatste 30 dagen (spend ÷ leads).
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+  const cutoffDate = cutoff.slice(0, 10);
+  const spend30 = (adSpend ?? [])
+    .filter((r) => r.date >= cutoffDate)
+    .reduce((s, r) => s + Number(r.cost_eur), 0);
+  const leads30 = rows.filter((r) => (r.lead.created_at ?? "") >= cutoff);
+  const qualified30 = leads30.filter((r) => r.score.score > 50).length;
+  const eur = (n: number, dec = 2) =>
+    n.toLocaleString("nl-NL", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: dec,
+      maximumFractionDigits: dec,
+    });
+  const hasSpend = (adSpend ?? []).length > 0;
+  const kostenPerLead =
+    hasSpend && leads30.length ? eur(spend30 / leads30.length) : "—";
+  const kostenPerQualified =
+    hasSpend && qualified30 ? eur(spend30 / qualified30) : "—";
 
   return (
     <div className="min-h-screen">
@@ -123,6 +145,16 @@ export default async function DashboardPage() {
             value={gewonnen}
             sub={`${pct(gewonnen)}%`}
             tone="groen"
+          />
+        </div>
+
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatCard label="Ad-spend (30d)" value={hasSpend ? eur(spend30, 0) : "—"} />
+          <StatCard label="Kosten / lead (30d)" value={kostenPerLead} tone="erf" />
+          <StatCard
+            label="Kosten / qualified (30d)"
+            value={kostenPerQualified}
+            tone="erf"
           />
         </div>
 
