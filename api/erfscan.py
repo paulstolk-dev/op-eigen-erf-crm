@@ -422,22 +422,20 @@ def build_tier3_suggesties(loc: dict, ruimtelijk: dict, erf: dict, kom) -> dict:
     sug: dict = {}
 
     # Beschermd dorpsgezicht / monument (RCE — hoog, alleen rijksniveau)
-    is_erfgoed = bool(
-        erf.get("rijksmonument") or erf.get("beschermd_gezicht") or erf.get("werelderfgoed")
-    )
+    # Alleen rijksmonument + beschermd stads-/dorpsgezicht (NIET werelderfgoed —
+    # dat is een aparte, minder beperkende categorie, zie de flags/kleur-logica).
+    is_mon_gez = bool(erf.get("rijksmonument") or erf.get("beschermd_gezicht"))
     detail_parts = []
     if erf.get("rijksmonument"):
         detail_parts.append(f"rijksmonument ({erf.get('rijksmonument_detail')})")
     if erf.get("beschermd_gezicht"):
         detail_parts.append(f"beschermd gezicht ({erf.get('gezicht_naam')})")
-    if erf.get("werelderfgoed"):
-        detail_parts.append(f"werelderfgoed ({erf.get('werelderfgoed_naam')})")
     sug["beschermd_dorpsgezicht"] = {
-        "waarde": "ja" if is_erfgoed else "nee",
+        "waarde": "ja" if is_mon_gez else "nee",
         "zekerheid": "handmatig" if erf.get("error") else "hoog",
         "bron": "Rijksdienst Cultureel Erfgoed (rijksniveau)",
         "detail": "; ".join(detail_parts)
-        or "Geen rijksmonument/gezicht op dit adres. Let op: gemeentelijke monumenten/gezichten apart checken.",
+        or "Geen rijksmonument of beschermd stads-/dorpsgezicht (rijksniveau). Gemeentelijke monumenten apart checken.",
         "url": erf.get("rijksmonument_url")
         or "https://www.cultureelerfgoed.nl/onderwerpen/monumenten",
     }
@@ -507,6 +505,7 @@ def suggest_conclusie(lead: dict, perceel: dict, ruimtelijk: dict, erf: dict, ko
     maxvv = ruimtelijk.get("max_vergunningvrij_m2") if isinstance(ruimtelijk, dict) else None
     maxvv = maxvv if isinstance(maxvv, (int, float)) else None
     is_erfgoed = bool(erf.get("rijksmonument") or erf.get("beschermd_gezicht"))
+    werelderfgoed = bool(erf.get("werelderfgoed"))
 
     plus, blok, checks = [], [], []
 
@@ -532,19 +531,25 @@ def suggest_conclusie(lead: dict, perceel: dict, ruimtelijk: dict, erf: dict, ko
         plus.append(f"Ruim perceel ({opp} m²): waarschijnlijk voldoende achtererf.")
     if maxvv and maxvv >= 60:
         plus.append(f"Indicatief ~{maxvv} m² vergunningvrij mogelijk (bijbehorend bouwwerk in achtererfgebied).")
-    if not is_erfgoed:
-        plus.append("Geen rijksmonument of beschermd gezicht (rijksniveau).")
+    if not is_erfgoed and not werelderfgoed:
+        plus.append("Geen rijksmonument, beschermd gezicht of werelderfgoed.")
 
     # --- checks (open eindjes die het van 'groen' afhouden) ---
     checks.append("Zorgvraag nog onbekend: bepaalt mantelzorg (nu) vs. familiewoning (per 1-7-2026).")
     if kom == "buiten":
         checks.append("Buiten de bebouwde kom: voor een verplaatsbare mantelzorgvoorziening geldt max. 100 m².")
     checks.append("Omgevingsplan/bestemming en exacte achtererf-begrenzing nog te verifiëren bij de gemeente.")
+    if werelderfgoed:
+        naam = erf.get("werelderfgoed_naam") or "werelderfgoed"
+        checks.append(
+            f"Ligt in UNESCO werelderfgoed ({naam}): extra ruimtelijke toetsing i.v.m. "
+            f"uitzonderlijke universele waarde — meestal geen bouwverbod, wel strengere inpassing."
+        )
 
     # --- beslissing ---
     if blok:
         waarde, zekerheid = "rood", "hoog" if is_erfgoed else "indicatie"
-    elif (opp and opp >= 500) and (maxvv and maxvv >= 60) and (kom == "binnen"):
+    elif (opp and opp >= 500) and (maxvv and maxvv >= 60) and (kom == "binnen") and not werelderfgoed:
         waarde, zekerheid = "groen", "indicatie"
     else:
         waarde, zekerheid = "oranje", "indicatie"
@@ -669,6 +674,11 @@ def run_erfscan(
             # RCE-erfgoed + CBS-kom één keer ophalen (voor tier-3 suggesties én kleur)
             erfgoed = check_erfgoed(loc["rd_x"], loc["rd_y"])
             kom = indicatie_bebouwde_kom(loc["rd_x"], loc["rd_y"])
+            if erfgoed.get("werelderfgoed"):
+                dossier.setdefault("flags", []).append(
+                    f"Ligt in UNESCO werelderfgoed ({erfgoed.get('werelderfgoed_naam') or 'onbekend'}): "
+                    f"extra ruimtelijke toetsing i.v.m. uitzonderlijke universele waarde (meestal geen bouwverbod)."
+                )
             dossier["tier3_suggesties"] = build_tier3_suggesties(
                 loc, dossier.get("ruimtelijk", {}), erfgoed, kom
             )
