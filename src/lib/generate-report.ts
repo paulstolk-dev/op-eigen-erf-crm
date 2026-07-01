@@ -34,6 +34,9 @@ REGELS (cruciaal):
   het bebouwingsgebied, max. bouwhoogte 5 m (schuin dak boven 3 m). Formuleer als
   "op basis van de landelijke regeling lijkt dit mogelijk, mits voldaan wordt aan de
   voorwaarden en lokale beperkingen." Weeg timing mee bij een korte startwens.
+- Sluit de concept-mail af met beide links: het gratis adviesgesprek
+  (https://opeigenerf.nl/kennismaking) en de Haalbaarheidsscan à €495
+  (https://opeigenerf.nl/haalbaarheidsscan), verrekenbaar bij begeleiding.
 - Schrijf in het Nederlands, vriendelijk maar zakelijk. Geen markdown-opmaak.`;
 
 function feiten(lead: Lead, erfscan: Erfscan): string {

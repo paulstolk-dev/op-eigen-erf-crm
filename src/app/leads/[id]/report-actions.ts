@@ -18,6 +18,22 @@ async function requireUser() {
 
 type Result = { ok: boolean; error?: string };
 
+// Plain-text mailtekst → veilige HTML met klikbare links.
+function toHtml(text: string): string {
+  const esc = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const linked = esc.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" style="color:#0a1b2b">$1</a>',
+  );
+  return linked
+    .split("\n")
+    .map((l) => l || "&nbsp;")
+    .join("<br>");
+}
+
 /** Claude stelt het rapport op → branded PDF → Storage → status 'rendered'. */
 export async function generateReport(leadId: string): Promise<Result> {
   const { supabase } = await requireUser();
@@ -107,10 +123,7 @@ export async function sendReport(leadId: string): Promise<Result> {
     }
   }
 
-  const html = (erfscan.draft_email_body || "")
-    .split("\n")
-    .map((l) => l || "&nbsp;")
-    .join("<br>");
+  const html = toHtml(erfscan.draft_email_body || "");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

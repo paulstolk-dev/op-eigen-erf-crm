@@ -5,10 +5,12 @@ import {
   Page,
   Text,
   View,
+  Image,
   Link,
   StyleSheet,
   renderToBuffer,
 } from "@react-pdf/renderer";
+import { LOGO_PNG } from "@/lib/logo-data";
 import type { ReportContent } from "@/lib/report-schema";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
@@ -86,6 +88,7 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   brand: { fontSize: 15, fontWeight: 700, color: BRAND },
+  logo: { height: 26 },
   docType: { fontSize: 10, color: "#6b7280" },
   h1: { fontSize: 17, fontWeight: 700, marginBottom: 2 },
   sub: { fontSize: 9.5, color: "#6b7280", marginBottom: 12 },
@@ -111,10 +114,11 @@ const s = StyleSheet.create({
   kortRow: { flexDirection: "row", marginBottom: 3 },
   kortQ: { width: 118, color: BRAND, fontWeight: 700 },
   kortA: { flex: 1 },
-  factRow: { flexDirection: "row", marginBottom: 2 },
+  factRow: { flexDirection: "row", marginBottom: 4, alignItems: "flex-start" },
   factLabel: { width: 150, color: "#6b7280" },
-  factValue: { flex: 1 },
-  factBron: { fontSize: 7.5, color: "#9ca3af" },
+  factRight: { flex: 1 },
+  factValue: { color: "#1f2937" },
+  factBron: { fontSize: 7.5, color: "#9ca3af", marginTop: 1 },
   li: { flexDirection: "row", marginBottom: 2 },
   liDot: { width: 10 },
   cta: {
@@ -160,7 +164,7 @@ function Fact({
   return (
     <View style={s.factRow}>
       <Text style={s.factLabel}>{label}</Text>
-      <View style={{ flex: 1 }}>
+      <View style={s.factRight}>
         <Text style={s.factValue}>{String(value)}</Text>
         {bron ? <Text style={s.factBron}>bron: {bron}</Text> : null}
       </View>
@@ -228,7 +232,8 @@ function ReportPdf({
     <Document>
       <Page size="A4" style={s.page}>
         <View style={s.header}>
-          <Text style={s.brand}>opeigenerf</Text>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <Image src={LOGO_PNG} style={s.logo} />
           <Text style={s.docType}>Gratis Erf Check — indicatief</Text>
         </View>
 
@@ -368,8 +373,19 @@ function ReportPdf({
           <Text style={s.body}>{content.advies_tekst}</Text>
           <View style={s.cta}>
             <Text style={s.ctaTitle}>Aanbevolen: {VERVOLG_LABEL[content.advies_vervolgstap]}</Text>
-            <Text>Plan een gratis adviesgesprek, of start de Haalbaarheidsscan (€495) —</Text>
-            <Text>dit bedrag wordt verrekend bij afname van een begeleidingstraject.</Text>
+            <Text>
+              Plan een gratis adviesgesprek:{" "}
+              <Link src="https://opeigenerf.nl/kennismaking" style={{ color: BRAND }}>
+                opeigenerf.nl/kennismaking
+              </Link>
+            </Text>
+            <Text>
+              Of start de Haalbaarheidsscan (€495):{" "}
+              <Link src="https://opeigenerf.nl/haalbaarheidsscan" style={{ color: BRAND }}>
+                opeigenerf.nl/haalbaarheidsscan
+              </Link>{" "}
+              — verrekenbaar bij afname van een begeleidingstraject.
+            </Text>
           </View>
         </View>
 
