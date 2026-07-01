@@ -33,6 +33,36 @@ function adres(lead: Lead, erfscan?: Erfscan | null): string {
   );
 }
 
+function StatCard({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: number;
+  sub?: string;
+  tone?: "erf" | "groen" | "rood";
+}) {
+  const subColor =
+    tone === "groen"
+      ? "text-green-600"
+      : tone === "rood"
+        ? "text-red-600"
+        : tone === "erf"
+          ? "text-erf"
+          : "text-slate-400";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className="text-2xl font-semibold text-slate-900">{value}</span>
+        {sub && <span className={`text-sm font-medium ${subColor}`}>{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -57,6 +87,12 @@ export default async function DashboardPage() {
     })
     .sort((a, b) => b.score.score - a.score.score);
 
+  const total = rows.length;
+  const qualified = rows.filter((r) => r.score.score > 50).length;
+  const gewonnen = rows.filter((r) => r.lead.status === "gewonnen").length;
+  const verloren = rows.filter((r) => r.lead.status === "verloren").length;
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
@@ -66,6 +102,28 @@ export default async function DashboardPage() {
           <p className="text-sm text-slate-500">
             Leads op prioriteit (leadscore), met erfcheck-conclusie en volgende actie.
           </p>
+        </div>
+
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard label="Aantal leads" value={total} />
+          <StatCard
+            label="Qualified (score > 50)"
+            value={qualified}
+            sub={`${pct(qualified)}%`}
+            tone="erf"
+          />
+          <StatCard
+            label="Verloren"
+            value={verloren}
+            sub={`${pct(verloren)}%`}
+            tone="rood"
+          />
+          <StatCard
+            label="Gewonnen"
+            value={gewonnen}
+            sub={`${pct(gewonnen)}%`}
+            tone="groen"
+          />
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
