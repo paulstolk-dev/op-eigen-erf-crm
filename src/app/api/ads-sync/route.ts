@@ -48,41 +48,57 @@ export async function GET(request: NextRequest) {
 
   try {
     const token = await getAccessToken();
-    const version = process.env.GOOGLE_ADS_API_VERSION || "v18";
     const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID!.replace(/[^0-9]/g, "");
     const loginId = (process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID || "").replace(/[^0-9]/g, "");
 
+    // GAQL kent geen LAST_90_DAYS-literal → expliciete datumrange.
+    const end = new Date().toISOString().slice(0, 10);
+    const start = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
     const query =
       "SELECT segments.date, metrics.cost_micros, metrics.clicks, metrics.impressions " +
-      "FROM customer WHERE segments.date DURING LAST_90_DAYS";
+      `FROM customer WHERE segments.date BETWEEN '${start}' AND '${end}'`;
 
-    const res = await fetch(
-      `https://googleads.googleapis.com/${version}/customers/${customerId}/googleAds:searchStream`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
-          ...(loginId ? { "login-customer-id": loginId } : {}),
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ query }),
-      },
-    );
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: `Google Ads API: ${await res.text()}` },
-        { status: 500 },
-      );
-    }
+    // API-versies verlopen; probeer de gepinde versie, val terug op recente.
+    const versions = [
+      process.env.GOOGLE_ADS_API_VERSION,
+      "v22",
+      "v21",
+      "v20",
+    ].filter(Boolean) as string[];
 
-    // searchStream levert een array van batches: [{ results: [...] }, ...]
-    const batches = (await res.json()) as Array<{
+    type Batch = {
       results?: Array<{
         segments: { date: string };
         metrics: { costMicros?: string; clicks?: string; impressions?: string };
       }>;
-    }>;
+    };
+    let batches: Batch[] | null = null;
+    let lastErr = "";
+    for (const version of versions) {
+      const res = await fetch(
+        `https://googleads.googleapis.com/${version}/customers/${customerId}/googleAds:searchStream`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+            ...(loginId ? { "login-customer-id": loginId } : {}),
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        },
+      );
+      if (res.ok) {
+        batches = (await res.json()) as Batch[];
+        break;
+      }
+      lastErr = `${version}: ${(await res.text()).slice(0, 300)}`;
+      // Onbekende/verouderde versie → volgende proberen; andere fout → stoppen.
+      if (res.status !== 404 && !lastErr.includes("UNSUPPORTED_VERSION")) break;
+    }
+    if (!batches) {
+      return NextResponse.json({ error: `Google Ads API: ${lastErr}` }, { status: 500 });
+    }
 
     const perDate: Record<string, { cost: number; clicks: number; impressions: number }> = {};
     for (const b of batches) {
