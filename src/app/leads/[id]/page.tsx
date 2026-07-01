@@ -162,6 +162,16 @@ export default async function LeadDetailPage({
                       }
                     >
                   }
+                  conclusieSuggestie={
+                    (erfscan.dossier as { conclusie_suggestie?: unknown })
+                      ?.conclusie_suggestie as {
+                      waarde?: string;
+                      zekerheid?: string;
+                      pluspunten?: string[];
+                      blokkers?: string[];
+                      checks?: string[];
+                    }
+                  }
                 />
                 <ReportPanel
                   leadId={lead.id}

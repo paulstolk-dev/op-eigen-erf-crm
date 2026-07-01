@@ -72,6 +72,28 @@ const CHECKLIST: {
 
 const CONCLUSIES = ["groen", "oranje", "rood"] as const;
 
+function ReasonList({
+  items,
+  marker,
+  tone,
+}: {
+  items?: string[];
+  marker: string;
+  tone: string;
+}) {
+  if (!items?.length) return null;
+  return (
+    <ul className="space-y-0.5">
+      {items.map((t, i) => (
+        <li key={i} className="flex gap-1.5 text-xs text-slate-700">
+          <span className={tone}>{marker}</span>
+          <span>{t}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type Suggestie = {
   waarde?: string;
   zekerheid?: string;
@@ -122,6 +144,7 @@ export function ErfscanReview({
   leadPostcode,
   leadHuisnummer,
   suggesties = {},
+  conclusieSuggestie,
 }: {
   leadId: string;
   initialTier3: Record<string, string>;
@@ -129,6 +152,13 @@ export function ErfscanReview({
   leadPostcode: string;
   leadHuisnummer: string;
   suggesties?: Record<string, Suggestie>;
+  conclusieSuggestie?: {
+    waarde?: string;
+    zekerheid?: string;
+    pluspunten?: string[];
+    blokkers?: string[];
+    checks?: string[];
+  };
 }) {
   // Pre-fill onbevestigde velden met de automatische suggestie.
   const [tier3, setTier3] = useState<Tier3>(() => {
@@ -216,6 +246,28 @@ export function ErfscanReview({
             );
           })}
         </div>
+
+        {conclusieSuggestie?.waarde && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs">
+              <span className="text-slate-500">Suggestie van de engine:</span>
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium ring-1 ring-inset ${
+                  CONCLUSIE_STYLES[conclusieSuggestie.waarde] ??
+                  "bg-slate-100 text-slate-600 ring-slate-500/20"
+                }`}
+              >
+                {CONCLUSIE_LABELS[conclusieSuggestie.waarde] ?? conclusieSuggestie.waarde}
+              </span>
+              {conclusieSuggestie.zekerheid && (
+                <span className="text-slate-400">({conclusieSuggestie.zekerheid})</span>
+              )}
+            </div>
+            <ReasonList items={conclusieSuggestie.blokkers} marker="✗" tone="text-red-600" />
+            <ReasonList items={conclusieSuggestie.pluspunten} marker="✓" tone="text-green-600" />
+            <ReasonList items={conclusieSuggestie.checks} marker="!" tone="text-amber-600" />
+          </div>
+        )}
       </div>
 
       {/* Tier-3 checklist */}

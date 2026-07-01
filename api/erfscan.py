@@ -72,6 +72,22 @@ def sb_get_lead(lead_id: str) -> dict:
     return rows[0]
 
 
+def sb_get_erfscan(lead_id: str) -> Optional[dict]:
+    """Bestaande erfscan-rij (voor o.a. een reeds door de mens gekozen conclusie)."""
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/erfscans",
+            params={"lead_id": f"eq.{lead_id}", "select": "conclusie"},
+            headers=_sb_headers({"Accept": "application/json"}),
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        return rows[0] if rows else None
+    except Exception:
+        return None
+
+
 def sb_upsert_erfscan(lead_id: str, fields: dict) -> None:
     """Upsert op unieke lead_id (merge-duplicates)."""
     body = {"lead_id": lead_id, **fields}
@@ -400,13 +416,12 @@ def indicatie_bebouwde_kom(rd_x: float, rd_y: float) -> Optional[str]:
         return None
 
 
-def build_tier3_suggesties(loc: dict, ruimtelijk: dict) -> dict:
+def build_tier3_suggesties(loc: dict, ruimtelijk: dict, erf: dict, kom) -> dict:
     """Stelt per Tier-3 item een suggestie samen: waarde + zekerheid + bron.
     zekerheid: 'hoog' (bron-zeker) | 'indicatie' | 'handmatig' | 'klant'."""
     sug: dict = {}
 
     # Beschermd dorpsgezicht / monument (RCE — hoog, alleen rijksniveau)
-    erf = check_erfgoed(loc["rd_x"], loc["rd_y"]) if loc.get("rd_x") else {}
     is_erfgoed = bool(
         erf.get("rijksmonument") or erf.get("beschermd_gezicht") or erf.get("werelderfgoed")
     )
@@ -428,7 +443,6 @@ def build_tier3_suggesties(loc: dict, ruimtelijk: dict) -> dict:
     }
 
     # Bebouwde kom (CBS — indicatie)
-    kom = indicatie_bebouwde_kom(loc["rd_x"], loc["rd_y"]) if loc.get("rd_x") else None
     sug["bebouwde_kom"] = {
         "waarde": kom or "",
         "zekerheid": "indicatie" if kom else "handmatig",
@@ -476,6 +490,72 @@ def build_tier3_suggesties(loc: dict, ruimtelijk: dict) -> dict:
         "url": "",
     }
     return sug
+
+
+def suggest_conclusie(lead: dict, perceel: dict, ruimtelijk: dict, erf: dict, kom) -> dict:
+    """
+    Automatische Groen/Oranje/Rood-suggestie op basis van de verzamelde signalen.
+    De mens bevestigt of overschrijft. Filosofie:
+      ROOD  = harde blokker (rijksmonument/beschermd gezicht → vergunningvrij vervalt;
+              of geen bruikbaar achtererf) — alleen via vergunning/BOPA.
+      GROEN = ruim + geen blokkers + binnen bebouwde kom (geen 100 m²-limiet) — mits
+              zorgvraag/gemeente nog bevestigd (indicatie).
+      ORANJE = kansrijk, maar checks nodig (default).
+    """
+    opp = perceel.get("oppervlakte_m2") if isinstance(perceel, dict) else None
+    opp = opp if isinstance(opp, (int, float)) else None
+    maxvv = ruimtelijk.get("max_vergunningvrij_m2") if isinstance(ruimtelijk, dict) else None
+    maxvv = maxvv if isinstance(maxvv, (int, float)) else None
+    is_erfgoed = bool(erf.get("rijksmonument") or erf.get("beschermd_gezicht"))
+
+    plus, blok, checks = [], [], []
+
+    # --- harde blokkers (rood) ---
+    if is_erfgoed:
+        w = []
+        if erf.get("rijksmonument"):
+            w.append("rijksmonument")
+        if erf.get("beschermd_gezicht"):
+            w.append("beschermd stads-/dorpsgezicht")
+        blok.append(
+            f"{' + '.join(w)}: vergunningvrij bouwen vervalt hier grotendeels — "
+            f"meestal alleen via een vergunning mogelijk."
+        )
+    geen_achtererf = (opp is not None and opp < 200) or (maxvv is not None and maxvv < 25)
+    if geen_achtererf:
+        blok.append("Weinig tot geen bruikbaar achtererf: te weinig ruimte voor een vergunningvrij bouwwerk.")
+
+    # --- pluspunten ---
+    if lead.get("audience") in ("ouders", "kinderen", "mantelzorg"):
+        plus.append("Eerstegraads familie: past op de mantelzorg- én (aankomende) familiewoningregeling.")
+    if opp and opp >= 500:
+        plus.append(f"Ruim perceel ({opp} m²): waarschijnlijk voldoende achtererf.")
+    if maxvv and maxvv >= 60:
+        plus.append(f"Indicatief ~{maxvv} m² vergunningvrij mogelijk (bijbehorend bouwwerk in achtererfgebied).")
+    if not is_erfgoed:
+        plus.append("Geen rijksmonument of beschermd gezicht (rijksniveau).")
+
+    # --- checks (open eindjes die het van 'groen' afhouden) ---
+    checks.append("Zorgvraag nog onbekend: bepaalt mantelzorg (nu) vs. familiewoning (per 1-7-2026).")
+    if kom == "buiten":
+        checks.append("Buiten de bebouwde kom: voor een verplaatsbare mantelzorgvoorziening geldt max. 100 m².")
+    checks.append("Omgevingsplan/bestemming en exacte achtererf-begrenzing nog te verifiëren bij de gemeente.")
+
+    # --- beslissing ---
+    if blok:
+        waarde, zekerheid = "rood", "hoog" if is_erfgoed else "indicatie"
+    elif (opp and opp >= 500) and (maxvv and maxvv >= 60) and (kom == "binnen"):
+        waarde, zekerheid = "groen", "indicatie"
+    else:
+        waarde, zekerheid = "oranje", "indicatie"
+
+    return {
+        "waarde": waarde,
+        "zekerheid": zekerheid,
+        "pluspunten": plus,
+        "blokkers": blok,
+        "checks": checks,
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -586,9 +666,14 @@ def run_erfscan(
             if perceel.get("geometry"):
                 dossier["ruimtelijk"] = estimate_achtererf(perceel["geometry"], pand_geom)
 
-            # Automatische Tier-3 suggesties (RCE-erfgoed, CBS-kom, staffel)
+            # RCE-erfgoed + CBS-kom één keer ophalen (voor tier-3 suggesties én kleur)
+            erfgoed = check_erfgoed(loc["rd_x"], loc["rd_y"])
+            kom = indicatie_bebouwde_kom(loc["rd_x"], loc["rd_y"])
             dossier["tier3_suggesties"] = build_tier3_suggesties(
-                loc, dossier.get("ruimtelijk", {})
+                loc, dossier.get("ruimtelijk", {}), erfgoed, kom
+            )
+            dossier["conclusie_suggestie"] = suggest_conclusie(
+                lead, perceel, dossier.get("ruimtelijk", {}), erfgoed, kom
             )
 
         a = assess(lead, perceel)
@@ -596,12 +681,18 @@ def run_erfscan(
         dossier["flags"] = a["flags"] + dossier.get("flags", [])
         dossier["advies"] = a["advies"]
 
+        # Menselijk gekozen conclusie behouden; anders de suggestie als startwaarde.
+        prev = sb_get_erfscan(lead_id)
+        effective_conclusie = (prev or {}).get("conclusie") or dossier.get(
+            "conclusie_suggestie", {}
+        ).get("waarde", "oranje")
+
         sb_upsert_erfscan(
             lead_id,
             {
                 "status": "needs_review",
                 "dossier": dossier,
-                "conclusie": a["conclusie"],
+                "conclusie": effective_conclusie,
                 "luchtfoto_path": luchtfoto_path,
                 "enriched_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                 "error": None,
