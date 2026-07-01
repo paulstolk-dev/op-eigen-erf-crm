@@ -10,6 +10,8 @@ import { NotesSection } from "./notes-section";
 import { ErfscanPanel } from "./erfscan-panel";
 import { ErfscanReview } from "./erfscan-review";
 import { ReportPanel } from "./report-panel";
+import { ScoreBadge } from "@/components/score-badge";
+import { scoreLead, SCORE_ACTIE } from "@/lib/lead-score";
 import type { Lead, LeadNote, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +55,8 @@ export default async function LeadDetailPage({
     .select("*")
     .eq("lead_id", id)
     .maybeSingle<Erfscan>();
+
+  const leadScore = scoreLead(lead, erfscan);
 
   // Signed URL voor de privé-luchtfoto (server-side, service role).
   let luchtfotoUrl: string | null = null;
@@ -236,13 +240,41 @@ export default async function LeadDetailPage({
             )}
           </section>
 
-          {/* Notes */}
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="mb-4 text-sm font-semibold text-slate-900">
-              Notities
-            </h2>
-            <NotesSection leadId={lead.id} notes={(notes ?? []) as LeadNote[]} />
-          </section>
+          {/* Rechterkolom: leadscore + notities */}
+          <div className="space-y-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-5">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-slate-900">Leadscore</h2>
+                <ScoreBadge score={leadScore.score} label={leadScore.label} />
+              </div>
+              <p className="mb-3 text-sm text-slate-600">{SCORE_ACTIE[leadScore.label]}</p>
+              <ul className="space-y-1">
+                {leadScore.breakdown.map((f, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-600">{f.factor}</span>
+                    <span
+                      className={
+                        f.punten >= 0
+                          ? "font-medium text-green-600"
+                          : "font-medium text-red-600"
+                      }
+                    >
+                      {f.punten > 0 ? `+${f.punten}` : f.punten}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[10px] text-slate-400">
+                Leadscore = kwaliteit/prioriteit van de lead. Los van de
+                erfcheck-conclusie (haalbaarheid).
+              </p>
+            </div>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-4 text-sm font-semibold text-slate-900">Notities</h2>
+              <NotesSection leadId={lead.id} notes={(notes ?? []) as LeadNote[]} />
+            </section>
+          </div>
         </div>
       </main>
     </div>
