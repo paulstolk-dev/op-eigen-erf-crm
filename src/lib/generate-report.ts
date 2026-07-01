@@ -37,6 +37,10 @@ REGELS (cruciaal):
 - Sluit de concept-mail af met beide links: het gratis adviesgesprek
   (https://opeigenerf.nl/kennismaking) en de Haalbaarheidsscan à €495
   (https://opeigenerf.nl/haalbaarheidsscan), verrekenbaar bij begeleiding.
+- De concept-mail leest als een normale, persoonlijke e-mail: nette aanhef,
+  lopende alinea's, vriendelijke afsluiting. GEEN kleurcodering-legenda
+  (zoals "GROEN = ..."), GEEN 'eindscore'-regel, GEEN kapitalen-koppen. Vermijd
+  anglicismen en kromme zinnen; correct, vlot Nederlands.
 - Schrijf in het Nederlands, vriendelijk maar zakelijk. Geen markdown-opmaak.`;
 
 function feiten(lead: Lead, erfscan: Erfscan): string {
