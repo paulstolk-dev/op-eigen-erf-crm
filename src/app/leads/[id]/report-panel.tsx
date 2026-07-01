@@ -77,7 +77,7 @@ export function ReportPanel({
           type="button"
           disabled={isGen}
           onClick={onGenerate}
-          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+          className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
         >
           {isGen
             ? "Claude schrijft…"
@@ -134,7 +134,7 @@ export function ReportPanel({
               disabled={isSend || !leadEmail}
               onClick={onSend}
               title={leadEmail ? "" : "Lead heeft geen e-mailadres"}
-              className="rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-green-800 disabled:opacity-50"
+              className="rounded-lg bg-erf px-3 py-2 text-sm font-medium text-white transition hover:bg-erf-700 disabled:opacity-50"
             >
               {isSend ? "Versturen…" : `Verstuur naar lead${leadEmail ? "" : " (geen e-mail)"}`}
             </button>

@@ -12,7 +12,8 @@ import {
 import type { ReportContent } from "@/lib/report-schema";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
-const BRAND = "#1f6f54";
+const BRAND = "#0a1b2b";
+const ERF = "#718d69";
 const CONCLUSIE_COLOR: Record<string, string> = {
   groen: "#16a34a",
   oranje: "#d97706",
@@ -100,7 +101,7 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 11.5,
     fontWeight: 700,
-    color: BRAND,
+    color: ERF,
     marginTop: 12,
     marginBottom: 3,
   },
@@ -118,13 +119,13 @@ const s = StyleSheet.create({
   liDot: { width: 10 },
   cta: {
     borderWidth: 1,
-    borderColor: BRAND,
+    borderColor: ERF,
     borderRadius: 6,
     padding: 10,
     marginTop: 6,
-    backgroundColor: "#f0fdf4",
+    backgroundColor: "#f2f5f0",
   },
-  ctaTitle: { fontWeight: 700, color: BRAND, marginBottom: 2 },
+  ctaTitle: { fontWeight: 700, color: ERF, marginBottom: 2 },
   srcItem: { flexDirection: "row", marginBottom: 2 },
   srcNum: { width: 14, color: "#6b7280" },
   srcLink: { flex: 1, fontSize: 8, color: "#374151", textDecoration: "none" },

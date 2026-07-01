@@ -307,7 +307,7 @@ export function ErfscanReview({
           type="button"
           disabled={isSaving}
           onClick={onSave}
-          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+          className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
         >
           {isSaving ? "Opslaan…" : "Checklist opslaan"}
         </button>

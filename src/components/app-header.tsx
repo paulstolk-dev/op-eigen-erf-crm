@@ -4,11 +4,10 @@ export function AppHeader({ email }: { email?: string | null }) {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-base font-semibold text-slate-900">
-            opeigenerf
-          </span>
-          <span className="rounded bg-slate-900 px-1.5 py-0.5 text-xs font-medium text-white">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="opeigenerf.nl" className="h-7 w-auto" />
+          <span className="rounded bg-navy/10 px-1.5 py-0.5 text-xs font-medium text-navy">
             CRM
           </span>
         </Link>

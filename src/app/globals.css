@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
+/* opeigenerf huisstijl */
+@theme {
+  --color-navy: #0a1b2b;
+  --color-navy-700: #17324a;
+  --color-erf: #718d69;
+  --color-erf-700: #5f7a58;
+}
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f6f7f4;
+  --foreground: #0a1b2b;
 }
 
 html,

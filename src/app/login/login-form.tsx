@@ -67,7 +67,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={status === "signing"}
-        className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+        className="w-full rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
       >
         {status === "signing" ? "Inloggen…" : "Inloggen"}
       </button>
