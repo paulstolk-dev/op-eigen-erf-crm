@@ -7,7 +7,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on all routes except static assets and Next internals.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Run on all routes except API routes (die regelen hun eigen auth/secret:
+    // /api/leads, /api/erfscan, /api/cron), static assets en Next internals.
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
