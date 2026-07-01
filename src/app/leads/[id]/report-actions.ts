@@ -103,7 +103,14 @@ export async function sendReport(leadId: string): Promise<Result> {
     .eq("lead_id", leadId)
     .single<Erfscan>();
 
-  if (!lead?.email) return { ok: false, error: "Lead heeft geen e-mailadres." };
+  // Test-modus: stuur alles naar REPORT_TEST_RECIPIENT i.p.v. de echte lead.
+  const testTo = process.env.REPORT_TEST_RECIPIENT;
+  const to = testTo || lead?.email;
+  if (!to)
+    return {
+      ok: false,
+      error: "Geen ontvanger (lead zonder e-mail en geen REPORT_TEST_RECIPIENT).",
+    };
   if (!erfscan?.draft_email_body) return { ok: false, error: "Geen concept-mail." };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY niet gezet." };
@@ -133,8 +140,10 @@ export async function sendReport(leadId: string): Promise<Result> {
     },
     body: JSON.stringify({
       from: process.env.REPORT_FROM_EMAIL || "opeigenerf <noreply@opeigenerf.nl>",
-      to: lead.email,
-      subject: erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl",
+      to,
+      subject:
+        (testTo ? `[TEST → ${lead?.email ?? "?"}] ` : "") +
+        (erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl"),
       html,
       attachments,
     }),
