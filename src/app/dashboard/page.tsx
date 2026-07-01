@@ -4,11 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { StatusBadge } from "@/components/status-badge";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead, SCORE_ACTIE_KORT } from "@/lib/lead-score";
-import {
-  CONCLUSIE_LABELS,
-  CONCLUSIE_STYLES,
-  erfscanStatusLabel,
-} from "@/lib/constants";
+import { CONCLUSIE_LABELS, CONCLUSIE_STYLES } from "@/lib/constants";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -117,8 +113,8 @@ export default async function DashboardPage() {
                     <td className="px-4 py-3">
                       <ScoreBadge score={score.score} label={score.label} />
                     </td>
-                    <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
-                      {erfscan ? erfscanStatusLabel(erfscan.status) : <StatusBadge status={lead.status} />}
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <StatusBadge status={lead.status} />
                     </td>
                     <td className="px-4 py-3">
                       {conclusie ? (

@@ -21,7 +21,7 @@ export async function updateLeadStatus(leadId: string, status: string) {
     .update({ status })
     .eq("id", leadId);
   if (error) throw new Error(error.message);
-  revalidatePath("/leads");
+  revalidatePath("/dashboard");
   revalidatePath(`/leads/${leadId}`);
 }
 
@@ -49,5 +49,5 @@ export async function deleteLead(leadId: string) {
   const { supabase } = await requireUser();
   const { error } = await supabase.from("leads").delete().eq("id", leadId);
   if (error) throw new Error(error.message);
-  revalidatePath("/leads");
+  revalidatePath("/dashboard");
 }
