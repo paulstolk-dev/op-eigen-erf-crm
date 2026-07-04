@@ -27,7 +27,14 @@ function str(v: unknown): string {
   return v === null || v === undefined ? "" : String(v);
 }
 
-export function AanbiederForm({ initial }: { initial?: Aanbieder }) {
+export function AanbiederForm({
+  initial,
+  variant = "crm",
+}: {
+  initial?: Aanbieder;
+  variant?: "crm" | "portal";
+}) {
+  const isCrm = variant === "crm";
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -148,18 +155,20 @@ export function AanbiederForm({ initial }: { initial?: Aanbieder }) {
             required
           />
         </div>
-        <div>
-          <label className={label}>Slug</label>
-          <input
-            className={input}
-            value={f.slug}
-            onChange={(e) => {
-              setSlugTouched(true);
-              set("slug", e.target.value);
-            }}
-            placeholder="wordt automatisch afgeleid van de naam"
-          />
-        </div>
+        {isCrm && (
+          <div>
+            <label className={label}>Slug</label>
+            <input
+              className={input}
+              value={f.slug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                set("slug", e.target.value);
+              }}
+              placeholder="wordt automatisch afgeleid van de naam"
+            />
+          </div>
+        )}
         <div>
           <label className={label}>Website</label>
           <input
@@ -387,7 +396,8 @@ export function AanbiederForm({ initial }: { initial?: Aanbieder }) {
         </div>
       </section>
 
-      {/* Status */}
+      {/* Status — alleen CRM-beheer */}
+      {isCrm && (
       <section className="flex flex-wrap items-center gap-6 border-t border-slate-100 pt-4">
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
@@ -415,6 +425,7 @@ export function AanbiederForm({ initial }: { initial?: Aanbieder }) {
           />
         </div>
       </section>
+      )}
 
       <div className="flex items-center justify-between border-t border-slate-100 pt-4">
         <button
@@ -424,7 +435,7 @@ export function AanbiederForm({ initial }: { initial?: Aanbieder }) {
         >
           {isPending ? "Opslaan…" : initial ? "Wijzigingen opslaan" : "Aanbieder aanmaken"}
         </button>
-        {initial && (
+        {initial && isCrm && (
           <button
             type="button"
             onClick={onDelete}

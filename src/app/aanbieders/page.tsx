@@ -59,12 +59,20 @@ export default async function AanbiedersPage({
               Catalogus van aanbieders en woningen op opeigenerf.nl.
             </p>
           </div>
-          <Link
-            href="/aanbieders/nieuw"
-            className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white transition hover:bg-navy-700"
-          >
-            Nieuwe aanbieder
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/aanbieders/aanvragen"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Toegangsaanvragen
+            </Link>
+            <Link
+              href="/aanbieders/nieuw"
+              className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white transition hover:bg-navy-700"
+            >
+              Nieuwe aanbieder
+            </Link>
+          </div>
         </div>
 
         <form

@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { typeLabel, erfscanStatusLabel, ERFSCAN_STATUS_STYLES } from "@/lib/constants";
 import { StatusSelect } from "./status-select";
 import { DeleteLeadButton } from "./delete-lead-button";
+import { DeelPaneel } from "./deel-paneel";
 import { NotesSection } from "./notes-section";
 import { ErfscanPanel } from "./erfscan-panel";
 import { ErfscanReview } from "./erfscan-review";
@@ -58,6 +59,30 @@ export default async function LeadDetailPage({
     .maybeSingle<Erfscan>();
 
   const leadScore = scoreLead(lead, erfscan);
+
+  // Deling met aanbieders (voor het deel-paneel).
+  const { data: shareRows } = await supabase
+    .from("lead_aanbieder")
+    .select("id,aanbieder_id,status,contact_vrijgegeven,aanbieders(naam)")
+    .eq("lead_id", id);
+  const shares = ((shareRows ?? []) as unknown as Array<{
+    id: string;
+    aanbieder_id: string;
+    status: string;
+    contact_vrijgegeven: boolean;
+    aanbieders: { naam: string } | null;
+  }>).map((r) => ({
+    id: r.id,
+    aanbieder_id: r.aanbieder_id,
+    status: r.status,
+    contact_vrijgegeven: r.contact_vrijgegeven,
+    aanbiederNaam: r.aanbieders?.naam ?? "—",
+  }));
+  const { data: actieveAanbieders } = await supabase
+    .from("aanbieders")
+    .select("id,naam")
+    .eq("actief", true)
+    .order("naam", { ascending: true });
 
   // Signed URL voor de privé-luchtfoto (server-side, service role).
   let luchtfotoUrl: string | null = null;
@@ -281,6 +306,20 @@ export default async function LeadDetailPage({
                 erfcheck-conclusie (haalbaarheid).
               </p>
             </div>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-1 text-sm font-semibold text-slate-900">
+                Delen met aanbieders
+              </h2>
+              <p className="mb-3 text-xs text-slate-400">
+                Aanbieders zien beperkte info; contactgegevens pas na vrijgave.
+              </p>
+              <DeelPaneel
+                leadId={lead.id}
+                shares={shares}
+                aanbieders={actieveAanbieders ?? []}
+              />
+            </section>
 
             <section className="rounded-xl border border-slate-200 bg-white p-5">
               <h2 className="mb-4 text-sm font-semibold text-slate-900">Notities</h2>

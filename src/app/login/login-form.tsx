@@ -31,17 +31,30 @@ export function LoginForm() {
       return;
     }
 
-    // Defence in depth: only allowlisted users may enter.
+    // Routeer op rol: CRM-medewerker -> dashboard, aanbieder -> portaal.
     const { data: allowed } = await supabase.rpc("is_allowed_user");
-    if (!allowed) {
-      await supabase.auth.signOut();
-      setStatus("error");
-      setMessage("Dit account heeft geen toegang tot de CRM.");
+    if (allowed) {
+      router.push("/dashboard");
+      router.refresh();
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    const { data: aanbiederStatus } = await supabase.rpc("my_aanbieder_status");
+    if (aanbiederStatus === "approved") {
+      router.push("/portal");
+      router.refresh();
+      return;
+    }
+    if (aanbiederStatus === "pending" || aanbiederStatus === "geweigerd") {
+      router.push("/portal/status");
+      router.refresh();
+      return;
+    }
+
+    // Geen enkele rol: uitloggen.
+    await supabase.auth.signOut();
+    setStatus("error");
+    setMessage("Dit account heeft nog geen toegang. Vraag toegang aan of wacht op goedkeuring.");
   }
 
   return (
@@ -72,6 +85,12 @@ export function LoginForm() {
         {status === "signing" ? "Inloggen…" : "Inloggen"}
       </button>
       {message && <p className="text-sm text-red-600">{message}</p>}
+      <p className="pt-1 text-center text-sm text-slate-500">
+        Aanbieder?{" "}
+        <a href="/registreren" className="font-medium text-navy hover:underline">
+          Toegang aanvragen
+        </a>
+      </p>
     </form>
   );
 }

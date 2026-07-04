@@ -51,3 +51,46 @@ export async function deleteLead(leadId: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
 }
+
+// --- Lead delen met aanbieders (RLS: 'crm all shares' vereist is_allowed_user) ---
+
+export async function shareLeadMetAanbieder(leadId: string, aanbiederId: string) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("lead_aanbieder").insert({
+    lead_id: leadId,
+    aanbieder_id: aanbiederId,
+    gedeeld_by: user.email ?? null,
+  });
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: "Al gedeeld met deze aanbieder." };
+    return { ok: false, error: error.message };
+  }
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
+export async function setContactVrijgave(
+  shareId: string,
+  leadId: string,
+  vrij: boolean,
+) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase
+    .from("lead_aanbieder")
+    .update({
+      contact_vrijgegeven: vrij,
+      vrijgegeven_at: vrij ? new Date().toISOString() : null,
+    })
+    .eq("id", shareId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
+export async function removeShare(shareId: string, leadId: string) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.from("lead_aanbieder").delete().eq("id", shareId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}

@@ -14,13 +14,23 @@ import {
   slugify,
 } from "@/lib/aanbieders-constants";
 
-async function requireUser() {
+// Bepaalt of de aanroeper een CRM-medewerker is (allowlist) of een aanbieder
+// (goedgekeurd portal-account). Aanbieders mogen ALLEEN hun eigen data raken;
+// dat wordt hier server-side afgedwongen, ongeacht wat de client stuurt.
+async function getAuthContext() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Niet ingelogd.");
-  return { supabase };
+  const [{ data: crm }, { data: aid }] = await Promise.all([
+    supabase.rpc("is_allowed_user"),
+    supabase.rpc("current_aanbieder_id"),
+  ]);
+  const isCrm = crm === true;
+  const aanbiederId = (aid as string | null) ?? null;
+  if (!isCrm && !aanbiederId) throw new Error("Geen toegang.");
+  return { supabase, user, isCrm, aanbiederId };
 }
 
 type Result = { ok: boolean; error?: string; id?: string };
@@ -79,12 +89,38 @@ async function afterMutation(id?: string): Promise<Result> {
 }
 
 export async function saveAanbieder(input: AanbiederInput, id?: string): Promise<Result> {
-  await requireUser();
+  const { isCrm, aanbiederId } = await getAuthContext();
   const parsed = aanbiederSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues.map((i) => i.message).join("; ") };
   }
   const data = parsed.data;
+
+  // Aanbieders mogen ALLEEN hun eigen profiel bewerken, geen nieuwe aanmaken,
+  // en niet de beheer-velden (actief/partner/sortering/slug) wijzigen.
+  if (!isCrm) {
+    if (!id || id !== aanbiederId) {
+      return { ok: false, error: "Je kunt alleen je eigen profiel bewerken." };
+    }
+    const {
+      slug: _slug,
+      is_partner: _p,
+      actief: _a,
+      sortering: _s,
+      ...profiel
+    } = data;
+    void _slug;
+    void _p;
+    void _a;
+    void _s;
+    const admin = createAdminClient();
+    const { error } = await admin.from("aanbieders").update(profiel).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/portal/profiel");
+    await revalidatePublicSite(["/aanbieders"]);
+    return { ok: true, id };
+  }
+
   const row = {
     ...data,
     slug: data.slug || slugify(data.naam),
@@ -106,7 +142,8 @@ export async function saveAanbieder(input: AanbiederInput, id?: string): Promise
 }
 
 export async function setAanbiederActief(id: string, actief: boolean): Promise<Result> {
-  await requireUser();
+  const { isCrm } = await getAuthContext();
+  if (!isCrm) return { ok: false, error: "Alleen CRM-beheerders." };
   const admin = createAdminClient();
   const { error } = await admin.from("aanbieders").update({ actief }).eq("id", id);
   if (error) return { ok: false, error: error.message };
@@ -115,7 +152,8 @@ export async function setAanbiederActief(id: string, actief: boolean): Promise<R
 
 // Hard verwijderen mag alleen als er geen woningen aan hangen (anders: soft delete).
 export async function deleteAanbieder(id: string): Promise<Result> {
-  await requireUser();
+  const { isCrm } = await getAuthContext();
+  if (!isCrm) return { ok: false, error: "Alleen CRM-beheerders." };
   const admin = createAdminClient();
   const { count } = await admin
     .from("woningen")
@@ -169,17 +207,34 @@ const woningSchema = z.object({
 export type WoningInput = z.input<typeof woningSchema>;
 
 export async function saveWoning(input: WoningInput, id?: string): Promise<Result> {
-  await requireUser();
+  const { isCrm, aanbiederId } = await getAuthContext();
   const parsed = woningSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues.map((i) => i.message).join("; ") };
   }
   const data = parsed.data;
+  const admin = createAdminClient();
+
+  // Aanbieder mag alleen in de EIGEN aanbieder_id werken, en bij bewerken
+  // alleen een woning die al van hem is.
+  if (!isCrm) {
+    data.aanbieder_id = aanbiederId!;
+    if (id) {
+      const { data: bestaand } = await admin
+        .from("woningen")
+        .select("aanbieder_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (!bestaand || bestaand.aanbieder_id !== aanbiederId) {
+        return { ok: false, error: "Geen toegang tot deze woning." };
+      }
+    }
+  }
+
   const row = {
     ...data,
     slug: data.slug || slugify(data.naam),
   };
-  const admin = createAdminClient();
   let woningId = id;
   if (id) {
     const { error } = await admin.from("woningen").update(row).eq("id", id);
@@ -194,16 +249,28 @@ export async function saveWoning(input: WoningInput, id?: string): Promise<Resul
     woningId = created.id;
   }
   revalidatePath(`/aanbieders/${data.aanbieder_id}`);
+  revalidatePath("/portal/woningen");
   await revalidatePublicSite(["/aanbieders"]);
   return { ok: true, id: woningId };
 }
 
 export async function deleteWoning(id: string, aanbiederId: string): Promise<Result> {
-  await requireUser();
+  const { isCrm, aanbiederId: eigenId } = await getAuthContext();
   const admin = createAdminClient();
+  if (!isCrm) {
+    const { data: bestaand } = await admin
+      .from("woningen")
+      .select("aanbieder_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!bestaand || bestaand.aanbieder_id !== eigenId) {
+      return { ok: false, error: "Geen toegang tot deze woning." };
+    }
+  }
   const { error } = await admin.from("woningen").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/aanbieders/${aanbiederId}`);
+  revalidatePath("/portal/woningen");
   await revalidatePublicSite(["/aanbieders"]);
   return { ok: true };
 }
@@ -213,14 +280,19 @@ export async function deleteWoning(id: string, aanbiederId: string): Promise<Res
 export async function uploadAanbiedersFile(
   formData: FormData,
 ): Promise<{ ok: boolean; url?: string; error?: string }> {
-  await requireUser();
+  const { isCrm, aanbiederId } = await getAuthContext();
   const file = formData.get("file");
-  const prefix = (formData.get("prefix") as string) || "misc";
+  let prefix = (formData.get("prefix") as string) || "misc";
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "Geen bestand ontvangen." };
   }
   if (file.size > 8 * 1024 * 1024) {
     return { ok: false, error: "Bestand te groot (max 8 MB)." };
+  }
+  // Aanbieders schrijven verplicht in hun eigen map (matcht de storage-RLS).
+  if (!isCrm) {
+    const soort = prefix.startsWith("logo") ? "logos" : "woningen";
+    prefix = `${soort}/${aanbiederId}`;
   }
   const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
   const path = `${prefix.replace(/[^a-zA-Z0-9/_-]/g, "")}/${crypto.randomUUID()}.${ext}`;
