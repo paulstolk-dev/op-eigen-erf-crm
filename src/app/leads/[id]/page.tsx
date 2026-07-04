@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/app-header";
 import { StatusBadge } from "@/components/status-badge";
 import { typeLabel, erfscanStatusLabel, ERFSCAN_STATUS_STYLES } from "@/lib/constants";
 import { StatusSelect } from "./status-select";
+import { DeleteLeadButton } from "./delete-lead-button";
 import { NotesSection } from "./notes-section";
 import { ErfscanPanel } from "./erfscan-panel";
 import { ErfscanReview } from "./erfscan-review";
@@ -133,9 +134,20 @@ export default async function LeadDetailPage({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500">Status wijzigen:</span>
-            <StatusSelect leadId={lead.id} current={lead.status} />
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Status wijzigen:</span>
+              <StatusSelect leadId={lead.id} current={lead.status} />
+            </div>
+            <DeleteLeadButton
+              leadId={lead.id}
+              leadNaam={
+                lead.naam ||
+                [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
+                lead.email ||
+                "Lead"
+              }
+            />
           </div>
         </div>
 
