@@ -36,6 +36,8 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic =
     pathname === "/login" ||
+    pathname === "/registreren" || // zelfregistratie aanbieders
+    pathname === "/geen-toegang" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/leads"); // marketing-site ingest endpoint
 
