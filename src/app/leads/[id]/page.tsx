@@ -8,7 +8,9 @@ import { typeLabel, erfscanStatusLabel, ERFSCAN_STATUS_STYLES } from "@/lib/cons
 import { StatusSelect } from "./status-select";
 import { DeleteLeadButton } from "./delete-lead-button";
 import { DeelPaneel } from "./deel-paneel";
+import { HubspotPanel } from "./hubspot-panel";
 import { NotesSection } from "./notes-section";
+import { hubspotConfigured } from "@/lib/hubspot";
 import { ErfscanPanel } from "./erfscan-panel";
 import { ErfscanReview } from "./erfscan-review";
 import { ReportPanel } from "./report-panel";
@@ -83,6 +85,12 @@ export default async function LeadDetailPage({
     .select("id,naam")
     .eq("actief", true)
     .order("naam", { ascending: true });
+
+  const { data: hubspotSync } = await supabase
+    .from("hubspot_sync")
+    .select("contact_id,deal_id,synced_at,error")
+    .eq("lead_id", id)
+    .maybeSingle();
 
   // Signed URL voor de privé-luchtfoto (server-side, service role).
   let luchtfotoUrl: string | null = null;
@@ -318,6 +326,15 @@ export default async function LeadDetailPage({
                 leadId={lead.id}
                 shares={shares}
                 aanbieders={actieveAanbieders ?? []}
+              />
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">HubSpot</h2>
+              <HubspotPanel
+                leadId={lead.id}
+                configured={hubspotConfigured()}
+                sync={hubspotSync ?? null}
               />
             </section>
 

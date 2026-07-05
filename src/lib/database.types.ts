@@ -24,6 +24,51 @@ export type Database = {
         Update: { key?: string; value?: string; updated_at?: string }
         Relationships: []
       }
+      hubspot_sync: {
+        Row: {
+          lead_id: string
+          contact_id: string | null
+          deal_id: string | null
+          synced_at: string | null
+          error: string | null
+        }
+        Insert: {
+          lead_id: string
+          contact_id?: string | null
+          deal_id?: string | null
+          synced_at?: string | null
+          error?: string | null
+        }
+        Update: {
+          lead_id?: string
+          contact_id?: string | null
+          deal_id?: string | null
+          synced_at?: string | null
+          error?: string | null
+        }
+        Relationships: []
+      }
+      hubspot_company_sync: {
+        Row: {
+          aanbieder_id: string
+          company_id: string | null
+          synced_at: string | null
+          error: string | null
+        }
+        Insert: {
+          aanbieder_id: string
+          company_id?: string | null
+          synced_at?: string | null
+          error?: string | null
+        }
+        Update: {
+          aanbieder_id?: string
+          company_id?: string | null
+          synced_at?: string | null
+          error?: string | null
+        }
+        Relationships: []
+      }
       ad_spend: {
         Row: {
           date: string

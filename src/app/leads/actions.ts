@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isLeadStatus } from "@/lib/constants";
+import { syncLeadToHubspot } from "@/lib/hubspot";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -93,4 +94,12 @@ export async function removeShare(shareId: string, leadId: string) {
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/leads/${leadId}`);
   return { ok: true };
+}
+
+// Handmatig een lead naar HubSpot syncen (naast de automatische trigger).
+export async function syncLeadHubspotNow(leadId: string) {
+  await requireUser();
+  const res = await syncLeadToHubspot(leadId);
+  revalidatePath(`/leads/${leadId}`);
+  return res;
 }
