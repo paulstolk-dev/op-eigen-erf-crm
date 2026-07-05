@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/ads-sync",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
