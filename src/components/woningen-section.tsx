@@ -15,6 +15,7 @@ import {
 import {
   saveWoning,
   deleteWoning,
+  setWoningActief,
   uploadAanbiedersFile,
   type WoningInput,
 } from "@/app/aanbieders/actions";
@@ -465,6 +466,42 @@ function WoningForm({
   );
 }
 
+function ActiefToggle({
+  woningId,
+  aanbiederId,
+  actief,
+}: {
+  woningId: string;
+  aanbiederId: string;
+  actief: boolean;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function toggle() {
+    startTransition(async () => {
+      const res = await setWoningActief(woningId, !actief, aanbiederId);
+      if (res.ok) router.refresh();
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={isPending}
+      title={actief ? "Op inactief zetten" : "Activeren"}
+      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset transition disabled:opacity-50 ${
+        actief
+          ? "bg-green-100 text-green-700 ring-green-600/20 hover:bg-green-200"
+          : "bg-slate-100 text-slate-500 ring-slate-400/20 hover:bg-slate-200"
+      }`}
+    >
+      {isPending ? "…" : actief ? "Actief" : "Inactief"}
+    </button>
+  );
+}
+
 export function WoningenSection({
   aanbiederId,
   woningen,
@@ -513,34 +550,47 @@ export function WoningenSection({
               />
             </li>
           ) : (
-            <li key={w.id}>
+            <li
+              key={w.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3"
+            >
               <button
                 onClick={() => setOpen(w.id)}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+                className="flex-1 text-left"
               >
-                <div>
-                  <div className="font-medium text-slate-900">
-                    {w.naam}
-                    {!w.actief && (
-                      <span className="ml-2 text-xs font-normal text-slate-400">
-                        (inactief)
-                      </span>
-                    )}
-                    {w.uitgelicht && (
-                      <span className="ml-2 rounded bg-erf/10 px-1.5 py-0.5 text-xs font-medium text-erf">
-                        Uitgelicht
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-slate-500">
-                    {w.oppervlakte_m2 ? `${w.oppervlakte_m2} m²` : "—"}
-                    {" · "}
-                    {euro(w.prijs_incl_btw)}
-                    {w.prijs_per_m2 != null && ` · ${euro(w.prijs_per_m2)}/m²`}
-                  </div>
+                <div className="font-medium text-slate-900">
+                  {w.naam}
+                  {!w.actief && (
+                    <span className="ml-2 text-xs font-normal text-slate-400">
+                      (inactief)
+                    </span>
+                  )}
+                  {w.uitgelicht && (
+                    <span className="ml-2 rounded bg-erf/10 px-1.5 py-0.5 text-xs font-medium text-erf">
+                      Uitgelicht
+                    </span>
+                  )}
                 </div>
-                <span className="text-sm text-slate-400">Bewerken →</span>
+                <div className="text-sm text-slate-500">
+                  {w.oppervlakte_m2 ? `${w.oppervlakte_m2} m²` : "—"}
+                  {" · "}
+                  {euro(w.prijs_incl_btw)}
+                  {w.prijs_per_m2 != null && ` · ${euro(w.prijs_per_m2)}/m²`}
+                </div>
               </button>
+              <div className="flex shrink-0 items-center gap-3">
+                <ActiefToggle
+                  woningId={w.id}
+                  aanbiederId={aanbiederId}
+                  actief={w.actief}
+                />
+                <button
+                  onClick={() => setOpen(w.id)}
+                  className="text-sm text-slate-400 transition hover:text-slate-700"
+                >
+                  Bewerken →
+                </button>
+              </div>
             </li>
           ),
         )}

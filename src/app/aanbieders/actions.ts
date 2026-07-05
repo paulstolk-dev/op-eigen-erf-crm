@@ -275,6 +275,32 @@ export async function deleteWoning(id: string, aanbiederId: string): Promise<Res
   return { ok: true };
 }
 
+// Snel een woning op actief/inactief zetten (zonder het hele formulier).
+export async function setWoningActief(
+  id: string,
+  actief: boolean,
+  aanbiederId: string,
+): Promise<Result> {
+  const { isCrm, aanbiederId: eigenId } = await getAuthContext();
+  const admin = createAdminClient();
+  if (!isCrm) {
+    const { data: bestaand } = await admin
+      .from("woningen")
+      .select("aanbieder_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!bestaand || bestaand.aanbieder_id !== eigenId) {
+      return { ok: false, error: "Geen toegang tot deze woning." };
+    }
+  }
+  const { error } = await admin.from("woningen").update({ actief }).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/aanbieders/${aanbiederId}`);
+  revalidatePath("/portal/woningen");
+  await revalidatePublicSite(["/aanbieders"]);
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------- uploads
 // Upload naar de publieke bucket 'aanbieders'; geeft de public URL terug.
 export async function uploadAanbiedersFile(
