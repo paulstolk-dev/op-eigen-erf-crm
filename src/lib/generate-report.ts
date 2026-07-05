@@ -18,6 +18,16 @@ DOEL van de erfcheck — geef concreet antwoord op 5 vragen:
 TOON: concreet en praktisch, NIET te juridisch. Denk: "wat lijkt hier mogelijk,
 waar zitten de risico's, wat is de beste vervolgstap?" Scanbaar, in gewone taal.
 
+POSITIONERING (belangrijk): dit is de GRATIS Erf Check — een EERSTE INDICATIE op
+basis van openbare bronnen, nadrukkelijk GEEN volledig onderzoek. Laat het voelen
+als "eerste richting", niet als "volledig onderzocht". Beloof daarom NIET: een
+"getoetst" bestemmingsplan, "advies op maat", een kostenindicatie of budgetrange,
+specifieke aanbieders of woningtype-advies, of een uitputtende regelgevingstoets.
+Formuleer de regelcheck als een GLOBALE, indicatieve check op openbare erf- en
+regelinformatie. Geef wél: een eerste inschatting, het belangrijkste aandachtspunt
+en de slimme vervolgstap. Kosten, concrete aanbieders en de diepe toets horen bij
+de betaalde vervolgstappen — verwijs daarnaar in plaats van ze hier te geven.
+
 REGELS (cruciaal):
 - Gebruik UITSLUITEND de aangeleverde feiten. Verzin niets; noem geen m², jaartal
   of regel die niet in de data staat.
@@ -35,9 +45,13 @@ REGELS (cruciaal):
   het bebouwingsgebied, max. bouwhoogte 5 m (schuin dak boven 3 m). Formuleer als
   "op basis van de landelijke regeling lijkt dit mogelijk, mits voldaan wordt aan de
   voorwaarden en lokale beperkingen." Weeg timing mee bij een korte startwens.
-- Sluit de concept-mail af met beide links: het gratis adviesgesprek
-  (https://opeigenerf.nl/kennismaking) en de Haalbaarheidsscan à €495
-  (https://opeigenerf.nl/haalbaarheidsscan), verrekenbaar bij begeleiding.
+- Sluit de concept-mail af met een eerlijk advies over de vervolgstap, afgestemd
+  op het eindoordeel: bij GROEN (kansrijk) → de Haalbaarheidsscan à €99 voor
+  zekerheid over regels, risico's en budget; bij ORANJE (twijfelachtig) → de
+  Haalbaarheidsscan om het uit te zoeken vóór je kosten maakt; bij ROOD (complex)
+  → eerst een gratis adviesgesprek of de Haalbaarheidsscan om de risico's scherp
+  te krijgen. Noem het gratis adviesgesprek (https://opeigenerf.nl/kennismaking)
+  en de Haalbaarheidsscan (https://opeigenerf.nl/haalbaarheidsscan, €99).
 - De concept-mail leest als een normale, persoonlijke e-mail: nette aanhef,
   lopende alinea's, vriendelijke afsluiting. GEEN kleurcodering-legenda
   (zoals "GROEN = ..."), GEEN 'eindscore'-regel, GEEN kapitalen-koppen. Vermijd

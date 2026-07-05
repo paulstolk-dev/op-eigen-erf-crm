@@ -31,7 +31,7 @@ const DOEL_LABEL: Record<string, string> = {
 };
 const VERVOLG_LABEL: Record<string, string> = {
   gratis_adviesgesprek: "Gratis adviesgesprek",
-  haalbaarheidsscan: "Haalbaarheidsscan (€495)",
+  haalbaarheidsscan: "Haalbaarheidsscan (€99)",
   begeleidingstraject: "Begeleidingstraject",
 };
 
@@ -380,7 +380,7 @@ function ReportPdf({
               </Link>
             </Text>
             <Text>
-              Of start de Haalbaarheidsscan (€495):{" "}
+              Of start de Haalbaarheidsscan (€99):{" "}
               <Link src="https://opeigenerf.nl/haalbaarheidsscan" style={{ color: BRAND }}>
                 opeigenerf.nl/haalbaarheidsscan
               </Link>{" "}
