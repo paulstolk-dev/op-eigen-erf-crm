@@ -113,7 +113,11 @@ export default async function LeadDetailPage({
       const { data: signed } = await admin.storage
         .from("erfscans")
         .createSignedUrl(erfscan.report_pdf_path, 3600);
-      reportPdfUrl = signed?.signedUrl ?? null;
+      // Cache-buster op updated_at: forceert de verse PDF na 'Opnieuw genereren'
+      // (vaste padnaam wordt overschreven; anders toont de CDN/browser stale).
+      reportPdfUrl = signed?.signedUrl
+        ? `${signed.signedUrl}&v=${new Date(erfscan.updated_at).getTime()}`
+        : null;
     } catch {
       reportPdfUrl = null;
     }

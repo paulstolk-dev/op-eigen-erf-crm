@@ -43,7 +43,13 @@ export async function runReportGeneration(
   const path = `${leadId}/rapport.pdf`;
   const { error: upErr } = await admin.storage
     .from("erfscans")
-    .upload(path, pdf, { contentType: "application/pdf", upsert: true });
+    .upload(path, pdf, {
+      contentType: "application/pdf",
+      upsert: true,
+      // Vaste padnaam wordt overschreven bij regenereren; geen CDN-cache,
+      // anders zie je na 'Opnieuw genereren' nog even de oude PDF.
+      cacheControl: "0",
+    });
   if (upErr) return { ok: false, error: `Upload mislukt: ${upErr.message}` };
 
   const { error } = await admin
