@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { DashboardChart, type DayPoint } from "@/components/dashboard-chart";
+import { AdsSyncButton } from "./ads-sync-button";
 import { StatusBadge } from "@/components/status-badge";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead, SCORE_ACTIE_KORT } from "@/lib/lead-score";
@@ -190,6 +191,12 @@ export default async function DashboardPage() {
           />
         </div>
 
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Marketing
+          </h2>
+          <AdsSyncButton />
+        </div>
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatCard label="Ad-spend (30d)" value={hasSpend ? eur(spend30, 0) : "—"} />
           <StatCard label="Kosten / lead (30d)" value={kostenPerLead} tone="erf" />
