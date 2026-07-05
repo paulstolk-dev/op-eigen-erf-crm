@@ -64,6 +64,24 @@ function StatCard({
   );
 }
 
+// Rapportstatus per lead: verzonden > gegenereerd (concept) > nog niets.
+function reportBadge(
+  erfscan?: Erfscan | null,
+): { label: string; cls: string } | null {
+  if (!erfscan) return null;
+  if (erfscan.sent_at)
+    return {
+      label: "Verzonden",
+      cls: "bg-green-100 text-green-700 ring-green-600/20",
+    };
+  if (erfscan.report_pdf_path || erfscan.draft_email_body)
+    return {
+      label: "Gegenereerd",
+      cls: "bg-amber-100 text-amber-700 ring-amber-600/20",
+    };
+  return null;
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -196,13 +214,14 @@ export default async function DashboardPage() {
                 <th className="px-4 py-3 font-medium">Score</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
                 <th className="px-4 py-3 font-medium">Conclusie</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">Rapport</th>
                 <th className="px-4 py-3 font-medium">Volgende actie</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                     Nog geen leads.
                   </td>
                 </tr>
@@ -214,6 +233,7 @@ export default async function DashboardPage() {
                   lead.email ||
                   "—";
                 const conclusie = erfscan?.conclusie;
+                const rapport = reportBadge(erfscan);
                 return (
                   <tr key={lead.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -243,6 +263,17 @@ export default async function DashboardPage() {
                           }`}
                         >
                           {CONCLUSIE_LABELS[conclusie] ?? conclusie}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {rapport ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${rapport.cls}`}
+                        >
+                          {rapport.label}
                         </span>
                       ) : (
                         <span className="text-slate-300">—</span>
