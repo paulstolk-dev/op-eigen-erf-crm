@@ -20,6 +20,18 @@ const ERF = "#718d69";
 const SCAN_URL = "https://opeigenerf.nl/haalbaarheidsscan";
 const KENNISMAKING_URL = "https://opeigenerf.nl/kennismaking";
 
+// Scan-link met de leadgegevens vooringevuld, zodat het formulier op de
+// haalbaarheidsscan-pagina alvast klopt (?email=&postcode=&huisnummer=…).
+function buildScanUrl(lead: Lead): string {
+  const p = new URLSearchParams();
+  if (lead.email) p.set("email", lead.email);
+  if (lead.postcode) p.set("postcode", lead.postcode);
+  if (lead.huisnummer) p.set("huisnummer", lead.huisnummer);
+  if (lead.toevoeging) p.set("toevoeging", lead.toevoeging);
+  const qs = p.toString();
+  return qs ? `${SCAN_URL}?${qs}` : SCAN_URL;
+}
+
 // Uitslag (intern groen/oranje/rood) → begrijpelijk woord + kleur + toelichting.
 const CONCLUSIE: Record<
   string,
@@ -139,10 +151,12 @@ function ReportPdf({
   erfscan,
   content,
   luchtfoto,
+  scanUrl,
 }: {
   erfscan: Erfscan;
   content: ReportContent;
   luchtfoto: string | null;
+  scanUrl: string;
 }) {
   const d = (erfscan.dossier ?? {}) as Record<string, any>;
   const adres = d.locatie?.weergavenaam || "Onbekend adres";
@@ -222,16 +236,16 @@ function ReportPdf({
 
         {/* Klikbaar CTA-blok → haalbaarheidsscan */}
         <View style={s.scanBox} wrap={false}>
-          <Link src={SCAN_URL} style={s.scanTitle}>
+          <Link src={scanUrl} style={s.scanTitle}>
             In de uitgebreide scan (€99) kijken we verder »
           </Link>
           {SCAN_PUNTEN.map((punt, i) => (
-            <Link key={i} src={SCAN_URL} style={s.scanBullet}>
+            <Link key={i} src={scanUrl} style={s.scanBullet}>
               <Text style={s.scanArrow}>• </Text>
               <Text>{punt}</Text>
             </Link>
           ))}
-          <Link src={SCAN_URL} style={s.scanCta}>
+          <Link src={scanUrl} style={s.scanCta}>
             Start de Haalbaarheidsscan » opeigenerf.nl/haalbaarheidsscan
           </Link>
         </View>
@@ -241,7 +255,7 @@ function ReportPdf({
           beoordeling op basis van open data (Kadaster/BRK, PDOK) en landelijke
           regels. Géén juridisch advies, vergunning of definitieve maatvoering. De
           exacte bouwruimte en lokale regels worden bepaald in de{" "}
-          <Link src={SCAN_URL} style={{ color: ERF }}>
+          <Link src={scanUrl} style={{ color: ERF }}>
             Haalbaarheidsscan
           </Link>
           . Vragen? Plan een gratis gesprek: {KENNISMAKING_URL}. © opeigenerf.nl
@@ -256,7 +270,7 @@ export async function renderReportPdf(
   erfscan: Erfscan,
   content: ReportContent,
 ): Promise<Buffer> {
-  void lead;
+  const scanUrl = buildScanUrl(lead);
   // Luchtfoto uit de privé-bucket ophalen en als data-URI insluiten.
   let luchtfoto: string | null = null;
   if (erfscan.luchtfoto_path) {
@@ -283,6 +297,11 @@ export async function renderReportPdf(
     }
   }
   return renderToBuffer(
-    <ReportPdf erfscan={erfscan} content={content} luchtfoto={luchtfoto} />,
+    <ReportPdf
+      erfscan={erfscan}
+      content={content}
+      luchtfoto={luchtfoto}
+      scanUrl={scanUrl}
+    />,
   );
 }
