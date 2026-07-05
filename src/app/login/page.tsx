@@ -1,13 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { roleLandingPath } from "@/lib/portal";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) redirect("/dashboard");
+  const dest = await roleLandingPath();
+  if (dest) redirect(dest);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">

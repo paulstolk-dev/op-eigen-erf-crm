@@ -14,10 +14,16 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
-      // Confirm the user is actually on the allowlist (defence in depth).
+      // Routeer op rol: CRM -> allowlist, anders aanbieder-portaal.
       const { data: allowed } = await supabase.rpc("is_allowed_user");
-      if (allowed) {
-        return NextResponse.redirect(new URL(next, request.url));
+      let dest: string | null = allowed ? next : null;
+      if (!allowed) {
+        const { data: status } = await supabase.rpc("my_aanbieder_status");
+        if (status === "approved") dest = "/portal";
+        else if (status === "pending" || status === "geweigerd") dest = "/portal/status";
+      }
+      if (dest) {
+        return NextResponse.redirect(new URL(dest, request.url));
       }
       await supabase.auth.signOut();
       return NextResponse.redirect(

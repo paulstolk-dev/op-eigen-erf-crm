@@ -10,6 +10,25 @@ type Membership = {
   email: string | null;
 };
 
+// Bepaalt waar een INGELOGDE gebruiker heen moet op basis van rol:
+//   CRM-medewerker      -> /dashboard
+//   goedgekeurde aanbieder -> /portal
+//   wachtend/afgewezen  -> /portal/status
+//   ingelogd zonder rol -> null (aanroeper beslist: uitloggen/geen-toegang)
+export async function roleLandingPath(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: allowed } = await supabase.rpc("is_allowed_user");
+  if (allowed) return "/dashboard";
+  const { data: status } = await supabase.rpc("my_aanbieder_status");
+  if (status === "approved") return "/portal";
+  if (status === "pending" || status === "geweigerd") return "/portal/status";
+  return null;
+}
+
 // Haalt de ingelogde gebruiker + zijn aanbieder-lidmaatschap op (elke status).
 export async function getAanbiederContext() {
   const supabase = await createClient();
