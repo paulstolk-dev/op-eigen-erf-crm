@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
+import { DashboardChart, type DayPoint } from "@/components/dashboard-chart";
 import { StatusBadge } from "@/components/status-badge";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead, SCORE_ACTIE_KORT } from "@/lib/lead-score";
@@ -115,6 +116,29 @@ export default async function DashboardPage() {
   const kostenPerQualified =
     hasSpend && qualified30 ? eur(spend30 / qualified30) : "—";
 
+  // Dagelijkse reeks (laatste 30 dagen): leads/dag + ads-kosten/dag.
+  const DAYS = 30;
+  const now = Date.now();
+  const leadsPerDay = new Map<string, number>();
+  for (const r of rows) {
+    const d = (r.lead.created_at ?? "").slice(0, 10);
+    if (d) leadsPerDay.set(d, (leadsPerDay.get(d) ?? 0) + 1);
+  }
+  const costPerDay = new Map<string, number>();
+  for (const s of adSpend ?? []) {
+    costPerDay.set(s.date, (costPerDay.get(s.date) ?? 0) + Number(s.cost_eur));
+  }
+  const chartData: DayPoint[] = Array.from({ length: DAYS }, (_, i) => {
+    const iso = new Date(now - (DAYS - 1 - i) * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    return {
+      date: iso,
+      leads: leadsPerDay.get(iso) ?? 0,
+      cost: costPerDay.get(iso) ?? 0,
+    };
+  });
+
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
@@ -156,6 +180,10 @@ export default async function DashboardPage() {
             value={kostenPerQualified}
             tone="erf"
           />
+        </div>
+
+        <div className="mb-5">
+          <DashboardChart data={chartData} />
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
