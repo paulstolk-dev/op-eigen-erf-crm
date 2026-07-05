@@ -19,6 +19,9 @@ export function AppHeader({ email }: { email?: string | null }) {
             <Link href="/aanbieders" className="transition hover:text-navy">
               Aanbieders
             </Link>
+            <Link href="/instellingen" className="transition hover:text-navy">
+              Instellingen
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-500">

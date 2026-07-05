@@ -18,6 +18,12 @@ export type Database = {
         Update: { created_at?: string; email?: string }
         Relationships: []
       }
+      app_settings: {
+        Row: { key: string; value: string; updated_at: string }
+        Insert: { key: string; value: string; updated_at?: string }
+        Update: { key?: string; value?: string; updated_at?: string }
+        Relationships: []
+      }
       ad_spend: {
         Row: {
           date: string

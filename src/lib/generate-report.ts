@@ -2,6 +2,7 @@ import "server-only";
 
 import { generateObject } from "ai";
 import { reportSchema, type ReportContent } from "./report-schema";
+import { getSetting, DEFAULT_EMAIL_PROMPT, SETTING_KEYS } from "./settings";
 import type { Lead, Erfscan } from "./database.types";
 
 const SYSTEM = `Je bent de erfcheck-analist van opeigenerf.nl. Je schrijft een gratis Erf Check
@@ -82,13 +83,19 @@ export async function generateReportContent(
   erfscan: Erfscan,
 ): Promise<ReportContent> {
   const model = process.env.REPORT_MODEL || "anthropic/claude-haiku-4-5";
+  // Bewerkbare concept-mail-instructie uit de instellingen.
+  const emailPrompt = await getSetting(
+    SETTING_KEYS.reportEmailPrompt,
+    DEFAULT_EMAIL_PROMPT,
+  );
   const { object } = await generateObject({
     model,
     schema: reportSchema,
     system: SYSTEM,
     prompt:
       `Stel het Erf Check-rapport en een concept-mail op voor deze lead.\n\n` +
-      `FEITEN (alleen deze gebruiken):\n${feiten(lead, erfscan)}`,
+      `FEITEN (alleen deze gebruiken):\n${feiten(lead, erfscan)}\n\n` +
+      `INSTRUCTIES VOOR DE CONCEPT-MAIL (concept_mail):\n${emailPrompt}`,
   });
   return object;
 }

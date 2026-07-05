@@ -1,0 +1,60 @@
+import "server-only";
+
+import { createAdminClient } from "@/lib/supabase/admin";
+import { generateReportContent } from "@/lib/generate-report";
+import { renderReportPdf } from "@/app/leads/[id]/report-pdf";
+import type { Lead, Erfscan } from "@/lib/database.types";
+
+// Kern van de rapportgeneratie zonder auth: Claude → branded PDF → Storage →
+// erfscans bijgewerkt (status 'rendered' + concept-mail). Gebruikt door zowel
+// de handmatige knop als de automatische /api/generate-report route.
+export async function runReportGeneration(
+  leadId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient();
+  const { data: lead } = await admin
+    .from("leads")
+    .select("*")
+    .eq("id", leadId)
+    .single<Lead>();
+  const { data: erfscan } = await admin
+    .from("erfscans")
+    .select("*")
+    .eq("lead_id", leadId)
+    .single<Erfscan>();
+  if (!lead || !erfscan) return { ok: false, error: "Lead of erfscan niet gevonden." };
+
+  // Bij auto-generatie is er nog geen mens-bevestigde conclusie: neem de
+  // suggestie van de engine over zodat het rapport een kleur heeft.
+  let eff = erfscan;
+  if (!erfscan.conclusie) {
+    const sug = (
+      erfscan.dossier as { conclusie_suggestie?: { waarde?: string } } | null
+    )?.conclusie_suggestie?.waarde;
+    if (sug === "groen" || sug === "oranje" || sug === "rood") {
+      await admin.from("erfscans").update({ conclusie: sug }).eq("lead_id", leadId);
+      eff = { ...erfscan, conclusie: sug };
+    }
+  }
+
+  const content = await generateReportContent(lead, eff);
+  const pdf = await renderReportPdf(lead, eff, content);
+
+  const path = `${leadId}/rapport.pdf`;
+  const { error: upErr } = await admin.storage
+    .from("erfscans")
+    .upload(path, pdf, { contentType: "application/pdf", upsert: true });
+  if (upErr) return { ok: false, error: `Upload mislukt: ${upErr.message}` };
+
+  const { error } = await admin
+    .from("erfscans")
+    .update({
+      status: "rendered",
+      report_pdf_path: path,
+      draft_email_subject: content.concept_mail.onderwerp,
+      draft_email_body: content.concept_mail.body,
+    })
+    .eq("lead_id", leadId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
