@@ -46,6 +46,15 @@ function doelLabel(a?: string | null): string {
   return AUDIENCE_LABEL[a.toLowerCase()] ?? a;
 }
 
+function datum(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("nl-NL", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function adres(lead: Lead, erfscan?: Erfscan | null): string {
   const d = (erfscan?.dossier ?? {}) as Record<string, any>;
   return (
@@ -112,7 +121,11 @@ export default async function LeadsPage() {
       const erfscan = erfscanByLead.get(lead.id) ?? null;
       return { lead: lead as Lead, erfscan, score: scoreLead(lead as Lead, erfscan) };
     })
-    .sort((a, b) => b.score.score - a.score.score);
+    .sort(
+      (a, b) =>
+        new Date(b.lead.created_at ?? 0).getTime() -
+        new Date(a.lead.created_at ?? 0).getTime(),
+    );
 
   return (
     <div className="min-h-screen">
@@ -121,7 +134,7 @@ export default async function LeadsPage() {
         <div className="mb-5">
           <h1 className="text-lg font-semibold text-slate-900">Leads</h1>
           <p className="text-sm text-slate-500">
-            Leads op prioriteit (leadscore), met erfcheck-conclusie en positie in de opvolg-flow.
+            Leads op datum van binnenkomst (nieuw → oud), met leadscore, erfcheck-conclusie en positie in de opvolg-flow.
           </p>
         </div>
 
@@ -130,6 +143,7 @@ export default async function LeadsPage() {
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Lead</th>
+                <th className="px-4 py-3 font-medium">Ontvangen</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">Adres</th>
                 <th className="px-4 py-3 font-medium">Doel</th>
                 <th className="px-4 py-3 font-medium">Score</th>
@@ -142,7 +156,7 @@ export default async function LeadsPage() {
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                     Nog geen leads.
                   </td>
                 </tr>
@@ -164,6 +178,9 @@ export default async function LeadsPage() {
                       >
                         {naam}
                       </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                      {datum(lead.created_at)}
                     </td>
                     <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
                       {adres(lead, erfscan)}
