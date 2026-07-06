@@ -32,20 +32,6 @@ const EMPTY = new Set<string>();
 
 export const dynamic = "force-dynamic";
 
-const AUDIENCE_LABEL: Record<string, string> = {
-  ouders: "Ouders",
-  kind: "Kind",
-  kinderen: "Kind",
-  mantelzorg: "Mantelzorg",
-  verhuur: "Verhuur",
-  zelf: "Zelf",
-};
-
-function doelLabel(a?: string | null): string {
-  if (!a) return "—";
-  return AUDIENCE_LABEL[a.toLowerCase()] ?? a;
-}
-
 function datum(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", {
@@ -53,6 +39,18 @@ function datum(iso: string | null): string {
     month: "short",
     year: "numeric",
   });
+}
+
+// Indicatief plaatsbaar oppervlak op het achtererf (zelfde bron als de leadscore).
+function achtererf(erfscan?: Erfscan | null): string {
+  const r = ((erfscan?.dossier ?? {}) as Record<string, any>).ruimtelijk ?? {};
+  const m2 =
+    typeof r.max_vergunningvrij_m2 === "number"
+      ? r.max_vergunningvrij_m2
+      : typeof r.achtererf_proxy_m2 === "number"
+        ? r.achtererf_proxy_m2
+        : null;
+  return m2 != null ? `± ${m2} m²` : "—";
 }
 
 function adres(lead: Lead, erfscan?: Erfscan | null): string {
@@ -145,7 +143,7 @@ export default async function LeadsPage() {
                 <th className="px-4 py-3 font-medium">Lead</th>
                 <th className="px-4 py-3 font-medium">Ontvangen</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">Adres</th>
-                <th className="px-4 py-3 font-medium">Doel</th>
+                <th className="px-4 py-3 font-medium">Achtererf</th>
                 <th className="px-4 py-3 font-medium">Score</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
                 <th className="px-4 py-3 font-medium">Conclusie</th>
@@ -185,7 +183,9 @@ export default async function LeadsPage() {
                     <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
                       {adres(lead, erfscan)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{doelLabel(lead.audience)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                      {achtererf(erfscan)}
+                    </td>
                     <td className="px-4 py-3">
                       <ScoreBadge score={score.score} label={score.label} />
                     </td>
