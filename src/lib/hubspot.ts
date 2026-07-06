@@ -428,3 +428,111 @@ export async function syncAanbiederToHubspot(
     return { ok: false, error: msg };
   }
 }
+
+// --- Verstuurde e-mail loggen als HubSpot-activiteit --------------------------
+// "Naam <mail@x.nl>" of "mail@x.nl" -> { email, firstName?, lastName? }
+function parseAddress(input: string): {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+} {
+  const m = input.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  const email = (m ? m[2] : input).trim();
+  const naam = (m ? m[1] : "").replace(/^"|"$/g, "").trim();
+  if (!naam) return { email };
+  const delen = naam.split(/\s+/);
+  return { email, firstName: delen[0], lastName: delen.slice(1).join(" ") || undefined };
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/\s*(p|div|tr|h[1-6]|li)\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// Logt een verstuurde e-mail op de HubSpot-tijdlijn van het contact + de company
+// van deze aanbieder. Best-effort: gebruikt de al-gesyncte company-id en (her)vindt
+// het contact op e-mail. Faalt stil als HubSpot niet is geconfigureerd.
+export async function logAanbiederEmail(
+  aanbiederId: string,
+  opts: { subject: string; html: string; from: string; to: string; sentAtIso: string },
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  if (!hubspotConfigured()) return { ok: true, skipped: true };
+  const admin = createAdminClient();
+  const { data: cs } = await admin
+    .from("hubspot_company_sync")
+    .select("company_id")
+    .eq("aanbieder_id", aanbiederId)
+    .maybeSingle();
+  const companyId = cs?.company_id ?? undefined;
+
+  try {
+    // Contact-id ophalen/aanmaken op e-mail (idempotent).
+    const to = parseAddress(opts.to);
+    const upc = await hs<{ results?: { id: string }[] }>(
+      "/crm/v3/objects/contacts/batch/upsert",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          inputs: [{ idProperty: "email", id: to.email, properties: { email: to.email } }],
+        }),
+      },
+    );
+    const contactId = upc?.results?.[0]?.id;
+
+    const from = parseAddress(opts.from);
+    const headers = {
+      from: {
+        email: from.email,
+        ...(from.firstName ? { firstName: from.firstName } : {}),
+        ...(from.lastName ? { lastName: from.lastName } : {}),
+      },
+      to: [{ email: to.email }],
+      cc: [],
+      bcc: [],
+    };
+
+    const created = await hs<{ id: string }>("/crm/v3/objects/emails", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          hs_timestamp: opts.sentAtIso,
+          hs_email_direction: "EMAIL",
+          hs_email_status: "SENT",
+          hs_email_subject: opts.subject,
+          hs_email_html: opts.html,
+          hs_email_text: htmlToText(opts.html),
+          hs_email_headers: JSON.stringify(headers),
+        },
+      }),
+    });
+    const emailId = created?.id;
+    if (!emailId) return { ok: false, error: "Geen email-id van HubSpot." };
+
+    // Koppelen aan contact + company (default-associaties).
+    if (contactId) {
+      await hs(
+        `/crm/v4/objects/emails/${emailId}/associations/default/contacts/${contactId}`,
+        { method: "PUT" },
+      );
+    }
+    if (companyId) {
+      await hs(
+        `/crm/v4/objects/emails/${emailId}/associations/default/companies/${companyId}`,
+        { method: "PUT" },
+      );
+    }
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Onbekende fout";
+    console.error("HubSpot: e-mail loggen mislukt:", msg);
+    return { ok: false, error: msg };
+  }
+}

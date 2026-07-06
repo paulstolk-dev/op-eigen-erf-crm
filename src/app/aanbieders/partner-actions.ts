@@ -14,7 +14,7 @@ import {
   DEFAULT_NURTURE_BCC,
 } from "@/lib/settings";
 import { PARTNER_STATUS } from "@/lib/aanbieders-constants";
-import { syncAanbiederToHubspot } from "@/lib/hubspot";
+import { syncAanbiederToHubspot, logAanbiederEmail } from "@/lib/hubspot";
 import type { TablesUpdate } from "@/lib/database.types";
 
 async function requireCrm() {
@@ -102,11 +102,21 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
   });
   if (!ok) return { ok: false, error: "Versturen mislukt (RESEND_API_KEY of adres?)." };
 
+  const sentAtIso = new Date().toISOString();
   await admin
     .from("aanbieders")
-    .update({ partner_status: "benaderd", partner_benaderd_at: new Date().toISOString() })
+    .update({ partner_status: "benaderd", partner_benaderd_at: sentAtIso })
     .eq("id", aanbiederId);
+  // Eerst company/contact (her)syncen, dan de verstuurde mail op de HubSpot-
+  // tijdlijn loggen. Beide best-effort: HubSpot-fouten blokkeren de verzending niet.
   await syncAanbiederToHubspot(aanbiederId).catch(() => {});
+  await logAanbiederEmail(aanbiederId, {
+    subject,
+    html,
+    from,
+    to: a.contact_email,
+    sentAtIso,
+  }).catch(() => {});
   revalidatePath("/aanbieders/partners");
   return { ok: true };
 }
