@@ -1,9 +1,11 @@
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 // Leadscore — kwaliteit/prioriteit van de lead (los van de erfcheck-conclusie).
-// Regel: tel een factor alleen mee als de info bekend is. Uitzondering: budget
-// 'onbekend of laag' is een expliciete -20 (een lead die geen budget deelt is
-// minder kansrijk), conform de scorecriteria.
+// Regel: tel een factor alleen mee als de info bekend is.
+//
+// Zwaartepunt = ruimte op het achtererf. Kan er indicatief ≥ 40 m² vergunningvrij
+// geplaatst worden, dan is dit een sterke lead (+50). Budget dat bekend-laag of
+// onbekend is telt licht negatief (-10). Eindscore wordt geclamped op 0–100.
 
 export type ScoreLabel = "groen" | "oranje" | "rood";
 export type ScoreFactor = { factor: string; punten: number };
@@ -68,6 +70,26 @@ export function scoreLead(lead: Lead, erfscan?: Erfscan | null): LeadScore {
     .join(" ")
     .toLowerCase();
 
+  // === Achtererf: indicatief plaatsbaar oppervlak (kern van de leadkwaliteit) ===
+  // max_vergunningvrij_m2 = hoeveel m² er indicatief vergunningvrij op het
+  // achtererf geplaatst kan worden. Valt terug op de achtererf-proxy.
+  const ruimtelijk = (dossier.ruimtelijk ?? {}) as Record<string, any>;
+  const plaatsbaar =
+    typeof ruimtelijk.max_vergunningvrij_m2 === "number"
+      ? ruimtelijk.max_vergunningvrij_m2
+      : typeof ruimtelijk.achtererf_proxy_m2 === "number"
+        ? ruimtelijk.achtererf_proxy_m2
+        : null;
+  if (plaatsbaar !== null) {
+    if (plaatsbaar >= 40) {
+      b.push({ factor: `Achtererf: ≥ 40 m² plaatsbaar (${plaatsbaar} m²)`, punten: 50 });
+    } else if (plaatsbaar >= 25) {
+      b.push({ factor: `Achtererf: beperkt plaatsbaar (${plaatsbaar} m²)`, punten: 20 });
+    } else {
+      b.push({ factor: `Weinig bruikbaar achtererf (${plaatsbaar} m²)`, punten: -20 });
+    }
+  }
+
   // + Eigen erf aanwezig (erfscan vond een perceel)
   const perceel = dossier.perceel;
   if (perceel && (perceel.status === "ok" || perceel.oppervlakte_m2)) {
@@ -85,18 +107,23 @@ export function scoreLead(lead: Lead, erfscan?: Erfscan | null): LeadScore {
     b.push({ factor: "Doel: familie/mantelzorg", punten: 20 });
   }
 
-  // Budget: > €100k = +20; bekend & laag óf onbekend = -20
+  // Budget: > €100k = +20; bekend & laag óf onbekend = -10
   const budget = parseBudget(lead.budget);
   if (budget !== null) {
     if (budget > 100000) b.push({ factor: "Budget boven €100.000", punten: 20 });
-    else b.push({ factor: "Budget laag (< €100.000)", punten: -20 });
+    else b.push({ factor: "Budget laag (< €100.000)", punten: -10 });
   } else {
-    b.push({ factor: "Budget onbekend", punten: -20 });
+    b.push({ factor: "Budget onbekend", punten: -10 });
   }
 
   // + Termijn binnen 12 maanden
   if (termijnBinnen12(lead.startdatum, lead.planning) === true) {
     b.push({ factor: "Termijn binnen 12 maanden", punten: 10 });
+  }
+
+  // + Telefoonnummer gedeeld (serieuze, bereikbare lead)
+  if (lead.telefoon && lead.telefoon.trim().length >= 8) {
+    b.push({ factor: "Telefoonnummer bekend", punten: 5 });
   }
 
   // + Foto / schets meegestuurd
@@ -126,7 +153,8 @@ export function scoreLead(lead: Lead, erfscan?: Erfscan | null): LeadScore {
     b.push({ factor: "Recreatie/vakantiegebruik", punten: -20 });
   }
 
-  const score = b.reduce((sum, x) => sum + x.punten, 0);
+  const ruw = b.reduce((sum, x) => sum + x.punten, 0);
+  const score = Math.max(0, Math.min(100, ruw));
   const label = labelForScore(score);
   return { score, label, actie: SCORE_ACTIE[label], breakdown: b };
 }
