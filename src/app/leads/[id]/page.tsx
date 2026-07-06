@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/app-header";
 import { StatusBadge } from "@/components/status-badge";
 import { typeLabel, erfscanStatusLabel, ERFSCAN_STATUS_STYLES } from "@/lib/constants";
 import { StatusSelect } from "./status-select";
+import { NaamEditor } from "./naam-editor";
 import { DeleteLeadButton } from "./delete-lead-button";
 import { DeelPaneel } from "./deel-paneel";
 import { HubspotPanel } from "./hubspot-panel";
@@ -264,8 +265,11 @@ export default async function LeadDetailPage({
                 Contactgegevens
               </h2>
               <dl className="grid grid-cols-2 gap-4">
-                <Field label="Voornaam" value={lead.voornaam} />
-                <Field label="Achternaam" value={lead.achternaam} />
+                <NaamEditor
+                  leadId={lead.id}
+                  voornaam={lead.voornaam}
+                  achternaam={lead.achternaam}
+                />
                 <Field label="E-mail" value={lead.email} />
                 <Field label="Telefoon" value={lead.telefoon} />
                 <Field label="Adres" value={address} />

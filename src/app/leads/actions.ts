@@ -28,6 +28,26 @@ export async function updateLeadStatus(leadId: string, status: string) {
   revalidatePath(`/leads/${leadId}`);
 }
 
+export async function updateLeadNaam(
+  leadId: string,
+  voornaam: string,
+  achternaam: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { supabase } = await requireUser();
+  const vn = voornaam.trim() || null;
+  const an = achternaam.trim() || null;
+  const { error } = await supabase
+    .from("leads")
+    .update({ voornaam: vn, achternaam: an })
+    .eq("id", leadId);
+  if (error) return { ok: false, error: error.message };
+  // Naam ook naar HubSpot (firstname/lastname) doorzetten; best-effort.
+  await syncLeadToHubspot(leadId).catch(() => {});
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
 export async function addNote(leadId: string, body: string) {
   const trimmed = body.trim();
   if (!trimmed) return;
