@@ -82,7 +82,9 @@ export default async function DashboardPage({
     .limit(2000);
 
   const { data: erfscans } = await supabase.from("erfscans").select("*");
-  const { data: adSpend } = await supabase.from("ad_spend").select("date,cost_eur");
+  const { data: adSpend } = await supabase
+    .from("ad_spend")
+    .select("date,cost_eur,clicks");
   const erfscanByLead = new Map<string, Erfscan>(
     (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
   );
@@ -115,6 +117,15 @@ export default async function DashboardPage({
   const hasSpend = (adSpend ?? []).length > 0;
   const kostenPerLead = hasSpend && total ? eur(spend / total) : "—";
   const kostenPerQualified = hasSpend && qualified ? eur(spend / qualified) : "—";
+
+  // Kliks + CTL (click-to-lead): welk deel van de kliks werd een lead.
+  const clicks = (adSpend ?? [])
+    .filter((r) => inRange(r.date))
+    .reduce((s, r) => s + (r.clicks ?? 0), 0);
+  const ctl =
+    hasSpend && clicks
+      ? `${((total / clicks) * 100).toLocaleString("nl-NL", { maximumFractionDigits: 1 })}%`
+      : "—";
 
   // Dagelijkse reeks over de gekozen periode: leads/dag + ads-kosten/dag.
   const leadsPerDay = new Map<string, number>();
@@ -190,8 +201,10 @@ export default async function DashboardPage({
           </h2>
           <AdsSyncButton />
         </div>
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard label="Ad-spend" value={hasSpend ? eur(spend, 0) : "—"} />
+          <StatCard label="Kliks" value={hasSpend ? clicks.toLocaleString("nl-NL") : "—"} />
+          <StatCard label="CTL (klik → lead)" value={ctl} tone="erf" />
           <StatCard label="Kosten / lead" value={kostenPerLead} tone="erf" />
           <StatCard
             label="Kosten / qualified"
