@@ -116,7 +116,10 @@ function mergeFor(row: ErfscanRow): MergeValues {
 
 // Verstuurt per lead maximaal één due-en-nog-niet-verzonden stap (paceert de
 // reeks, voorkomt bursts). Anker = het moment dat het rapport is verstuurd.
-export async function runNurture(opts?: { force?: boolean }): Promise<{
+export async function runNurture(opts?: {
+  force?: boolean;
+  leadId?: string;
+}): Promise<{
   ok: boolean;
   verstuurd: number;
   error?: string;
@@ -130,12 +133,14 @@ export async function runNurture(opts?: { force?: boolean }): Promise<{
     .order("volgorde", { ascending: true });
   if (!steps || steps.length === 0) return { ok: true, verstuurd: 0 };
 
-  const { data: rows } = await admin
+  let q = admin
     .from("erfscans")
     .select(
       "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer)",
     )
     .not("sent_at", "is", null);
+  if (opts?.leadId) q = q.eq("lead_id", opts.leadId);
+  const { data: rows } = await q;
   const scans = (rows ?? []) as unknown as ErfscanRow[];
   if (scans.length === 0) return { ok: true, verstuurd: 0 };
 

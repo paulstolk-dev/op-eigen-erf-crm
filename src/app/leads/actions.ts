@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isLeadStatus } from "@/lib/constants";
 import { syncLeadToHubspot } from "@/lib/hubspot";
+import { runNurture } from "@/lib/nurture";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -96,6 +97,18 @@ export async function removeShare(shareId: string, leadId: string) {
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/leads/${leadId}`);
   return { ok: true };
+}
+
+// Handmatig de eerstvolgende opvolgmail naar één lead sturen.
+// force = negeer de wachttijd. Retourneert of er iets verstuurd is.
+export async function verstuurNurtureVoorLead(leadId: string, force: boolean) {
+  const { supabase } = await requireUser();
+  const { data: allowed } = await supabase.rpc("is_allowed_user");
+  if (allowed !== true) return { ok: false, verstuurd: 0, error: "Alleen CRM-beheerders." };
+  const res = await runNurture({ force, leadId });
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  return res;
 }
 
 // Handmatig een lead naar HubSpot syncen (naast de automatische trigger).

@@ -9,6 +9,7 @@ import { StatusSelect } from "./status-select";
 import { DeleteLeadButton } from "./delete-lead-button";
 import { DeelPaneel } from "./deel-paneel";
 import { HubspotPanel } from "./hubspot-panel";
+import { NurturePanel } from "./nurture-panel";
 import { NotesSection } from "./notes-section";
 import { hubspotConfigured } from "@/lib/hubspot";
 import { ErfscanPanel } from "./erfscan-panel";
@@ -91,6 +92,23 @@ export default async function LeadDetailPage({
     .select("contact_id,deal_id,synced_at,error")
     .eq("lead_id", id)
     .maybeSingle();
+
+  // Opvolg-flow: eerstvolgende actieve stap voor deze lead.
+  const { data: flowSteps } = await supabase
+    .from("email_sequence_steps")
+    .select("id,sleutel,volgorde")
+    .eq("actief", true)
+    .order("volgorde", { ascending: true });
+  const { data: flowSends } = await supabase
+    .from("email_sequence_sends")
+    .select("step_id")
+    .eq("lead_id", id);
+  const sentStepIds = new Set((flowSends ?? []).map((s) => s.step_id));
+  const nextFlowStep =
+    (flowSteps ?? []).find((s) => !sentStepIds.has(s.id))?.sleutel.toUpperCase() ??
+    null;
+  const flowDelivered = Boolean(erfscan?.sent_at);
+  const flowUitFlow = lead.status === "gewonnen" || lead.status === "verloren";
 
   // Signed URL voor de privé-luchtfoto (server-side, service role).
   let luchtfotoUrl: string | null = null;
@@ -330,6 +348,18 @@ export default async function LeadDetailPage({
                 leadId={lead.id}
                 shares={shares}
                 aanbieders={actieveAanbieders ?? []}
+              />
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">
+                Opvolg-flow
+              </h2>
+              <NurturePanel
+                leadId={lead.id}
+                nextStep={nextFlowStep}
+                delivered={flowDelivered}
+                uitFlow={flowUitFlow}
               />
             </section>
 
