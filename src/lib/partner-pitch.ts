@@ -34,10 +34,15 @@ export function renderPitch(
   pitch: Pitch,
   aanbieder: { naam: string; contact_naam: string | null },
 ): { subject: string; html: string } {
+  // Contactpersoon is optioneel: zonder naam vallen we terug op "team van <aanbieder>"
+  // zodat de aanhef netjes blijft ("Beste team van Firma X," i.p.v. "Beste,").
+  const contactNaam = aanbieder.contact_naam?.trim()
+    ? aanbieder.contact_naam.trim()
+    : `team van ${aanbieder.naam}`;
   const merge = (t: string) =>
     t
       .replace(/\{\{\s*aanbieder_naam\s*\}\}/g, aanbieder.naam)
-      .replace(/\{\{\s*contact_naam\s*\}\}/g, aanbieder.contact_naam || "")
+      .replace(/\{\{\s*contact_naam\s*\}\}/g, contactNaam)
       .replace(/Beste\s+,/g, "Beste,");
 
   const subject = merge(pitch.subject);

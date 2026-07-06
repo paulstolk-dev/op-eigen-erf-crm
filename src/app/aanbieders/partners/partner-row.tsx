@@ -69,7 +69,7 @@ export function PartnerRow({ row }: { row: Row }) {
           className={inp}
           value={naam}
           onChange={(e) => setNaam(e.target.value)}
-          placeholder="Contactpersoon"
+          placeholder="Contactpersoon (optioneel)"
         />
       </td>
       <td className="px-3 py-3">
