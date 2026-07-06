@@ -28,7 +28,13 @@ function dayLabel(iso: string): string {
   return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function DashboardChart({ data }: { data: DayPoint[] }) {
+export function DashboardChart({
+  data,
+  periodLabel = "laatste 30 dagen",
+}: {
+  data: DayPoint[];
+  periodLabel?: string;
+}) {
   const [hover, setHover] = useState<number | null>(null);
 
   const n = Math.max(1, data.length);
@@ -57,7 +63,7 @@ export function DashboardChart({ data }: { data: DayPoint[] }) {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-900">
           Leads &amp; advertentiekosten per dag{" "}
-          <span className="font-normal text-slate-400">(laatste 30 dagen)</span>
+          <span className="font-normal text-slate-400">({periodLabel})</span>
         </h2>
         <div className="flex items-center gap-4 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">

@@ -27,7 +27,7 @@ export function DeleteLeadButton({
     startTransition(async () => {
       try {
         await deleteLead(leadId);
-        router.push("/dashboard");
+        router.push("/leads");
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Verwijderen mislukt.");

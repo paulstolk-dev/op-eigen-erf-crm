@@ -14,6 +14,9 @@ export function AppHeader({ email }: { email?: string | null }) {
           </Link>
           <nav className="flex items-center gap-4 text-sm font-medium text-slate-600">
             <Link href="/dashboard" className="transition hover:text-navy">
+              Dashboard
+            </Link>
+            <Link href="/leads" className="transition hover:text-navy">
               Leads
             </Link>
             <Link href="/aanbieders" className="transition hover:text-navy">

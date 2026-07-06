@@ -1,6 +1,176 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/app-header";
+import { StatusBadge } from "@/components/status-badge";
+import { ScoreBadge } from "@/components/score-badge";
+import { scoreLead, SCORE_ACTIE_KORT } from "@/lib/lead-score";
+import { CONCLUSIE_LABELS, CONCLUSIE_STYLES } from "@/lib/constants";
+import type { Lead, Erfscan } from "@/lib/database.types";
 
-// De losse leadslijst is samengevoegd met het dashboard.
-export default function LeadsIndex() {
-  redirect("/dashboard");
+export const dynamic = "force-dynamic";
+
+const AUDIENCE_LABEL: Record<string, string> = {
+  ouders: "Ouders",
+  kind: "Kind",
+  kinderen: "Kind",
+  mantelzorg: "Mantelzorg",
+  verhuur: "Verhuur",
+  zelf: "Zelf",
+};
+
+function doelLabel(a?: string | null): string {
+  if (!a) return "—";
+  return AUDIENCE_LABEL[a.toLowerCase()] ?? a;
+}
+
+function adres(lead: Lead, erfscan?: Erfscan | null): string {
+  const d = (erfscan?.dossier ?? {}) as Record<string, any>;
+  return (
+    d.locatie?.woonplaats ||
+    d.locatie?.gemeente ||
+    [lead.postcode, lead.huisnummer].filter(Boolean).join(" ") ||
+    "—"
+  );
+}
+
+// Rapportstatus per lead: verzonden > gegenereerd (concept) > nog niets.
+function reportBadge(
+  erfscan?: Erfscan | null,
+): { label: string; cls: string } | null {
+  if (!erfscan) return null;
+  if (erfscan.sent_at)
+    return {
+      label: "Verzonden",
+      cls: "bg-green-100 text-green-700 ring-green-600/20",
+    };
+  if (erfscan.report_pdf_path || erfscan.draft_email_body)
+    return {
+      label: "Gegenereerd",
+      cls: "bg-amber-100 text-amber-700 ring-amber-600/20",
+    };
+  return null;
+}
+
+export default async function LeadsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: leads } = await supabase
+    .from("leads")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+
+  const { data: erfscans } = await supabase.from("erfscans").select("*");
+  const erfscanByLead = new Map<string, Erfscan>(
+    (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
+  );
+
+  const rows = (leads ?? [])
+    .map((lead) => {
+      const erfscan = erfscanByLead.get(lead.id) ?? null;
+      return { lead: lead as Lead, erfscan, score: scoreLead(lead as Lead, erfscan) };
+    })
+    .sort((a, b) => b.score.score - a.score.score);
+
+  return (
+    <div className="min-h-screen">
+      <AppHeader email={user?.email} />
+      <main className="mx-auto max-w-7xl px-4 py-6">
+        <div className="mb-5">
+          <h1 className="text-lg font-semibold text-slate-900">Leads</h1>
+          <p className="text-sm text-slate-500">
+            Leads op prioriteit (leadscore), met erfcheck-conclusie en volgende actie.
+          </p>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-medium">Lead</th>
+                <th className="hidden px-4 py-3 font-medium sm:table-cell">Adres</th>
+                <th className="px-4 py-3 font-medium">Doel</th>
+                <th className="px-4 py-3 font-medium">Score</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
+                <th className="px-4 py-3 font-medium">Conclusie</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">Rapport</th>
+                <th className="px-4 py-3 font-medium">Volgende actie</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                    Nog geen leads.
+                  </td>
+                </tr>
+              )}
+              {rows.map(({ lead, erfscan, score }) => {
+                const naam =
+                  lead.naam ||
+                  [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
+                  lead.email ||
+                  "—";
+                const conclusie = erfscan?.conclusie;
+                const rapport = reportBadge(erfscan);
+                return (
+                  <tr key={lead.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/leads/${lead.id}`}
+                        className="font-medium text-slate-900 hover:underline"
+                      >
+                        {naam}
+                      </Link>
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
+                      {adres(lead, erfscan)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{doelLabel(lead.audience)}</td>
+                    <td className="px-4 py-3">
+                      <ScoreBadge score={score.score} label={score.label} />
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <StatusBadge status={lead.status} />
+                    </td>
+                    <td className="px-4 py-3">
+                      {conclusie ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                            CONCLUSIE_STYLES[conclusie] ??
+                            "bg-slate-100 text-slate-600 ring-slate-500/20"
+                          }`}
+                        >
+                          {CONCLUSIE_LABELS[conclusie] ?? conclusie}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {rapport ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${rapport.cls}`}
+                        >
+                          {rapport.label}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {SCORE_ACTIE_KORT[score.label]}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  );
 }

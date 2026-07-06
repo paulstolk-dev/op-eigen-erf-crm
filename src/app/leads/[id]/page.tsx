@@ -141,10 +141,10 @@ export default async function LeadDetailPage({
       <AppHeader email={user?.email} />
       <main className="mx-auto max-w-4xl px-4 py-6">
         <Link
-          href="/dashboard"
+          href="/leads"
           className="text-sm text-slate-500 hover:text-slate-900"
         >
-          ← Terug naar dashboard
+          ← Terug naar leads
         </Link>
 
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">

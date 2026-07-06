@@ -2,38 +2,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { DashboardChart, type DayPoint } from "@/components/dashboard-chart";
+import { DashboardFilter } from "@/components/dashboard-filter";
 import { AdsSyncButton } from "./ads-sync-button";
-import { StatusBadge } from "@/components/status-badge";
-import { ScoreBadge } from "@/components/score-badge";
-import { scoreLead, SCORE_ACTIE_KORT } from "@/lib/lead-score";
-import { CONCLUSIE_LABELS, CONCLUSIE_STYLES } from "@/lib/constants";
+import { scoreLead } from "@/lib/lead-score";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
-
-const AUDIENCE_LABEL: Record<string, string> = {
-  ouders: "Ouders",
-  kind: "Kind",
-  kinderen: "Kind",
-  mantelzorg: "Mantelzorg",
-  verhuur: "Verhuur",
-  zelf: "Zelf",
-};
-
-function doelLabel(a?: string | null): string {
-  if (!a) return "—";
-  return AUDIENCE_LABEL[a.toLowerCase()] ?? a;
-}
-
-function adres(lead: Lead, erfscan?: Erfscan | null): string {
-  const d = (erfscan?.dossier ?? {}) as Record<string, any>;
-  return (
-    d.locatie?.woonplaats ||
-    d.locatie?.gemeente ||
-    [lead.postcode, lead.huisnummer].filter(Boolean).join(" ") ||
-    "—"
-  );
-}
 
 function StatCard({
   label,
@@ -65,35 +39,47 @@ function StatCard({
   );
 }
 
-// Rapportstatus per lead: verzonden > gegenereerd (concept) > nog niets.
-function reportBadge(
-  erfscan?: Erfscan | null,
-): { label: string; cls: string } | null {
-  if (!erfscan) return null;
-  if (erfscan.sent_at)
-    return {
-      label: "Verzonden",
-      cls: "bg-green-100 text-green-700 ring-green-600/20",
-    };
-  if (erfscan.report_pdf_path || erfscan.draft_email_body)
-    return {
-      label: "Gegenereerd",
-      cls: "bg-amber-100 text-amber-700 ring-amber-600/20",
-    };
-  return null;
+function isoDay(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
-export default async function DashboardPage() {
+// Aantal dagen tussen twee ISO-datums (inclusief), zodat we een preset kunnen herkennen.
+function dayCount(from: string, to: string): number {
+  const a = new Date(from + "T00:00:00Z").getTime();
+  const b = new Date(to + "T00:00:00Z").getTime();
+  return Math.max(1, Math.round((b - a) / 86400000) + 1);
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Standaardperiode: laatste 30 dagen. Overschrijfbaar via ?from=&to=.
+  const today = new Date();
+  const defaultTo = isoDay(today);
+  const defaultFrom = isoDay(new Date(today.getTime() - 29 * 86400000));
+  const from = sp.from || defaultFrom;
+  const to = sp.to || defaultTo;
+  // Inclusief de hele einddag: vergelijk op datum-deel.
+  const inRange = (d?: string | null) => {
+    const day = (d ?? "").slice(0, 10);
+    return day >= from && day <= to;
+  };
+  const nDays = dayCount(from, to);
+  const presetDays = [7, 30, 90, 365].includes(nDays) ? nDays : null;
+
   const { data: leads } = await supabase
     .from("leads")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(1000);
+    .limit(2000);
 
   const { data: erfscans } = await supabase.from("erfscans").select("*");
   const { data: adSpend } = await supabase.from("ad_spend").select("date,cost_eur");
@@ -101,12 +87,13 @@ export default async function DashboardPage() {
     (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
   );
 
+  // Alleen leads binnen de gekozen periode meetellen.
   const rows = (leads ?? [])
+    .filter((lead) => inRange(lead.created_at))
     .map((lead) => {
       const erfscan = erfscanByLead.get(lead.id) ?? null;
       return { lead: lead as Lead, erfscan, score: scoreLead(lead as Lead, erfscan) };
-    })
-    .sort((a, b) => b.score.score - a.score.score);
+    });
 
   const total = rows.length;
   const qualified = rows.filter((r) => r.score.score > 50).length;
@@ -114,14 +101,10 @@ export default async function DashboardPage() {
   const verloren = rows.filter((r) => r.lead.status === "verloren").length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
 
-  // Marketing: kosten per lead over de laatste 30 dagen (spend ÷ leads).
-  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
-  const cutoffDate = cutoff.slice(0, 10);
-  const spend30 = (adSpend ?? [])
-    .filter((r) => r.date >= cutoffDate)
+  // Marketing: ads-spend en kosten per lead over dezelfde periode.
+  const spend = (adSpend ?? [])
+    .filter((r) => inRange(r.date))
     .reduce((s, r) => s + Number(r.cost_eur), 0);
-  const leads30 = rows.filter((r) => (r.lead.created_at ?? "") >= cutoff);
-  const qualified30 = leads30.filter((r) => r.score.score > 50).length;
   const eur = (n: number, dec = 2) =>
     n.toLocaleString("nl-NL", {
       style: "currency",
@@ -130,14 +113,10 @@ export default async function DashboardPage() {
       maximumFractionDigits: dec,
     });
   const hasSpend = (adSpend ?? []).length > 0;
-  const kostenPerLead =
-    hasSpend && leads30.length ? eur(spend30 / leads30.length) : "—";
-  const kostenPerQualified =
-    hasSpend && qualified30 ? eur(spend30 / qualified30) : "—";
+  const kostenPerLead = hasSpend && total ? eur(spend / total) : "—";
+  const kostenPerQualified = hasSpend && qualified ? eur(spend / qualified) : "—";
 
-  // Dagelijkse reeks (laatste 30 dagen): leads/dag + ads-kosten/dag.
-  const DAYS = 30;
-  const now = Date.now();
+  // Dagelijkse reeks over de gekozen periode: leads/dag + ads-kosten/dag.
   const leadsPerDay = new Map<string, number>();
   for (const r of rows) {
     const d = (r.lead.created_at ?? "").slice(0, 10);
@@ -145,12 +124,12 @@ export default async function DashboardPage() {
   }
   const costPerDay = new Map<string, number>();
   for (const s of adSpend ?? []) {
-    costPerDay.set(s.date, (costPerDay.get(s.date) ?? 0) + Number(s.cost_eur));
+    if (inRange(s.date))
+      costPerDay.set(s.date, (costPerDay.get(s.date) ?? 0) + Number(s.cost_eur));
   }
-  const chartData: DayPoint[] = Array.from({ length: DAYS }, (_, i) => {
-    const iso = new Date(now - (DAYS - 1 - i) * 86400000)
-      .toISOString()
-      .slice(0, 10);
+  const fromMs = new Date(from + "T00:00:00Z").getTime();
+  const chartData: DayPoint[] = Array.from({ length: nDays }, (_, i) => {
+    const iso = isoDay(new Date(fromMs + i * 86400000));
     return {
       date: iso,
       leads: leadsPerDay.get(iso) ?? 0,
@@ -158,15 +137,29 @@ export default async function DashboardPage() {
     };
   });
 
+  const periodLabel =
+    presetDays === 7
+      ? "laatste 7 dagen"
+      : presetDays === 30
+        ? "laatste 30 dagen"
+        : presetDays === 90
+          ? "laatste 90 dagen"
+          : presetDays === 365
+            ? "laatste 12 maanden"
+            : `${from} t/m ${to}`;
+
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-5">
-          <h1 className="text-lg font-semibold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">
-            Leads op prioriteit (leadscore), met erfcheck-conclusie en volgende actie.
-          </p>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900">Dashboard</h1>
+            <p className="text-sm text-slate-500">
+              Statistieken over de geselecteerde periode ({periodLabel}).
+            </p>
+          </div>
+          <DashboardFilter from={from} to={to} activeDays={presetDays} />
         </div>
 
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -198,102 +191,26 @@ export default async function DashboardPage() {
           <AdsSyncButton />
         </div>
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatCard label="Ad-spend (30d)" value={hasSpend ? eur(spend30, 0) : "—"} />
-          <StatCard label="Kosten / lead (30d)" value={kostenPerLead} tone="erf" />
+          <StatCard label="Ad-spend" value={hasSpend ? eur(spend, 0) : "—"} />
+          <StatCard label="Kosten / lead" value={kostenPerLead} tone="erf" />
           <StatCard
-            label="Kosten / qualified (30d)"
+            label="Kosten / qualified"
             value={kostenPerQualified}
             tone="erf"
           />
         </div>
 
         <div className="mb-5">
-          <DashboardChart data={chartData} />
+          <DashboardChart data={chartData} periodLabel={periodLabel} />
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Lead</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Adres</th>
-                <th className="px-4 py-3 font-medium">Doel</th>
-                <th className="px-4 py-3 font-medium">Score</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
-                <th className="px-4 py-3 font-medium">Conclusie</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Rapport</th>
-                <th className="px-4 py-3 font-medium">Volgende actie</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
-                    Nog geen leads.
-                  </td>
-                </tr>
-              )}
-              {rows.map(({ lead, erfscan, score }) => {
-                const naam =
-                  lead.naam ||
-                  [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
-                  lead.email ||
-                  "—";
-                const conclusie = erfscan?.conclusie;
-                const rapport = reportBadge(erfscan);
-                return (
-                  <tr key={lead.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/leads/${lead.id}`}
-                        className="font-medium text-slate-900 hover:underline"
-                      >
-                        {naam}
-                      </Link>
-                    </td>
-                    <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
-                      {adres(lead, erfscan)}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{doelLabel(lead.audience)}</td>
-                    <td className="px-4 py-3">
-                      <ScoreBadge score={score.score} label={score.label} />
-                    </td>
-                    <td className="hidden px-4 py-3 md:table-cell">
-                      <StatusBadge status={lead.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {conclusie ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                            CONCLUSIE_STYLES[conclusie] ??
-                            "bg-slate-100 text-slate-600 ring-slate-500/20"
-                          }`}
-                        >
-                          {CONCLUSIE_LABELS[conclusie] ?? conclusie}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                    <td className="hidden px-4 py-3 md:table-cell">
-                      {rapport ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${rapport.cls}`}
-                        >
-                          {rapport.label}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {SCORE_ACTIE_KORT[score.label]}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="flex justify-end">
+          <Link
+            href="/leads"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            Bekijk alle leads →
+          </Link>
         </div>
       </main>
     </div>

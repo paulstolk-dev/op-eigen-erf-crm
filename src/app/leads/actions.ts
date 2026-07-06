@@ -23,6 +23,7 @@ export async function updateLeadStatus(leadId: string, status: string) {
     .eq("id", leadId);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
+  revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
 }
 
@@ -51,6 +52,7 @@ export async function deleteLead(leadId: string) {
   const { error } = await supabase.from("leads").delete().eq("id", leadId);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
+  revalidatePath("/leads");
 }
 
 // --- Lead delen met aanbieders (RLS: 'crm all shares' vereist is_allowed_user) ---
