@@ -367,6 +367,93 @@ export type Database = {
           },
         ]
       }
+      email_sequence_steps: {
+        Row: {
+          id: string
+          sleutel: string
+          volgorde: number
+          dag_na_start: number
+          onderwerp: string
+          preview: string | null
+          body: string
+          cta_primary_label: string | null
+          cta_primary_url: string | null
+          cta_secondary_label: string | null
+          cta_secondary_url: string | null
+          actief: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          sleutel: string
+          volgorde?: number
+          dag_na_start?: number
+          onderwerp: string
+          preview?: string | null
+          body: string
+          cta_primary_label?: string | null
+          cta_primary_url?: string | null
+          cta_secondary_label?: string | null
+          cta_secondary_url?: string | null
+          actief?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sleutel?: string
+          volgorde?: number
+          dag_na_start?: number
+          onderwerp?: string
+          preview?: string | null
+          body?: string
+          cta_primary_label?: string | null
+          cta_primary_url?: string | null
+          cta_secondary_label?: string | null
+          cta_secondary_url?: string | null
+          actief?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_sequence_sends: {
+        Row: {
+          id: string
+          lead_id: string
+          step_id: string
+          sent_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id: string
+          step_id: string
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: string
+          step_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sequence_sends_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sequence_sends_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "email_sequence_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_notes: {
         Row: {
           author_email: string | null
@@ -586,5 +673,6 @@ export type Aanbieder = Tables<"aanbieders">
 export type Woning = Tables<"woningen">
 export type AanbiederUser = Tables<"aanbieder_users">
 export type LeadAanbieder = Tables<"lead_aanbieder">
+export type EmailSequenceStep = Tables<"email_sequence_steps">
 export type PortalLead =
   Database["public"]["Functions"]["get_portal_leads"]["Returns"][number]

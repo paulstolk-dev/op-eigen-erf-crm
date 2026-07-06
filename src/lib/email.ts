@@ -8,6 +8,7 @@ export async function sendEmail(opts: {
   html: string;
   from?: string;
   bcc?: string;
+  replyTo?: string;
   attachments?: { filename: string; content: string }[]; // content = base64
 }): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -27,6 +28,7 @@ export async function sendEmail(opts: {
       subject: opts.subject,
       html: opts.html,
       ...(opts.bcc ? { bcc: opts.bcc } : {}),
+      ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
       ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
     }),
   });
