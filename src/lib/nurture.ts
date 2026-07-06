@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { logLeadEmail } from "@/lib/hubspot";
 import {
   getSetting,
   SETTING_KEYS,
@@ -190,6 +191,14 @@ export async function runNurture(opts?: {
     await admin
       .from("email_sequence_sends")
       .insert({ lead_id: row.lead_id, step_id: step.id });
+    // Verstuurde mail op de HubSpot-tijdlijn van het contact + de deal loggen.
+    await logLeadEmail(row.lead_id, {
+      subject,
+      html,
+      from,
+      to: lead.email,
+      sentAtIso: new Date().toISOString(),
+    }).catch(() => {});
     verstuurd++;
   }
 

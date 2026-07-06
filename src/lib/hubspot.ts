@@ -457,6 +457,69 @@ function htmlToText(html: string): string {
     .trim();
 }
 
+// Maakt een HubSpot email-engagement (verstuurde mail) en koppelt die aan de
+// opgegeven objecten via default-associaties. Retourneert het email-id.
+async function createEmailEngagement(opts: {
+  subject: string;
+  html: string;
+  from: string;
+  to: string;
+  sentAtIso: string;
+  associations: { objectType: "contacts" | "companies" | "deals"; id: string }[];
+}): Promise<string | undefined> {
+  const to = parseAddress(opts.to);
+  const from = parseAddress(opts.from);
+  const headers = {
+    from: {
+      email: from.email,
+      ...(from.firstName ? { firstName: from.firstName } : {}),
+      ...(from.lastName ? { lastName: from.lastName } : {}),
+    },
+    to: [{ email: to.email }],
+    cc: [],
+    bcc: [],
+  };
+
+  const created = await hs<{ id: string }>("/crm/v3/objects/emails", {
+    method: "POST",
+    body: JSON.stringify({
+      properties: {
+        hs_timestamp: opts.sentAtIso,
+        hs_email_direction: "EMAIL",
+        hs_email_status: "SENT",
+        hs_email_subject: opts.subject,
+        hs_email_html: opts.html,
+        hs_email_text: htmlToText(opts.html),
+        hs_email_headers: JSON.stringify(headers),
+      },
+    }),
+  });
+  const emailId = created?.id;
+  if (!emailId) return undefined;
+
+  for (const a of opts.associations) {
+    await hs(
+      `/crm/v4/objects/emails/${emailId}/associations/default/${a.objectType}/${a.id}`,
+      { method: "PUT" },
+    );
+  }
+  return emailId;
+}
+
+// Contact-id ophalen/aanmaken op e-mail (idempotent).
+async function contactIdForEmail(email: string): Promise<string | undefined> {
+  const upc = await hs<{ results?: { id: string }[] }>(
+    "/crm/v3/objects/contacts/batch/upsert",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        inputs: [{ idProperty: "email", id: email, properties: { email } }],
+      }),
+    },
+  );
+  return upc?.results?.[0]?.id;
+}
+
 // Logt een verstuurde e-mail op de HubSpot-tijdlijn van het contact + de company
 // van deze aanbieder. Best-effort: gebruikt de al-gesyncte company-id en (her)vindt
 // het contact op e-mail. Faalt stil als HubSpot niet is geconfigureerd.
@@ -474,65 +537,50 @@ export async function logAanbiederEmail(
   const companyId = cs?.company_id ?? undefined;
 
   try {
-    // Contact-id ophalen/aanmaken op e-mail (idempotent).
     const to = parseAddress(opts.to);
-    const upc = await hs<{ results?: { id: string }[] }>(
-      "/crm/v3/objects/contacts/batch/upsert",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          inputs: [{ idProperty: "email", id: to.email, properties: { email: to.email } }],
-        }),
-      },
-    );
-    const contactId = upc?.results?.[0]?.id;
+    const contactId = await contactIdForEmail(to.email);
+    const associations: { objectType: "contacts" | "companies" | "deals"; id: string }[] = [];
+    if (contactId) associations.push({ objectType: "contacts", id: contactId });
+    if (companyId) associations.push({ objectType: "companies", id: companyId });
 
-    const from = parseAddress(opts.from);
-    const headers = {
-      from: {
-        email: from.email,
-        ...(from.firstName ? { firstName: from.firstName } : {}),
-        ...(from.lastName ? { lastName: from.lastName } : {}),
-      },
-      to: [{ email: to.email }],
-      cc: [],
-      bcc: [],
-    };
-
-    const created = await hs<{ id: string }>("/crm/v3/objects/emails", {
-      method: "POST",
-      body: JSON.stringify({
-        properties: {
-          hs_timestamp: opts.sentAtIso,
-          hs_email_direction: "EMAIL",
-          hs_email_status: "SENT",
-          hs_email_subject: opts.subject,
-          hs_email_html: opts.html,
-          hs_email_text: htmlToText(opts.html),
-          hs_email_headers: JSON.stringify(headers),
-        },
-      }),
-    });
-    const emailId = created?.id;
+    const emailId = await createEmailEngagement({ ...opts, associations });
     if (!emailId) return { ok: false, error: "Geen email-id van HubSpot." };
-
-    // Koppelen aan contact + company (default-associaties).
-    if (contactId) {
-      await hs(
-        `/crm/v4/objects/emails/${emailId}/associations/default/contacts/${contactId}`,
-        { method: "PUT" },
-      );
-    }
-    if (companyId) {
-      await hs(
-        `/crm/v4/objects/emails/${emailId}/associations/default/companies/${companyId}`,
-        { method: "PUT" },
-      );
-    }
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Onbekende fout";
-    console.error("HubSpot: e-mail loggen mislukt:", msg);
+    console.error("HubSpot: aanbieder-e-mail loggen mislukt:", msg);
+    return { ok: false, error: msg };
+  }
+}
+
+// Logt een verstuurde lead-mail (nurture) op de HubSpot-tijdlijn van het contact
+// + de deal van de lead. Best-effort; faalt stil zonder HubSpot-config.
+export async function logLeadEmail(
+  leadId: string,
+  opts: { subject: string; html: string; from: string; to: string; sentAtIso: string },
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  if (!hubspotConfigured()) return { ok: true, skipped: true };
+  const admin = createAdminClient();
+  const { data: map } = await admin
+    .from("hubspot_sync")
+    .select("contact_id, deal_id")
+    .eq("lead_id", leadId)
+    .maybeSingle();
+
+  try {
+    const to = parseAddress(opts.to);
+    const contactId = map?.contact_id ?? (await contactIdForEmail(to.email));
+    const dealId = map?.deal_id ?? undefined;
+    const associations: { objectType: "contacts" | "companies" | "deals"; id: string }[] = [];
+    if (contactId) associations.push({ objectType: "contacts", id: contactId });
+    if (dealId) associations.push({ objectType: "deals", id: dealId });
+
+    const emailId = await createEmailEngagement({ ...opts, associations });
+    if (!emailId) return { ok: false, error: "Geen email-id van HubSpot." };
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Onbekende fout";
+    console.error("HubSpot: lead-e-mail loggen mislukt:", msg);
     return { ok: false, error: msg };
   }
 }
