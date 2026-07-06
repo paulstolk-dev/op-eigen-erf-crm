@@ -192,15 +192,89 @@ export async function runNurture(opts?: {
       .from("email_sequence_sends")
       .insert({ lead_id: row.lead_id, step_id: step.id });
     // Verstuurde mail op de HubSpot-tijdlijn van het contact + de deal loggen.
-    await logLeadEmail(row.lead_id, {
+    const logged = await logLeadEmail(row.lead_id, {
       subject,
       html,
       from,
       to: lead.email,
       sentAtIso: new Date().toISOString(),
-    }).catch(() => {});
+    }).catch(() => ({ ok: false }) as { ok: boolean });
+    if (logged.ok) {
+      await admin
+        .from("email_sequence_sends")
+        .update({ hubspot_logged_at: new Date().toISOString() })
+        .eq("lead_id", row.lead_id)
+        .eq("step_id", step.id);
+    }
     verstuurd++;
   }
 
   return { ok: true, verstuurd };
+}
+
+// Logt reeds-verstuurde nurture-mails alsnog op de HubSpot-tijdlijn. Idempotent:
+// slaat sends met hubspot_logged_at over. Herrendert de mail met de opgeslagen
+// stap + huidige lead/erfscan-data en gebruikt het oorspronkelijke sent_at.
+export async function backfillNurtureHubspot(): Promise<{
+  ok: boolean;
+  gelogd: number;
+  overgeslagen: number;
+}> {
+  const admin = createAdminClient();
+
+  const { data: steps } = await admin.from("email_sequence_steps").select("*");
+  const stepById = new Map(
+    (steps ?? []).map((s) => [s.id, s as EmailSequenceStep]),
+  );
+
+  const { data: sends } = await admin
+    .from("email_sequence_sends")
+    .select("id, lead_id, step_id, sent_at, hubspot_logged_at")
+    .is("hubspot_logged_at", null)
+    .order("sent_at", { ascending: true });
+  if (!sends || sends.length === 0) return { ok: true, gelogd: 0, overgeslagen: 0 };
+
+  const from = await getSetting(SETTING_KEYS.nurtureFrom, DEFAULT_NURTURE_FROM);
+
+  let gelogd = 0;
+  let overgeslagen = 0;
+  for (const s of sends) {
+    const step = stepById.get(s.step_id);
+    if (!step) {
+      overgeslagen++;
+      continue;
+    }
+    const { data: scan } = await admin
+      .from("erfscans")
+      .select(
+        "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer)",
+      )
+      .eq("lead_id", s.lead_id)
+      .maybeSingle();
+    const row = scan as unknown as ErfscanRow | null;
+    const lead = row?.leads;
+    if (!lead?.email) {
+      overgeslagen++;
+      continue;
+    }
+    const { subject, html } = renderNurtureEmail(step, mergeFor(row!));
+    const res = await logLeadEmail(s.lead_id, {
+      subject,
+      html,
+      from,
+      to: lead.email,
+      sentAtIso: new Date(s.sent_at ?? Date.now()).toISOString(),
+    }).catch(() => ({ ok: false }) as { ok: boolean });
+    if (res.ok) {
+      await admin
+        .from("email_sequence_sends")
+        .update({ hubspot_logged_at: new Date().toISOString() })
+        .eq("id", s.id);
+      gelogd++;
+    } else {
+      overgeslagen++;
+    }
+  }
+
+  return { ok: true, gelogd, overgeslagen };
 }

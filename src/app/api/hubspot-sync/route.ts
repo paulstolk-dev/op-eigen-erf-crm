@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { syncLeadToHubspot, syncAanbiederToHubspot } from "@/lib/hubspot";
+import { backfillNurtureHubspot } from "@/lib/nurture";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
     if (provided !== secret) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  }
+
+  if (body.backfill_nurture === true) {
+    const res = await backfillNurtureHubspot();
+    return NextResponse.json(res, { status: res.ok ? 200 : 500 });
   }
 
   const record = (body.record ?? {}) as Record<string, unknown>;

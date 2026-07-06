@@ -457,53 +457,57 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-// Maakt een HubSpot email-engagement (verstuurde mail) en koppelt die aan de
-// opgegeven objecten via default-associaties. Retourneert het email-id.
+// Logt een verstuurde e-mail als HubSpot-engagement (v1) en koppelt die aan de
+// opgegeven contacten/deals/companies. De v1 Engagements-API zet het type correct
+// op EMAIL (verzonden) en vult afzender/ontvanger in metadata — waardoor de mail
+// als nette activiteit op de tijdlijn verschijnt. (De v3 objects/emails-route met
+// hs_email_headers deed dat niet: die werd INCOMING_EMAIL met lege ontvanger.)
 async function createEmailEngagement(opts: {
   subject: string;
   html: string;
   from: string;
   to: string;
   sentAtIso: string;
-  associations: { objectType: "contacts" | "companies" | "deals"; id: string }[];
+  contactIds?: string[];
+  dealIds?: string[];
+  companyIds?: string[];
 }): Promise<string | undefined> {
   const to = parseAddress(opts.to);
   const from = parseAddress(opts.from);
-  const headers = {
-    from: {
-      email: from.email,
-      ...(from.firstName ? { firstName: from.firstName } : {}),
-      ...(from.lastName ? { lastName: from.lastName } : {}),
+  const toNum = (ids?: string[]) =>
+    (ids ?? []).map((x) => Number(x)).filter((n) => Number.isFinite(n));
+
+  const created = await hs<{ engagement?: { id: number } }>(
+    "/engagements/v1/engagements",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        engagement: {
+          active: true,
+          type: "EMAIL",
+          timestamp: new Date(opts.sentAtIso).getTime(),
+        },
+        associations: {
+          contactIds: toNum(opts.contactIds),
+          dealIds: toNum(opts.dealIds),
+          companyIds: toNum(opts.companyIds),
+        },
+        metadata: {
+          from: {
+            email: from.email,
+            ...(from.firstName ? { firstName: from.firstName } : {}),
+            ...(from.lastName ? { lastName: from.lastName } : {}),
+          },
+          to: [{ email: to.email }],
+          subject: opts.subject,
+          html: opts.html,
+          text: htmlToText(opts.html),
+        },
+      }),
     },
-    to: [{ email: to.email }],
-    cc: [],
-    bcc: [],
-  };
-
-  const created = await hs<{ id: string }>("/crm/v3/objects/emails", {
-    method: "POST",
-    body: JSON.stringify({
-      properties: {
-        hs_timestamp: opts.sentAtIso,
-        hs_email_direction: "EMAIL",
-        hs_email_status: "SENT",
-        hs_email_subject: opts.subject,
-        hs_email_html: opts.html,
-        hs_email_text: htmlToText(opts.html),
-        hs_email_headers: JSON.stringify(headers),
-      },
-    }),
-  });
-  const emailId = created?.id;
-  if (!emailId) return undefined;
-
-  for (const a of opts.associations) {
-    await hs(
-      `/crm/v4/objects/emails/${emailId}/associations/default/${a.objectType}/${a.id}`,
-      { method: "PUT" },
-    );
-  }
-  return emailId;
+  );
+  const id = created?.engagement?.id;
+  return id ? String(id) : undefined;
 }
 
 // Contact-id ophalen/aanmaken op e-mail (idempotent).
@@ -539,11 +543,12 @@ export async function logAanbiederEmail(
   try {
     const to = parseAddress(opts.to);
     const contactId = await contactIdForEmail(to.email);
-    const associations: { objectType: "contacts" | "companies" | "deals"; id: string }[] = [];
-    if (contactId) associations.push({ objectType: "contacts", id: contactId });
-    if (companyId) associations.push({ objectType: "companies", id: companyId });
 
-    const emailId = await createEmailEngagement({ ...opts, associations });
+    const emailId = await createEmailEngagement({
+      ...opts,
+      contactIds: contactId ? [contactId] : [],
+      companyIds: companyId ? [companyId] : [],
+    });
     if (!emailId) return { ok: false, error: "Geen email-id van HubSpot." };
     return { ok: true };
   } catch (e) {
@@ -571,11 +576,12 @@ export async function logLeadEmail(
     const to = parseAddress(opts.to);
     const contactId = map?.contact_id ?? (await contactIdForEmail(to.email));
     const dealId = map?.deal_id ?? undefined;
-    const associations: { objectType: "contacts" | "companies" | "deals"; id: string }[] = [];
-    if (contactId) associations.push({ objectType: "contacts", id: contactId });
-    if (dealId) associations.push({ objectType: "deals", id: dealId });
 
-    const emailId = await createEmailEngagement({ ...opts, associations });
+    const emailId = await createEmailEngagement({
+      ...opts,
+      contactIds: contactId ? [contactId] : [],
+      dealIds: dealId ? [dealId] : [],
+    });
     if (!emailId) return { ok: false, error: "Geen email-id van HubSpot." };
     return { ok: true };
   } catch (e) {

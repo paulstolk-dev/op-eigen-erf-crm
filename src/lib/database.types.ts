@@ -436,18 +436,21 @@ export type Database = {
           lead_id: string
           step_id: string
           sent_at: string
+          hubspot_logged_at: string | null
         }
         Insert: {
           id?: string
           lead_id: string
           step_id: string
           sent_at?: string
+          hubspot_logged_at?: string | null
         }
         Update: {
           id?: string
           lead_id?: string
           step_id?: string
           sent_at?: string
+          hubspot_logged_at?: string | null
         }
         Relationships: [
           {
