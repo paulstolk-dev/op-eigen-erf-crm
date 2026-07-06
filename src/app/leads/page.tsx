@@ -3,9 +3,32 @@ import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { StatusBadge } from "@/components/status-badge";
 import { ScoreBadge } from "@/components/score-badge";
-import { scoreLead, SCORE_ACTIE_KORT } from "@/lib/lead-score";
+import { scoreLead } from "@/lib/lead-score";
 import { CONCLUSIE_LABELS, CONCLUSIE_STYLES } from "@/lib/constants";
 import type { Lead, Erfscan } from "@/lib/database.types";
+
+// Waar staat de lead in de opvolg-flow? Anker = het rapport is verstuurd.
+type FlowStep = { id: string; sleutel: string };
+function flowStatus(
+  erfscan: Erfscan | null,
+  status: string,
+  sent: Set<string>,
+  steps: FlowStep[],
+): { label: string; cls: string; plain?: boolean; title?: string } {
+  if (!erfscan?.sent_at)
+    return { label: "—", cls: "", plain: true, title: "Rapport nog niet verstuurd" };
+  if (status === "gewonnen" || status === "verloren")
+    return { label: "Uit flow", cls: "bg-slate-100 text-slate-500 ring-slate-400/20" };
+  const next = steps.find((s) => !sent.has(s.id));
+  if (!next)
+    return { label: "Afgerond", cls: "bg-green-100 text-green-700 ring-green-600/20" };
+  return {
+    label: next.sleutel.toUpperCase(),
+    cls: "bg-navy/10 text-navy ring-navy/20",
+    title: "Volgende opvolgmail",
+  };
+}
+const EMPTY = new Set<string>();
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +91,22 @@ export default async function LeadsPage() {
     (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
   );
 
+  // Flow-positie: actieve stappen + wat er per lead al verzonden is.
+  const { data: flowSteps } = await supabase
+    .from("email_sequence_steps")
+    .select("id,sleutel,volgorde")
+    .eq("actief", true)
+    .order("volgorde", { ascending: true });
+  const activeSteps = (flowSteps ?? []) as FlowStep[];
+  const { data: flowSends } = await supabase
+    .from("email_sequence_sends")
+    .select("lead_id,step_id");
+  const sentByLead = new Map<string, Set<string>>();
+  for (const s of flowSends ?? []) {
+    if (!sentByLead.has(s.lead_id)) sentByLead.set(s.lead_id, new Set());
+    sentByLead.get(s.lead_id)!.add(s.step_id);
+  }
+
   const rows = (leads ?? [])
     .map((lead) => {
       const erfscan = erfscanByLead.get(lead.id) ?? null;
@@ -82,7 +121,7 @@ export default async function LeadsPage() {
         <div className="mb-5">
           <h1 className="text-lg font-semibold text-slate-900">Leads</h1>
           <p className="text-sm text-slate-500">
-            Leads op prioriteit (leadscore), met erfcheck-conclusie en volgende actie.
+            Leads op prioriteit (leadscore), met erfcheck-conclusie en positie in de opvolg-flow.
           </p>
         </div>
 
@@ -97,7 +136,7 @@ export default async function LeadsPage() {
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
                 <th className="px-4 py-3 font-medium">Conclusie</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Rapport</th>
-                <th className="px-4 py-3 font-medium">Volgende actie</th>
+                <th className="px-4 py-3 font-medium">Flow</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -161,8 +200,27 @@ export default async function LeadsPage() {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {SCORE_ACTIE_KORT[score.label]}
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const flow = flowStatus(
+                          erfscan,
+                          lead.status,
+                          sentByLead.get(lead.id) ?? EMPTY,
+                          activeSteps,
+                        );
+                        return flow.plain ? (
+                          <span className="text-slate-300" title={flow.title}>
+                            {flow.label}
+                          </span>
+                        ) : (
+                          <span
+                            title={flow.title}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${flow.cls}`}
+                          >
+                            {flow.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                   </tr>
                 );
