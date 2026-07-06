@@ -121,6 +121,10 @@ export type Database = {
           bron_url: string | null
           laatst_gecontroleerd: string | null
           is_partner: boolean
+          contact_naam: string | null
+          contact_email: string | null
+          partner_status: string
+          partner_benaderd_at: string | null
           actief: boolean
           sortering: number
           created_at: string
@@ -150,6 +154,10 @@ export type Database = {
           bron_url?: string | null
           laatst_gecontroleerd?: string | null
           is_partner?: boolean
+          contact_naam?: string | null
+          contact_email?: string | null
+          partner_status?: string
+          partner_benaderd_at?: string | null
           actief?: boolean
           sortering?: number
           created_at?: string
@@ -178,6 +186,10 @@ export type Database = {
           bron_url?: string | null
           laatst_gecontroleerd?: string | null
           is_partner?: boolean
+          contact_naam?: string | null
+          contact_email?: string | null
+          partner_status?: string
+          partner_benaderd_at?: string | null
           actief?: boolean
           sortering?: number
           updated_at?: string

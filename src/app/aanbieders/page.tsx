@@ -61,6 +61,12 @@ export default async function AanbiedersPage({
           </div>
           <div className="flex items-center gap-2">
             <Link
+              href="/aanbieders/partners"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Partners (werving)
+            </Link>
+            <Link
               href="/aanbieders/aanvragen"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
