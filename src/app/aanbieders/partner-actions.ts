@@ -14,6 +14,7 @@ import {
   DEFAULT_NURTURE_BCC,
 } from "@/lib/settings";
 import { PARTNER_STATUS } from "@/lib/aanbieders-constants";
+import { syncAanbiederToHubspot } from "@/lib/hubspot";
 import type { TablesUpdate } from "@/lib/database.types";
 
 async function requireCrm() {
@@ -42,6 +43,7 @@ export async function setPartnerStatus(
   if (status === "partner") patch.is_partner = true;
   const { error } = await admin.from("aanbieders").update(patch).eq("id", aanbiederId);
   if (error) return { ok: false, error: error.message };
+  await syncAanbiederToHubspot(aanbiederId).catch(() => {});
   revalidatePath("/aanbieders/partners");
   return { ok: true };
 }
@@ -61,6 +63,8 @@ export async function saveContact(
     })
     .eq("id", aanbiederId);
   if (error) return { ok: false, error: error.message };
+  // Direct naar HubSpot pushen (naast de DB-trigger) voor snelle, betrouwbare sync.
+  await syncAanbiederToHubspot(aanbiederId).catch(() => {});
   revalidatePath("/aanbieders/partners");
   return { ok: true };
 }
@@ -102,6 +106,7 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
     .from("aanbieders")
     .update({ partner_status: "benaderd", partner_benaderd_at: new Date().toISOString() })
     .eq("id", aanbiederId);
+  await syncAanbiederToHubspot(aanbiederId).catch(() => {});
   revalidatePath("/aanbieders/partners");
   return { ok: true };
 }

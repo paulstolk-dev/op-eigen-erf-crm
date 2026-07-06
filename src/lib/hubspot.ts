@@ -136,6 +136,27 @@ async function ensureCompanyProperties() {
     fieldType: "text",
     groupName: "erfcheck",
   });
+  await ensureProperty("companies", {
+    name: "erfcheck_contactpersoon",
+    label: "Erfcheck contactpersoon",
+    type: "string",
+    fieldType: "text",
+    groupName: "erfcheck",
+  });
+  await ensureProperty("companies", {
+    name: "erfcheck_contact_email",
+    label: "Erfcheck contact-e-mail",
+    type: "string",
+    fieldType: "text",
+    groupName: "erfcheck",
+  });
+  await ensureProperty("companies", {
+    name: "erfcheck_partner_status",
+    label: "Erfcheck partnerstatus",
+    type: "string",
+    fieldType: "text",
+    groupName: "erfcheck",
+  });
   companyPropsEnsured = true;
 }
 
@@ -316,6 +337,9 @@ export async function syncAanbiederToHubspot(
     if (a.vestigingsplaats) props.city = a.vestigingsplaats;
     if (a.beschrijving) props.description = a.beschrijving.slice(0, 5000);
     if (a.prijsklasse) props.erfcheck_prijsklasse = a.prijsklasse;
+    if (a.contact_naam) props.erfcheck_contactpersoon = a.contact_naam;
+    if (a.contact_email) props.erfcheck_contact_email = a.contact_email;
+    if (a.partner_status) props.erfcheck_partner_status = a.partner_status;
 
     // 'domain' is in HubSpot geen unieke property → niet via batch/upsert.
     // Zoek daarom eerst een bestaande company op domein; anders aanmaken.
@@ -347,6 +371,42 @@ export async function syncAanbiederToHubspot(
         body: JSON.stringify({ properties: props }),
       });
       companyId = created?.id;
+    }
+
+    // Contactpersoon als echt HubSpot-contact aanmaken en aan de company koppelen,
+    // zodat de e-mail zichtbaar ónder de company verschijnt. Best-effort: een
+    // fout hier mag de geslaagde company-sync niet ongedaan maken.
+    if (a.contact_email && companyId) {
+      try {
+        await ensureContactProperties();
+        const delen = (a.contact_naam ?? "").trim().split(/\s+/).filter(Boolean);
+        const cprops: Record<string, string> = {
+          email: a.contact_email,
+          erfcheck_doelgroep: "aanbieder-contact",
+        };
+        if (delen[0]) cprops.firstname = delen[0];
+        if (delen.length > 1) cprops.lastname = delen.slice(1).join(" ");
+        const upc = await hs<{ results?: { id: string }[] }>(
+          "/crm/v3/objects/contacts/batch/upsert",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              inputs: [
+                { idProperty: "email", id: a.contact_email, properties: cprops },
+              ],
+            }),
+          },
+        );
+        const contactId = upc?.results?.[0]?.id;
+        if (contactId) {
+          await hs(
+            `/crm/v4/objects/companies/${companyId}/associations/default/contacts/${contactId}`,
+            { method: "PUT" },
+          );
+        }
+      } catch (e) {
+        console.error("HubSpot: contactpersoon koppelen mislukt:", e);
+      }
     }
 
     await admin.from("hubspot_company_sync").upsert(
