@@ -108,8 +108,8 @@ export async function sendReport(leadId: string): Promise<Result> {
     body: JSON.stringify({
       from: process.env.REPORT_FROM_EMAIL || "opeigenerf <noreply@opeigenerf.nl>",
       to,
-      // BCC-kopie naar jezelf (bijv. archief), behalve in testmodus (gaat toch al naar test-adres).
-      ...(process.env.REPORT_BCC && !testTo ? { bcc: process.env.REPORT_BCC } : {}),
+      // BCC-kopie naar het archief-adres, behalve in testmodus (gaat toch al naar test-adres).
+      ...(!testTo ? { bcc: process.env.REPORT_BCC || "info@opeigenerf.nl" } : {}),
       subject:
         (testTo ? `[TEST → ${lead?.email ?? "?"}] ` : "") +
         (erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl"),

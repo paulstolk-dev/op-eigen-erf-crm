@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       .select("*")
       .eq("lead_id", leadId)
       .single<Erfscan>();
-    const notify = process.env.LEAD_NOTIFY_EMAIL;
+    const notify = process.env.LEAD_NOTIFY_EMAIL || "info@opeigenerf.nl";
 
     if (lead && erfscan && notify) {
       const d = (erfscan.dossier ?? {}) as {

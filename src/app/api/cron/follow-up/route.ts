@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const notify = process.env.LEAD_NOTIFY_EMAIL;
+  const notify = process.env.LEAD_NOTIFY_EMAIL || "info@opeigenerf.nl";
   let processed = 0;
 
   for (const lead of leads ?? []) {
