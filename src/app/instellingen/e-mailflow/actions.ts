@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { setSetting, SETTING_KEYS } from "@/lib/settings";
 
 async function requireCrm() {
   const supabase = await createClient();
@@ -68,6 +69,24 @@ export async function addStep(): Promise<Result> {
   if (error) return { ok: false, error: error.message };
   revalidatePath("/instellingen/e-mailflow");
   return { ok: true };
+}
+
+export async function saveSender(
+  from: string,
+  replyTo: string,
+): Promise<Result> {
+  await requireCrm();
+  if (!from.trim() || !replyTo.trim()) {
+    return { ok: false, error: "Afzender en reply-to zijn verplicht." };
+  }
+  try {
+    await setSetting(SETTING_KEYS.nurtureFrom, from.trim());
+    await setSetting(SETTING_KEYS.nurtureReplyTo, replyTo.trim());
+    revalidatePath("/instellingen/e-mailflow");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Opslaan mislukt." };
+  }
 }
 
 export async function deleteStep(id: string): Promise<Result> {

@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { SequenceEditor } from "./sequence-editor";
+import { SenderForm } from "./sender-form";
+import {
+  getSetting,
+  SETTING_KEYS,
+  DEFAULT_NURTURE_FROM,
+  DEFAULT_NURTURE_REPLY_TO,
+} from "@/lib/settings";
 import type { EmailSequenceStep } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +26,11 @@ export default async function EmailFlowPage() {
     .from("email_sequence_steps")
     .select("*")
     .order("volgorde", { ascending: true });
+
+  const [from, replyTo] = await Promise.all([
+    getSetting(SETTING_KEYS.nurtureFrom, DEFAULT_NURTURE_FROM),
+    getSetting(SETTING_KEYS.nurtureReplyTo, DEFAULT_NURTURE_REPLY_TO),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -45,6 +57,13 @@ export default async function EmailFlowPage() {
             eerste stap (levering) op <em>inactief</em> — die verstuur je handmatig.
           </p>
         </div>
+
+        <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            Afzender &amp; antwoorden
+          </h2>
+          <SenderForm from={from} replyTo={replyTo} />
+        </section>
 
         <SequenceEditor steps={(steps ?? []) as EmailSequenceStep[]} />
       </main>

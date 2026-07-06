@@ -2,6 +2,12 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import {
+  getSetting,
+  SETTING_KEYS,
+  DEFAULT_NURTURE_FROM,
+  DEFAULT_NURTURE_REPLY_TO,
+} from "@/lib/settings";
 import type { EmailSequenceStep } from "@/lib/database.types";
 
 const VERDICT: Record<string, string> = {
@@ -137,11 +143,12 @@ export async function runNurture(): Promise<{
     .select("lead_id, step_id");
   const gedaan = new Set((sends ?? []).map((s) => `${s.lead_id}:${s.step_id}`));
 
-  const from =
-    process.env.NURTURE_FROM_EMAIL ||
-    process.env.REPORT_FROM_EMAIL ||
-    "opeigenerf <noreply@opeigenerf.nl>";
-  const replyTo = process.env.NURTURE_REPLY_TO || "info@opeigenerf.nl";
+  // Afzender + reply-to zijn instelbaar via de UI (app_settings); anders env/default.
+  const from = await getSetting(SETTING_KEYS.nurtureFrom, DEFAULT_NURTURE_FROM);
+  const replyTo = await getSetting(
+    SETTING_KEYS.nurtureReplyTo,
+    DEFAULT_NURTURE_REPLY_TO,
+  );
   const now = Date.now();
   let verstuurd = 0;
 
