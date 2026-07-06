@@ -10,18 +10,20 @@ const label = "block text-xs font-medium text-slate-600 mb-1";
 export function SenderForm({
   from,
   replyTo,
+  bcc,
 }: {
   from: string;
   replyTo: string;
+  bcc: string;
 }) {
-  const [f, setF] = useState({ from, replyTo });
+  const [f, setF] = useState({ from, replyTo, bcc });
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   function save() {
     setMsg(null);
     startTransition(async () => {
-      const res = await saveSender(f.from, f.replyTo);
+      const res = await saveSender(f.from, f.replyTo, f.bcc);
       setMsg(res.ok ? { ok: true, text: "Opgeslagen." } : { ok: false, text: res.error ?? "Mislukt." });
     });
   }
@@ -49,6 +51,18 @@ export function SenderForm({
           onChange={(e) => setF((p) => ({ ...p, replyTo: e.target.value }))}
           placeholder="info@opeigenerf.nl"
         />
+      </div>
+      <div className="sm:col-span-2">
+        <label className={label}>BCC (kopie van elke opvolgmail)</label>
+        <input
+          className={input}
+          value={f.bcc}
+          onChange={(e) => setF((p) => ({ ...p, bcc: e.target.value }))}
+          placeholder="info@opeigenerf.nl"
+        />
+        <p className="mt-1 text-xs text-slate-400">
+          Laat leeg om geen BCC mee te sturen.
+        </p>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
         <button

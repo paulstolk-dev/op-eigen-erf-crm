@@ -26,6 +26,7 @@ export const SETTING_KEYS = {
   reportEmailPrompt: "report_email_prompt",
   nurtureFrom: "nurture_from",
   nurtureReplyTo: "nurture_reply_to",
+  nurtureBcc: "nurture_bcc",
 } as const;
 
 // Fallbacks (UI-instelling wint, dan env, dan deze default).
@@ -35,6 +36,8 @@ export const DEFAULT_NURTURE_FROM =
   "opeigenerf <noreply@opeigenerf.nl>";
 export const DEFAULT_NURTURE_REPLY_TO =
   process.env.NURTURE_REPLY_TO || "info@opeigenerf.nl";
+export const DEFAULT_NURTURE_BCC =
+  process.env.NURTURE_BCC || "info@opeigenerf.nl";
 
 export async function getSetting(
   key: string,

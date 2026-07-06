@@ -9,6 +9,7 @@ import {
   SETTING_KEYS,
   DEFAULT_NURTURE_FROM,
   DEFAULT_NURTURE_REPLY_TO,
+  DEFAULT_NURTURE_BCC,
 } from "@/lib/settings";
 import type { EmailSequenceStep } from "@/lib/database.types";
 
@@ -27,9 +28,10 @@ export default async function EmailFlowPage() {
     .select("*")
     .order("volgorde", { ascending: true });
 
-  const [from, replyTo] = await Promise.all([
+  const [from, replyTo, bcc] = await Promise.all([
     getSetting(SETTING_KEYS.nurtureFrom, DEFAULT_NURTURE_FROM),
     getSetting(SETTING_KEYS.nurtureReplyTo, DEFAULT_NURTURE_REPLY_TO),
+    getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC),
   ]);
 
   return (
@@ -62,7 +64,7 @@ export default async function EmailFlowPage() {
           <h2 className="mb-3 text-base font-semibold text-slate-900">
             Afzender &amp; antwoorden
           </h2>
-          <SenderForm from={from} replyTo={replyTo} />
+          <SenderForm from={from} replyTo={replyTo} bcc={bcc} />
         </section>
 
         <SequenceEditor steps={(steps ?? []) as EmailSequenceStep[]} />

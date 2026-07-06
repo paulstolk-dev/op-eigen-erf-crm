@@ -74,6 +74,7 @@ export async function addStep(): Promise<Result> {
 export async function saveSender(
   from: string,
   replyTo: string,
+  bcc: string,
 ): Promise<Result> {
   await requireCrm();
   if (!from.trim() || !replyTo.trim()) {
@@ -82,6 +83,7 @@ export async function saveSender(
   try {
     await setSetting(SETTING_KEYS.nurtureFrom, from.trim());
     await setSetting(SETTING_KEYS.nurtureReplyTo, replyTo.trim());
+    await setSetting(SETTING_KEYS.nurtureBcc, bcc.trim());
     revalidatePath("/instellingen/e-mailflow");
     return { ok: true };
   } catch (e) {

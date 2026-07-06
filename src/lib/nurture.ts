@@ -7,6 +7,7 @@ import {
   SETTING_KEYS,
   DEFAULT_NURTURE_FROM,
   DEFAULT_NURTURE_REPLY_TO,
+  DEFAULT_NURTURE_BCC,
 } from "@/lib/settings";
 import type { EmailSequenceStep } from "@/lib/database.types";
 
@@ -143,12 +144,13 @@ export async function runNurture(): Promise<{
     .select("lead_id, step_id");
   const gedaan = new Set((sends ?? []).map((s) => `${s.lead_id}:${s.step_id}`));
 
-  // Afzender + reply-to zijn instelbaar via de UI (app_settings); anders env/default.
+  // Afzender + reply-to + bcc zijn instelbaar via de UI (app_settings); anders env/default.
   const from = await getSetting(SETTING_KEYS.nurtureFrom, DEFAULT_NURTURE_FROM);
   const replyTo = await getSetting(
     SETTING_KEYS.nurtureReplyTo,
     DEFAULT_NURTURE_REPLY_TO,
   );
+  const bcc = (await getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC)).trim();
   const now = Date.now();
   let verstuurd = 0;
 
@@ -169,7 +171,14 @@ export async function runNurture(): Promise<{
     if (!step) continue;
 
     const { subject, html } = renderNurtureEmail(step as EmailSequenceStep, v);
-    const ok = await sendEmail({ to: lead.email, subject, html, from, replyTo });
+    const ok = await sendEmail({
+      to: lead.email,
+      subject,
+      html,
+      from,
+      replyTo,
+      ...(bcc ? { bcc } : {}),
+    });
     if (!ok) continue; // RESEND niet gezet of fout -> later opnieuw proberen
 
     await admin
