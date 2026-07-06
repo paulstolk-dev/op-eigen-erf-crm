@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { SequenceEditor } from "./sequence-editor";
 import { SenderForm } from "./sender-form";
+import { ManualSend } from "./manual-send";
 import {
   getSetting,
   SETTING_KEYS,
@@ -66,6 +67,10 @@ export default async function EmailFlowPage() {
           </h2>
           <SenderForm from={from} replyTo={replyTo} bcc={bcc} />
         </section>
+
+        <div className="mb-4">
+          <ManualSend />
+        </div>
 
         <SequenceEditor steps={(steps ?? []) as EmailSequenceStep[]} />
       </main>

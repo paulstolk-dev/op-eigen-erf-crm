@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { setSetting, SETTING_KEYS } from "@/lib/settings";
+import { runNurture } from "@/lib/nurture";
 
 async function requireCrm() {
   const supabase = await createClient();
@@ -89,6 +90,18 @@ export async function saveSender(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Opslaan mislukt." };
   }
+}
+
+// Handmatig de opvolgmails nu versturen (i.p.v. wachten op de dagelijkse cron).
+// force = negeer de wachttijd en stuur de eerstvolgende stap direct.
+export async function verstuurNurtureNu(
+  force: boolean,
+): Promise<{ ok: boolean; verstuurd?: number; error?: string }> {
+  await requireCrm();
+  const res = await runNurture({ force });
+  revalidatePath("/instellingen/e-mailflow");
+  revalidatePath("/leads");
+  return res;
 }
 
 export async function deleteStep(id: string): Promise<Result> {

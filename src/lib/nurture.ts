@@ -116,7 +116,7 @@ function mergeFor(row: ErfscanRow): MergeValues {
 
 // Verstuurt per lead maximaal één due-en-nog-niet-verzonden stap (paceert de
 // reeks, voorkomt bursts). Anker = het moment dat het rapport is verstuurd.
-export async function runNurture(): Promise<{
+export async function runNurture(opts?: { force?: boolean }): Promise<{
   ok: boolean;
   verstuurd: number;
   error?: string;
@@ -163,10 +163,11 @@ export async function runNurture(): Promise<{
     const v = mergeFor(row);
 
     // Eerste due-en-onverzonden stap voor deze lead (max. één per run).
+    // Met force: negeer de wachttijd en stuur de eerstvolgende onverzonden stap.
     const step = steps.find(
       (st) =>
         !gedaan.has(`${row.lead_id}:${st.id}`) &&
-        now >= anchor + st.dag_na_start * DAY,
+        (opts?.force || now >= anchor + st.dag_na_start * DAY),
     );
     if (!step) continue;
 
