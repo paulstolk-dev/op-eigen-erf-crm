@@ -11,7 +11,7 @@ export const maxDuration = 120;
 // Auto-rapportgeneratie. Wordt aangeroepen door de DB-trigger op erfscans zodra
 // de erfscan klaar is (status 'needs_review'), of handmatig. Genereert het
 // rapport + concept-mail en stuurt een interne notificatie met erfgrootte,
-// leadscore, concept-mail en het PDF-rapport naar LEAD_NOTIFY_EMAIL.
+// leadscore, concept-mail en de trackbare Erfcheck-paginalink naar LEAD_NOTIFY_EMAIL.
 export async function POST(request: NextRequest) {
   let body: Record<string, unknown> = {};
   try {
@@ -78,18 +78,11 @@ export async function POST(request: NextRequest) {
         : "—";
       const m2 = (v?: number) => (v != null ? `${v} m²` : "n.b.");
 
-      const attachments: { filename: string; content: string }[] = [];
-      if (erfscan.report_pdf_path) {
-        const { data: blob } = await admin.storage
-          .from("erfscans")
-          .download(erfscan.report_pdf_path);
-        if (blob) {
-          attachments.push({
-            filename: "erfcheck-rapport.pdf",
-            content: Buffer.from(await blob.arrayBuffer()).toString("base64"),
-          });
-        }
-      }
+      const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl").replace(
+        /\/$/,
+        "",
+      );
+      const pageUrl = `${base}/r/${lead.report_token}`;
 
       const esc = (s: string) =>
         s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -115,8 +108,10 @@ export async function POST(request: NextRequest) {
   </div>
 
   <p style="margin:16px 0 0;font-size:13px;color:#64748b">
-    Het volledige rapport zit als PDF in de bijlage. Bekijk en verstuur in het
-    <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl") + "/leads/" + leadId}" style="color:#0a1b2b">CRM</a>.
+    De Erf Check wordt als trackbare pagina aangeboden:
+    <a href="${pageUrl}" style="color:#0a1b2b">${pageUrl}</a>.<br>
+    Bekijk en verstuur in het
+    <a href="${base + "/leads/" + leadId}" style="color:#0a1b2b">CRM</a>.
   </p>
 </div>`;
 
@@ -124,7 +119,6 @@ export async function POST(request: NextRequest) {
         to: notify,
         subject: `Erfcheck-concept: ${naam} — ${score.label} (score ${score.score})`,
         html,
-        attachments,
       });
     }
   } catch (e) {
