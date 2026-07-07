@@ -730,7 +730,16 @@ def run(seeds: list[dict], commit: bool):
         n_models = len(extracted.get("modellen", []))
         log(f"  → {n_models} modellen geëxtraheerd.")
 
-        record = {"seed": seed, "extracted": extracted}
+        toegewezen = sum(
+            len(m.get("_afbeeldingen", [])) for m in extracted.get("modellen", [])
+        )
+        record = {
+            "seed": seed,
+            "extracted": extracted,
+            "images": len(harvest.images),   # geoogste kandidaatfoto's
+            "toegewezen": toegewezen,        # door LLM aan modellen gekoppeld
+            "fotos": 0,                      # daadwerkelijk geüpload (na writes)
+        }
         results.append(record)
 
         if not commit:
@@ -768,6 +777,7 @@ def run(seeds: list[dict], commit: bool):
                 fotos = process_images(fetcher, m.get("_afbeeldingen", []), a_slug, m_slug, storage, seen_hashes)
                 for f in fotos:
                     db.insert_foto({**f, "aanbieder_id": aanbieder_id, "woning_id": woning_id})
+                record["fotos"] += len(fotos)
                 nieuw += 1
                 log(f"    · {m.get('naam','?')}: {len(fotos)} foto's")
 

@@ -105,6 +105,9 @@ def _background(body: RunBody) -> None:
                 {
                     "url": r["seed"].get("website_url"),
                     "modellen": len((r.get("extracted") or {}).get("modellen", [])),
+                    "images": r.get("images", 0),
+                    "toegewezen": r.get("toegewezen", 0),
+                    "fotos": r.get("fotos", 0),
                 }
                 for r in results
             ],
