@@ -90,23 +90,6 @@ export function scoreLead(lead: Lead, erfscan?: Erfscan | null): LeadScore {
     }
   }
 
-  // + Eigen erf aanwezig (erfscan vond een perceel)
-  const perceel = dossier.perceel;
-  if (perceel && (perceel.status === "ok" || perceel.oppervlakte_m2)) {
-    b.push({ factor: "Eigen erf aanwezig", punten: 20 });
-  }
-
-  // + Grote tuin / ruim perceel (≥ 500 m²)
-  const opp = perceel?.oppervlakte_m2;
-  if (typeof opp === "number" && opp >= 500) {
-    b.push({ factor: `Ruim perceel (${opp} m²)`, punten: 20 });
-  }
-
-  // + Doel is ouders / kind / mantelzorg
-  if (["ouders", "kind", "kinderen", "mantelzorg"].includes(audience)) {
-    b.push({ factor: "Doel: familie/mantelzorg", punten: 20 });
-  }
-
   // Budget: > €100k = +20; bekend & laag óf onbekend = -10
   const budget = parseBudget(lead.budget);
   if (budget !== null) {
