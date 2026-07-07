@@ -64,7 +64,7 @@ export default async function ErfcheckPage({
         {/* Header */}
         <div className="mb-6 flex items-center justify-between gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="opeigenerf.nl" className="h-14" />
+          <img src="/logo.svg" alt="opeigenerf.nl" className="h-10 w-auto" />
           <span className="text-right text-xs text-slate-500">
             Onafhankelijk — we bouwen zelf niet.
           </span>
