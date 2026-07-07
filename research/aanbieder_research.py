@@ -568,7 +568,14 @@ def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: 
                 _pstat("robots")
                 continue
             fetcher._throttle(im["url"])
-            r = fetcher.http.get(im["url"], headers={"Referer": im["page"]})
+            # Verse client per download: de langlevende Fetcher-client geeft na de
+            # trage Claude-call soms DNS-fouten (idle keepalive); een fresh get niet.
+            r = httpx.get(
+                im["url"],
+                headers={"User-Agent": USER_AGENT, "Referer": im["page"]},
+                timeout=REQUEST_TIMEOUT,
+                follow_redirects=True,
+            )
             ct = r.headers.get("content-type", "")
             if r.status_code != 200 or not ct.startswith("image"):
                 _pstat(f"http_{r.status_code}" if r.status_code != 200 else "geen_image")
