@@ -108,6 +108,7 @@ def _background(body: RunBody) -> None:
                 }
                 for r in results
             ],
+            "fouten": list(ar.LAST_ERRORS),
         }
     except Exception as e:  # noqa: BLE001
         msg = f"{type(e).__name__}: {e}"

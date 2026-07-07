@@ -91,6 +91,9 @@ OUT_DIR = Path("out")
 
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
+# Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
+LAST_ERRORS: list[str] = []
+
 
 # --------------------------------------------------------------------------- #
 # Kleine helpers
@@ -633,6 +636,7 @@ def run(seeds: list[dict], commit: bool):
 
     seen_hashes: set[str] = set()
     results = []
+    LAST_ERRORS.clear()
 
     for seed in seeds:
         log(f"\n▶ {seed['naam']} — {seed['website_url']}")
@@ -697,7 +701,9 @@ def run(seeds: list[dict], commit: bool):
                 log(f"  ✔ opgeslagen als concept (actief=false).")
         except Exception as e:
             db.rollback()
-            log(f"  ! DB-fout, teruggedraaid: {e}")
+            msg = f"{seed.get('website_url')}: {type(e).__name__}: {e}"
+            LAST_ERRORS.append(msg)
+            log(f"  ! DB-fout, teruggedraaid: {msg}")
 
     # dry-run output
     stamp = time.strftime("%Y%m%d-%H%M%S")
