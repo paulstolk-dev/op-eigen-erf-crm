@@ -537,10 +537,16 @@ def coerce(payload: dict, allowed_cols: set[str], enums: dict[str, set[str]]) ->
     for k, v in payload.items():
         if k not in allowed_cols:
             continue
-        if v == "" :
+        if v == "":
             v = None
         if k in enums and v is not None and v not in enums[k]:
-            v = None                     # ongeldige enumwaarde -> null, nooit gokken
+            v = None                     # ongeldige enumwaarde: nooit gokken
+        # None-waarden (incl. ongeldige enums) WEGLATEN uit de insert, zodat de
+        # kolom-default aanslaat (bv. koop/huur/tweedehands, btw_basis_bron,
+        # is_vanaf_prijs, aanbod_type zijn NOT NULL met een default). Expliciet
+        # null insereren zou die NOT-NULL-constraints breken.
+        if v is None:
+            continue
         out[k] = v
     return out
 
