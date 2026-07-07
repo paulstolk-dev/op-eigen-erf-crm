@@ -94,22 +94,13 @@ export async function sendReport(leadId: string): Promise<Result> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY niet gezet." };
 
-  const admin = createAdminClient();
-  const attachments: { filename: string; content: string }[] = [];
-  if (erfscan.report_pdf_path) {
-    const { data: blob } = await admin.storage
-      .from("erfscans")
-      .download(erfscan.report_pdf_path);
-    if (blob) {
-      const buf = Buffer.from(await blob.arrayBuffer());
-      attachments.push({
-        filename: "erfcheck-rapport.pdf",
-        content: buf.toString("base64"),
-      });
-    }
-  }
-
-  const html = toHtml(erfscan.draft_email_body || "");
+  // De Erf Check wordt nu als tracbare pagina aangeboden i.p.v. PDF-bijlage.
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl").replace(/\/$/, "");
+  const pageUrl = `${base}/r/${lead!.report_token}`;
+  const button = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
+    <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">Bekijk je Erf Check online »</a>
+  </td></tr></table>`;
+  const html = toHtml(erfscan.draft_email_body || "") + button;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -126,11 +117,11 @@ export async function sendReport(leadId: string): Promise<Result> {
         (testTo ? `[TEST → ${lead?.email ?? "?"}] ` : "") +
         (erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl"),
       html,
-      attachments,
     }),
   });
   if (!res.ok) return { ok: false, error: `Resend: ${await res.text()}` };
 
+  const admin = createAdminClient();
   await admin
     .from("erfscans")
     .update({ status: "sent", sent_at: new Date().toISOString() })

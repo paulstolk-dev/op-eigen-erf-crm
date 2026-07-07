@@ -590,6 +590,9 @@ export type Database = {
           error: string | null
           enriched_at: string | null
           sent_at: string | null
+          viewed_at: string | null
+          last_viewed_at: string | null
+          view_count: number
           created_at: string
           updated_at: string
         }
@@ -607,6 +610,9 @@ export type Database = {
           error?: string | null
           enriched_at?: string | null
           sent_at?: string | null
+          viewed_at?: string | null
+          last_viewed_at?: string | null
+          view_count?: number
           created_at?: string
           updated_at?: string
         }
@@ -624,6 +630,9 @@ export type Database = {
           error?: string | null
           enriched_at?: string | null
           sent_at?: string | null
+          viewed_at?: string | null
+          last_viewed_at?: string | null
+          view_count?: number
           created_at?: string
           updated_at?: string
         }
@@ -656,6 +665,9 @@ export type Database = {
           telefoon: string | null
           toevoeging: string | null
           type: string
+          report_token: string
+          terugbel_verzoek_at: string | null
+          terugbel_notitie: string | null
           updated_at: string
           voornaam: string | null
         }
@@ -677,6 +689,9 @@ export type Database = {
           telefoon?: string | null
           toevoeging?: string | null
           type: string
+          report_token?: string
+          terugbel_verzoek_at?: string | null
+          terugbel_notitie?: string | null
           updated_at?: string
           voornaam?: string | null
         }
@@ -698,6 +713,9 @@ export type Database = {
           telefoon?: string | null
           toevoeging?: string | null
           type?: string
+          report_token?: string
+          terugbel_verzoek_at?: string | null
+          terugbel_notitie?: string | null
           updated_at?: string
           voornaam?: string | null
         }

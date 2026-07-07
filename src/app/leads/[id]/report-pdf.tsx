@@ -12,59 +12,16 @@ import {
 } from "@react-pdf/renderer";
 import { LOGO_PNG } from "@/lib/logo-data";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  BRAND,
+  ERF,
+  KENNISMAKING_URL,
+  buildScanUrl,
+  CONCLUSIE,
+  SCAN_PUNTEN,
+} from "@/lib/erfcheck-report";
 import type { ReportContent } from "@/lib/report-schema";
 import type { Lead, Erfscan } from "@/lib/database.types";
-
-const BRAND = "#0a1b2b";
-const ERF = "#718d69";
-const SCAN_URL = "https://opeigenerf.nl/haalbaarheidsscan";
-const KENNISMAKING_URL = "https://opeigenerf.nl/kennismaking";
-
-// Scan-link met de leadgegevens vooringevuld, zodat het formulier op de
-// haalbaarheidsscan-pagina alvast klopt (?email=&postcode=&huisnummer=…).
-function buildScanUrl(lead: Lead): string {
-  const p = new URLSearchParams();
-  if (lead.email) p.set("email", lead.email);
-  if (lead.postcode) p.set("postcode", lead.postcode);
-  if (lead.huisnummer) p.set("huisnummer", lead.huisnummer);
-  if (lead.toevoeging) p.set("toevoeging", lead.toevoeging);
-  const qs = p.toString();
-  return qs ? `${SCAN_URL}?${qs}` : SCAN_URL;
-}
-
-// Uitslag (intern groen/oranje/rood) → begrijpelijk woord + kleur + toelichting.
-const CONCLUSIE: Record<
-  string,
-  { woord: string; kleur: string; uitleg: string }
-> = {
-  groen: {
-    woord: "Kansrijk",
-    kleur: "#16a34a",
-    uitleg:
-      "Geautomatiseerde indicatie op basis van je perceelgrootte. Dit is nog geen bouwoordeel — de exacte ruimte in je achtererf volgt in de uitgebreide scan.",
-  },
-  oranje: {
-    woord: "Twijfelachtig",
-    kleur: "#d97706",
-    uitleg:
-      "Er zijn aandachtspunten die eerst uitgezocht moeten worden. De uitgebreide scan geeft zekerheid over de regels, ruimte en risico's.",
-  },
-  rood: {
-    woord: "Complex",
-    kleur: "#dc2626",
-    uitleg:
-      "Er spelen beperkingen die je plan kunnen blokkeren. Een gratis adviesgesprek of de uitgebreide scan brengt de risico's scherp in beeld.",
-  },
-};
-
-const SCAN_PUNTEN = [
-  "luchtfoto met de bestaande bebouwing ingemeten",
-  "exacte berekening van de ruimte in jóuw achtererf",
-  "kostenindicatie in prijsbanden",
-  "advies over passende woningtypes",
-  "de route die bij jouw situatie past",
-  "een concreet stappenplan",
-];
 
 const s = StyleSheet.create({
   page: { padding: 30, paddingBottom: 46, fontSize: 9.5, color: "#1f2937", lineHeight: 1.4 },

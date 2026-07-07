@@ -252,6 +252,12 @@ export default async function LeadDetailPage({
                   draftBody={erfscan.draft_email_body ?? ""}
                   pdfUrl={reportPdfUrl}
                   leadEmail={lead.email}
+                  pageUrl={`${(process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl").replace(/\/$/, "")}/r/${lead.report_token}`}
+                  viewCount={erfscan.view_count ?? 0}
+                  lastViewedAt={erfscan.last_viewed_at}
+                  terugbelAt={lead.terugbel_verzoek_at}
+                  terugbelNotitie={lead.terugbel_notitie}
+                  telefoon={lead.telefoon}
                 />
               </>
             ) : (

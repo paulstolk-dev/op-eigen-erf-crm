@@ -39,6 +39,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/registreren" || // zelfregistratie aanbieders
     pathname === "/geen-toegang" ||
     pathname.startsWith("/auth") ||
+    pathname.startsWith("/r/") || // publieke, tokenbeveiligde Erf Check-pagina
     pathname.startsWith("/api/leads"); // marketing-site ingest endpoint
 
   if (!user && !isPublic) {

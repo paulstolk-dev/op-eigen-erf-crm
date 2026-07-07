@@ -11,6 +11,12 @@ export function ReportPanel({
   draftBody,
   pdfUrl,
   leadEmail,
+  pageUrl,
+  viewCount,
+  lastViewedAt,
+  terugbelAt,
+  terugbelNotitie,
+  telefoon,
 }: {
   leadId: string;
   status: string;
@@ -18,6 +24,12 @@ export function ReportPanel({
   draftBody: string;
   pdfUrl: string | null;
   leadEmail: string | null;
+  pageUrl: string;
+  viewCount: number;
+  lastViewedAt: string | null;
+  terugbelAt: string | null;
+  terugbelNotitie: string | null;
+  telefoon: string | null;
 }) {
   const router = useRouter();
   const [subject, setSubject] = useState(draftSubject);
@@ -27,6 +39,16 @@ export function ReportPanel({
   const [isRerender, startRerender] = useTransition();
   const [isSave, startSave] = useTransition();
   const [isSend, startSend] = useTransition();
+  const [copied, setCopied] = useState(false);
+
+  function datumNL(iso: string | null): string {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
 
   const hasReport = status === "rendered" || status === "sent";
 
@@ -120,6 +142,60 @@ export function ReportPanel({
           </a>
         )}
       </div>
+
+      {hasReport && (
+        <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+          {/* Erfcheck-pagina (wat de lead ontvangt) */}
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Erfcheck-pagina
+              </span>
+              <span className="text-xs text-slate-500">
+                {viewCount > 0
+                  ? `Bekeken ${viewCount}× · laatst ${datumNL(lastViewedAt)}`
+                  : "Nog niet bekeken"}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <a
+                href={pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-sm text-navy hover:underline"
+              >
+                {pageUrl}
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(pageUrl);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="shrink-0 rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
+              >
+                {copied ? "Gekopieerd" : "Kopieer"}
+              </button>
+            </div>
+          </div>
+
+          {/* Terugbelverzoek van de lead */}
+          {terugbelAt && (
+            <div className="rounded-lg bg-amber-50 p-3 ring-1 ring-inset ring-amber-200">
+              <p className="text-sm font-semibold text-amber-900">
+                📞 Terugbelverzoek — {telefoon || "?"}
+              </p>
+              {terugbelNotitie && (
+                <p className="mt-0.5 text-sm text-amber-800">{terugbelNotitie}</p>
+              )}
+              <p className="mt-0.5 text-xs text-amber-700">
+                Ingediend {datumNL(terugbelAt)}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {hasReport && (
         <div className="mt-5 space-y-3 border-t border-slate-100 pt-4">
