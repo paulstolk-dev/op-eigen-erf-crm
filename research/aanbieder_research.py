@@ -539,8 +539,11 @@ def coerce(payload: dict, allowed_cols: set[str], enums: dict[str, set[str]]) ->
             continue
         if v == "":
             v = None
-        if k in enums and v is not None and v not in enums[k]:
-            v = None                     # ongeldige enumwaarde: nooit gokken
+        if k in enums and v is not None:
+            # Enum-kolom: alleen een geldige string toestaan. Een lijst/dict (soms
+            # geeft de LLM ["koop","huur"]) is ongeldig → weglaten (DB-default).
+            if not isinstance(v, str) or v not in enums[k]:
+                v = None
         # None-waarden (incl. ongeldige enums) WEGLATEN uit de insert, zodat de
         # kolom-default aanslaat (bv. koop/huur/tweedehands, btw_basis_bron,
         # is_vanaf_prijs, aanbod_type zijn NOT NULL met een default). Expliciet
