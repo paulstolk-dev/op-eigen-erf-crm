@@ -30,6 +30,7 @@ import aanbieder_research as ar
 app = FastAPI(title="opeigenerf aanbieder-research")
 
 _running = threading.Lock()  # max één crawl tegelijk
+_last: dict = {"state": "idle"}  # laatste run-status (voor GET /status)
 
 
 class RunBody(BaseModel):
@@ -80,11 +81,21 @@ def _seeds_for(body: RunBody) -> list[dict]:
     raise HTTPException(422, f"Onbekende mode: {body.mode}")
 
 
-def _background(seeds: list[dict]) -> None:
+def _background(body: RunBody) -> None:
+    global _last
     try:
+        _last = {"state": "seeds", "mode": body.mode}
+        seeds = _seeds_for(body)  # discovery (web_search) draait hier — niet in de request
+        if not seeds:
+            _last = {"state": "done", "mode": body.mode, "aantal": 0, "reason": "geen aanbieders"}
+            return
+        _last = {"state": "running", "mode": body.mode, "aantal": len(seeds)}
         ar.run(seeds, commit=True)
-    except Exception as e:  # noqa: BLE001 — log en geef de lock vrij
-        ar.log(f"! run-fout: {e}")
+        _last = {"state": "done", "mode": body.mode, "aantal": len(seeds)}
+    except Exception as e:  # noqa: BLE001
+        msg = f"{type(e).__name__}: {e}"
+        ar.log(f"! run-fout: {msg}")
+        _last = {"state": "error", "mode": body.mode, "error": msg}
     finally:
         _running.release()
 
@@ -120,6 +131,15 @@ def diag(
     return out
 
 
+@app.get("/status")
+def status(
+    x_research_secret: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    _check_secret(x_research_secret or authorization)
+    return {"busy": _running.locked(), "last": _last}
+
+
 @app.post("/run", status_code=202)
 def run(
     body: RunBody,
@@ -127,15 +147,11 @@ def run(
     authorization: str | None = Header(default=None),
 ) -> dict:
     _check_secret(x_research_secret or authorization)
-    try:
-        seeds = _seeds_for(body)
-    except HTTPException:
-        raise
-    except Exception as e:  # noqa: BLE001 — geef de echte oorzaak terug
-        raise HTTPException(500, f"{type(e).__name__}: {e}")
-    if not seeds:
-        return {"ok": True, "started": False, "reason": "geen aanbieders om te verwerken"}
+    if body.mode not in ("discover", "seed", "refresh"):
+        raise HTTPException(422, f"Onbekende mode: {body.mode}")
     if not _running.acquire(blocking=False):
         raise HTTPException(409, "Er draait al een crawl.")
-    threading.Thread(target=_background, args=(seeds,), daemon=True).start()
-    return {"ok": True, "started": True, "aantal": len(seeds), "mode": body.mode}
+    # Alles (incl. discovery-web_search) draait async in de achtergrondthread,
+    # zodat de HTTP-request nooit blokkeert. Volg voortgang via GET /status.
+    threading.Thread(target=_background, args=(body,), daemon=True).start()
+    return {"ok": True, "started": True, "mode": body.mode}
