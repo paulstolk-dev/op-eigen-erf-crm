@@ -161,6 +161,7 @@ function ReportPdf({
   const d = (erfscan.dossier ?? {}) as Record<string, any>;
   const adres = d.locatie?.weergavenaam || "Onbekend adres";
   const opp = d.perceel?.oppervlakte_m2 as number | undefined;
+  const maxvv = d.ruimtelijk?.max_vergunningvrij_m2 as number | undefined;
   const c = CONCLUSIE[content.conclusie] ?? CONCLUSIE.oranje;
 
   return (
@@ -205,6 +206,17 @@ function ReportPdf({
             <Text style={s.cardLabel}>PERCEELOPPERVLAKTE</Text>
             <Text style={s.opp}>{opp ? `± ${opp} m²` : "n.b."}</Text>
             <Text style={s.cardBron}>Bron: Kadaster (BRK)</Text>
+            {maxvv != null ? (
+              <>
+                <Text style={[s.cardLabel, { marginTop: 8 }]}>
+                  MAX. VERGUNNINGVRIJ (INDICATIE)
+                </Text>
+                <Text style={s.opp}>± {maxvv} m²</Text>
+                <Text style={s.cardBron}>
+                  Bijbehorend bouwwerk in achtererfgebied
+                </Text>
+              </>
+            ) : null}
           </View>
           <View style={s.card}>
             <Text style={[s.badge, { backgroundColor: c.kleur }]}>{c.woord}</Text>
