@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   CONCLUSIE,
   SCAN_PUNTEN,
@@ -41,6 +42,13 @@ export default async function ErfcheckPage({
     .maybeSingle<Erfscan>();
   if (!erfscan) notFound();
 
+  // Eigen (ingelogde CRM-)opens niet meetellen — alleen echte bezoekers.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isInternal = !!user;
+
   const d = (erfscan.dossier ?? {}) as Record<string, any>;
   const adres = (d.locatie?.weergavenaam as string) || "Jouw erf";
   const opp = d.perceel?.oppervlakte_m2 as number | undefined;
@@ -59,7 +67,7 @@ export default async function ErfcheckPage({
 
   return (
     <div className="min-h-screen bg-[#f6f7f4] py-8 text-slate-800">
-      <TrackView token={token} />
+      <TrackView token={token} skip={isInternal} />
       <main className="mx-auto max-w-2xl px-4">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between gap-3">
