@@ -92,7 +92,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "dns-retry-4"
+VERSION = "dns-retry-5"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
@@ -550,16 +550,22 @@ class Storage:
 
     def upload(self, path: str, content: bytes, content_type: str) -> bool:
         url = f"{self.base}/storage/v1/object/{BUCKET}/{path}"
-        r = self.http.post(
-            url, content=content,
-            headers={
-                "Authorization": f"Bearer {self.key}",
-                "apikey": self.key,
-                "Content-Type": content_type,
-                "x-upsert": "true",
-            },
-        )
-        return r.status_code in (200, 201)
+        headers = {
+            "Authorization": f"Bearer {self.key}",
+            "apikey": self.key,
+            "Content-Type": content_type,
+            "x-upsert": "true",
+        }
+        # Verse client + retry: de langlevende client geeft na de idle Claude-call
+        # bursty DNS-fouten richting Supabase (zelfde probleem als de downloads).
+        for poging in range(4):
+            try:
+                r = httpx.post(url, content=content, headers=headers,
+                               timeout=REQUEST_TIMEOUT)
+                return r.status_code in (200, 201)
+            except Exception:
+                time.sleep(1.5 * (poging + 1))
+        return False
 
 
 def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: str,
