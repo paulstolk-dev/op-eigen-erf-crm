@@ -89,9 +89,26 @@ def _background(body: RunBody) -> None:
         if not seeds:
             _last = {"state": "done", "mode": body.mode, "aantal": 0, "reason": "geen aanbieders"}
             return
-        _last = {"state": "running", "mode": body.mode, "aantal": len(seeds)}
-        ar.run(seeds, commit=True)
-        _last = {"state": "done", "mode": body.mode, "aantal": len(seeds)}
+        _last = {
+            "state": "running",
+            "mode": body.mode,
+            "aantal": len(seeds),
+            "gevonden": [s.get("website_url") for s in seeds],
+        }
+        results = ar.run(seeds, commit=True) or []
+        _last = {
+            "state": "done",
+            "mode": body.mode,
+            "aantal": len(seeds),
+            "gevonden": [s.get("website_url") for s in seeds],
+            "verwerkt": [
+                {
+                    "url": r["seed"].get("website_url"),
+                    "modellen": len((r.get("extracted") or {}).get("modellen", [])),
+                }
+                for r in results
+            ],
+        }
     except Exception as e:  # noqa: BLE001
         msg = f"{type(e).__name__}: {e}"
         ar.log(f"! run-fout: {msg}")

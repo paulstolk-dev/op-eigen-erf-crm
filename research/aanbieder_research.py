@@ -709,6 +709,7 @@ def run(seeds: list[dict], commit: bool):
         log("Dry-run — er is niets naar Supabase geschreven. Gebruik --commit om weg te schrijven.")
     if db:
         db.conn.close()
+    return results
 
 
 def load_seeds_from_file(path: str) -> list[dict]:
