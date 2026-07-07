@@ -92,7 +92,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "dns-retry-3"
+VERSION = "dns-retry-4"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []

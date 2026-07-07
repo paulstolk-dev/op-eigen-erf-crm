@@ -160,6 +160,13 @@ def diag(
         out["net"] = {"status": rr.status_code, "ctype": rr.headers.get("content-type")}
     except Exception as e:  # noqa: BLE001
         out["net"] = {"error": f"{type(e).__name__}: {e}"}
+    # Toon de daadwerkelijk gedeployde download-broncode (retry aanwezig?).
+    try:
+        import inspect
+        src = inspect.getsource(ar.process_images).splitlines()
+        out["retry_in_source"] = any("for poging in range" in ln for ln in src)
+    except Exception as e:  # noqa: BLE001
+        out["retry_in_source"] = f"err: {e}"
     return out
 
 
