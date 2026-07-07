@@ -125,7 +125,7 @@ def _background(body: RunBody) -> None:
 
 @app.get("/")
 def health() -> dict:
-    return {"ok": True, "busy": _running.locked()}
+    return {"ok": True, "busy": _running.locked(), "version": getattr(ar, "VERSION", "?")}
 
 
 @app.get("/diag")

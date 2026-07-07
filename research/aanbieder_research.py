@@ -91,6 +91,9 @@ OUT_DIR = Path("out")
 
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
+# Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
+VERSION = "dns-retry-2"
+
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
 # Telt waarom kandidaatfoto's afvallen (voor diagnose).
@@ -580,7 +583,8 @@ def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: 
                         follow_redirects=True,
                     )
                     break
-                except httpx.ConnectError:
+                except Exception:   # incl. httpcore.ConnectError (bursty DNS)
+                    r = None
                     time.sleep(1.5 * (poging + 1))
             if r is None:
                 _pstat("connect_gaveup")
