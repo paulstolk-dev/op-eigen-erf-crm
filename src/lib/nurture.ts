@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { logLeadEmail } from "@/lib/hubspot";
+import { reportBaseUrl } from "@/lib/erfcheck-report";
 import {
   getSetting,
   SETTING_KEYS,
@@ -25,6 +26,7 @@ type MergeValues = {
   adres: string;
   verdict: string;
   perceel_m2: string;
+  erfcheck_url: string;
 };
 
 function applyMerge(text: string, v: MergeValues): string {
@@ -33,6 +35,7 @@ function applyMerge(text: string, v: MergeValues): string {
     .replace(/\{\{\s*adres\s*\}\}/g, v.adres)
     .replace(/\{\{\s*verdict\s*\}\}/g, v.verdict)
     .replace(/\{\{\s*perceel_m2\s*\}\}/g, v.perceel_m2)
+    .replace(/\{\{\s*erfcheck_url\s*\}\}/g, v.erfcheck_url)
     .replace(/Hoi\s+,/g, "Hoi,"); // nette aanhef als voornaam ontbreekt
 }
 
@@ -61,13 +64,13 @@ export function renderNurtureEmail(
   const button =
     step.cta_primary_label && step.cta_primary_url
       ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
-          <a href="${step.cta_primary_url}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${esc(step.cta_primary_label)}</a>
+          <a href="${applyMerge(step.cta_primary_url, v)}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${esc(step.cta_primary_label)}</a>
         </td></tr></table>`
       : "";
 
   const secondary =
     step.cta_secondary_label && step.cta_secondary_url
-      ? `<p style="margin:12px 0 0"><a href="${step.cta_secondary_url}" style="color:#718d69;font-weight:600;text-decoration:none">${esc(step.cta_secondary_label)} →</a></p>`
+      ? `<p style="margin:12px 0 0"><a href="${applyMerge(step.cta_secondary_url, v)}" style="color:#718d69;font-weight:600;text-decoration:none">${esc(step.cta_secondary_label)} →</a></p>`
       : "";
 
   const html = `<!-- preheader -->
@@ -93,6 +96,7 @@ type ErfscanRow = {
     status: string | null;
     postcode: string | null;
     huisnummer: string | null;
+    report_token: string | null;
   } | null;
 };
 
@@ -112,6 +116,7 @@ function mergeFor(row: ErfscanRow): MergeValues {
     adres,
     verdict: row.conclusie ? VERDICT[row.conclusie] ?? row.conclusie : "nog te bepalen",
     perceel_m2: opp != null ? `± ${opp} m²` : "n.b.",
+    erfcheck_url: lead.report_token ? `${reportBaseUrl()}/r/${lead.report_token}` : "",
   };
 }
 
@@ -137,7 +142,7 @@ export async function runNurture(opts?: {
   let q = admin
     .from("erfscans")
     .select(
-      "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer)",
+      "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer,report_token)",
     )
     .not("sent_at", "is", null);
   if (opts?.leadId) q = q.eq("lead_id", opts.leadId);
@@ -247,7 +252,7 @@ export async function backfillNurtureHubspot(): Promise<{
     const { data: scan } = await admin
       .from("erfscans")
       .select(
-        "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer)",
+        "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer,report_token)",
       )
       .eq("lead_id", s.lead_id)
       .maybeSingle();

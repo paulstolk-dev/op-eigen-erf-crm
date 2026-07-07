@@ -55,7 +55,11 @@ export default async function EmailFlowPage() {
             <code className="text-slate-700">{"{{voornaam}}"}</code>{" "}
             <code className="text-slate-700">{"{{adres}}"}</code>{" "}
             <code className="text-slate-700">{"{{verdict}}"}</code>{" "}
-            <code className="text-slate-700">{"{{perceel_m2}}"}</code>. Laat de
+            <code className="text-slate-700">{"{{perceel_m2}}"}</code>{" "}
+            <code className="text-slate-700">{"{{erfcheck_url}}"}</code>. Zet{" "}
+            <code className="text-slate-700">{"{{erfcheck_url}}"}</code> als CTA-link
+            (of in de tekst) om naar de persoonlijke, trackbare Erf Check-pagina van
+            de lead te verwijzen — een klik verschijnt als bezoek op de lead. Laat de
             primaire knop/secundaire link leeg om die weg te laten. Tip: houd de
             eerste stap (levering) op <em>inactief</em> — die verstuur je handmatig.
           </p>
