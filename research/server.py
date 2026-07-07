@@ -160,6 +160,17 @@ def diag(
         out["net"] = {"status": rr.status_code, "ctype": rr.headers.get("content-type")}
     except Exception as e:  # noqa: BLE001
         out["net"] = {"error": f"{type(e).__name__}: {e}"}
+    # Supabase Storage-host: staat SUPABASE_URL goed en is hij bereikbaar?
+    sb = os.environ.get("SUPABASE_URL", "")
+    out["supabase_url"] = sb
+    try:
+        rr = httpx.get(f"{sb.rstrip('/')}/storage/v1/bucket/aanbieder-scrape",
+                       headers={"apikey": os.environ.get("SUPABASE_SERVICE_KEY", ""),
+                                "Authorization": f"Bearer {os.environ.get('SUPABASE_SERVICE_KEY','')}"},
+                       timeout=15)
+        out["supabase_probe"] = {"status": rr.status_code, "body": rr.text[:120]}
+    except Exception as e:  # noqa: BLE001
+        out["supabase_probe"] = {"error": f"{type(e).__name__}: {e}"}
     # Toon de daadwerkelijk gedeployde download-broncode (retry aanwezig?).
     try:
         import inspect
