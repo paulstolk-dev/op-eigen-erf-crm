@@ -306,6 +306,90 @@ def discover_subpages(base_url: str, home_html: str) -> list[str]:
     return found[:MAX_PAGES_PER_SITE]
 
 
+# Attributen waar (lazy-loaded) afbeeldingen in staan.
+LAZY_IMG_ATTRS = (
+    "src", "data-src", "data-lazy-src", "data-original", "data-lazy",
+    "data-image", "data-echo", "data-fallback-src",
+)
+_BG_URL_RE = re.compile(
+    r"background(?:-image)?\s*:\s*url\((['\"]?)([^)'\"]+)\1\)", re.I
+)
+
+
+def _srcset_best(value: str) -> str | None:
+    """Kies de grootste URL uit een srcset ('url 320w, url 1024w' / 'url 2x')."""
+    best_url, best_w = None, -1
+    for part in value.split(","):
+        toks = part.strip().split()
+        if not toks:
+            continue
+        w = 0
+        if len(toks) > 1:
+            d = toks[1].lower()
+            try:
+                if d.endswith("w"):
+                    w = int(d[:-1])
+                elif d.endswith("x"):
+                    w = int(float(d[:-1]) * 1000)
+            except ValueError:
+                w = 0
+        if w >= best_w:
+            best_url, best_w = toks[0], w
+    return best_url
+
+
+def _tag_image_urls(tag) -> list[str]:
+    """Alle kandidaat-afbeelding-URL's uit een <img>/<source>-tag."""
+    urls: list[str] = []
+    for attr in LAZY_IMG_ATTRS:
+        v = tag.get(attr)
+        if isinstance(v, str) and v and not v.startswith("data:"):
+            urls.append(v)
+    for attr in ("srcset", "data-srcset"):
+        v = tag.get(attr)
+        if isinstance(v, str) and v:
+            best = _srcset_best(v)
+            if best and not best.startswith("data:"):
+                urls.append(best)
+    return urls
+
+
+def _collect_images(soup, page: str, seen_img: set[str], out: list[dict]) -> None:
+    """Oogst afbeeldingen uit img/source/srcset + CSS background-images."""
+    raw: list[tuple[str, str, object]] = []  # (url, alt, tag)
+    for tag in soup.find_all(["img", "source"]):
+        alt = (tag.get("alt") or "").strip()
+        for u in _tag_image_urls(tag):
+            raw.append((u, alt, tag))
+    for el in soup.find_all(style=True):
+        for m in _BG_URL_RE.finditer(el.get("style") or ""):
+            if not m.group(2).startswith("data:"):
+                raw.append((m.group(2), "", el))
+    for el in soup.find_all(attrs={"data-bg": True}):
+        v = el.get("data-bg")
+        if isinstance(v, str) and v and not v.startswith("data:"):
+            raw.append((v, "", el))
+
+    skip = ("logo", "icon", "sprite", "favicon", "placeholder", "spacer", "blank", "loader")
+    for url, alt, tag in raw:
+        full = urljoin(page, url.split("?")[0])
+        low = full.lower()
+        if not low.startswith("http"):
+            continue
+        if any(x in low for x in skip):
+            continue
+        if full in seen_img:
+            continue
+        seen_img.add(full)
+        parent = tag.find_parent()
+        out.append({
+            "url": full,
+            "alt": alt[:120],
+            "context": (parent.get_text(" ").strip()[:120] if parent else ""),
+            "page": page,
+        })
+
+
 def harvest_site(fetcher: Fetcher, base_url: str) -> Harvest:
     h = Harvest()
     home = fetcher.get(base_url)
@@ -321,29 +405,13 @@ def harvest_site(fetcher: Fetcher, base_url: str) -> Harvest:
             continue
         h.pages.append(page)
         soup = BeautifulSoup(resp.text, "html.parser")
+        # Eerst afbeeldingen oogsten uit de VOLLEDIGE HTML (incl. lazy/srcset/
+        # noscript/background), dan pas scripts strippen voor de tekst.
+        _collect_images(soup, page, seen_img, h.images)
         for tag in soup(["script", "style", "noscript", "svg"]):
             tag.decompose()
         page_text = re.sub(r"\s+", " ", soup.get_text(" ")).strip()
         texts.append(f"\n\n===== PAGINA: {page} =====\n{page_text[:6000]}")
-
-        for img in soup.find_all("img"):
-            src = img.get("src") or img.get("data-src") or ""
-            if not src:
-                continue
-            full = urljoin(page, src.split("?")[0])
-            if not full.lower().startswith("http"):
-                continue
-            if any(x in full.lower() for x in ("logo", "icon", "sprite", "favicon", "placeholder")):
-                continue
-            if full in seen_img:
-                continue
-            seen_img.add(full)
-            h.images.append({
-                "url": full,
-                "alt": (img.get("alt") or "").strip()[:120],
-                "context": (img.find_parent().get_text(" ").strip()[:120] if img.find_parent() else ""),
-                "page": page,
-            })
 
     h.text = "".join(texts)[:45000]
     return h
