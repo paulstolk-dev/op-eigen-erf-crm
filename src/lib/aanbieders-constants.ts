@@ -50,6 +50,19 @@ export const PARTNER_STATUS_STYLES: Record<string, string> = {
   afgewezen: "bg-red-100 text-red-700 ring-red-600/20",
 };
 
+// Review-status voor gescrapete aanbieders/woningen (bron='scrape').
+export const SCRAPE_REVIEW_STATUS = ["nieuw", "ok", "afgewezen"] as const;
+export const SCRAPE_REVIEW_STATUS_LABELS: Record<string, string> = {
+  nieuw: "Te beoordelen",
+  ok: "Gepubliceerd",
+  afgewezen: "Afgewezen",
+};
+export const SCRAPE_REVIEW_STATUS_STYLES: Record<string, string> = {
+  nieuw: "bg-amber-100 text-amber-700 ring-amber-600/20",
+  ok: "bg-green-100 text-green-700 ring-green-600/20",
+  afgewezen: "bg-red-100 text-red-700 ring-red-600/20",
+};
+
 export const BTW_BASIS = ["incl", "ex"] as const;
 export const BTW_BASIS_LABELS: Record<string, string> = {
   incl: "Incl. btw",

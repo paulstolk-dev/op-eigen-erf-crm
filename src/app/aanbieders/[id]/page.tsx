@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { AanbiederForm } from "@/components/aanbieder-form";
 import { WoningenSection } from "@/components/woningen-section";
+import { HerscrapeKnop } from "./herscrape-knop";
 import type { Aanbieder, Woning } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -41,9 +42,12 @@ export default async function AanbiederDetailPage({
         <Link href="/aanbieders" className="text-sm text-slate-500 hover:text-navy">
           ← Terug naar aanbieders
         </Link>
-        <h1 className="mb-5 mt-2 text-lg font-semibold text-slate-900">
-          {(aanbieder as Aanbieder).naam}
-        </h1>
+        <div className="mb-5 mt-2 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-lg font-semibold text-slate-900">
+            {(aanbieder as Aanbieder).naam}
+          </h1>
+          <HerscrapeKnop aanbiederId={id} />
+        </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6">
           <AanbiederForm initial={aanbieder as Aanbieder} />

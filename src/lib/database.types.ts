@@ -125,6 +125,8 @@ export type Database = {
           contact_email: string | null
           partner_status: string
           partner_benaderd_at: string | null
+          bron: string
+          review_status: string
           actief: boolean
           sortering: number
           created_at: string
@@ -158,6 +160,8 @@ export type Database = {
           contact_email?: string | null
           partner_status?: string
           partner_benaderd_at?: string | null
+          bron?: string
+          review_status?: string
           actief?: boolean
           sortering?: number
           created_at?: string
@@ -190,6 +194,8 @@ export type Database = {
           contact_email?: string | null
           partner_status?: string
           partner_benaderd_at?: string | null
+          bron?: string
+          review_status?: string
           actief?: boolean
           sortering?: number
           updated_at?: string
@@ -219,6 +225,8 @@ export type Database = {
           bron_url: string | null
           prijspeil: string | null
           laatst_gecontroleerd: string | null
+          bron: string
+          review_status: string
           actief: boolean
           uitgelicht: boolean
           sortering: number
@@ -246,6 +254,8 @@ export type Database = {
           bron_url?: string | null
           prijspeil?: string | null
           laatst_gecontroleerd?: string | null
+          bron?: string
+          review_status?: string
           actief?: boolean
           uitgelicht?: boolean
           sortering?: number
@@ -272,6 +282,8 @@ export type Database = {
           bron_url?: string | null
           prijspeil?: string | null
           laatst_gecontroleerd?: string | null
+          bron?: string
+          review_status?: string
           actief?: boolean
           uitgelicht?: boolean
           sortering?: number
@@ -283,6 +295,68 @@ export type Database = {
             columns: ["aanbieder_id"]
             isOneToOne: false
             referencedRelation: "aanbieders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scrape_afbeeldingen: {
+        Row: {
+          id: string
+          aanbieder_id: string | null
+          woning_id: string | null
+          bron_url: string
+          bron_pagina: string | null
+          storage_path: string | null
+          sha256: string | null
+          breedte: number | null
+          hoogte: number | null
+          bytes: number | null
+          gekozen: boolean
+          review_status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          aanbieder_id?: string | null
+          woning_id?: string | null
+          bron_url: string
+          bron_pagina?: string | null
+          storage_path?: string | null
+          sha256?: string | null
+          breedte?: number | null
+          hoogte?: number | null
+          bytes?: number | null
+          gekozen?: boolean
+          review_status?: string
+          created_at?: string
+        }
+        Update: {
+          aanbieder_id?: string | null
+          woning_id?: string | null
+          bron_url?: string
+          bron_pagina?: string | null
+          storage_path?: string | null
+          sha256?: string | null
+          breedte?: number | null
+          hoogte?: number | null
+          bytes?: number | null
+          gekozen?: boolean
+          review_status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrape_afbeeldingen_aanbieder_id_fkey"
+            columns: ["aanbieder_id"]
+            isOneToOne: false
+            referencedRelation: "aanbieders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrape_afbeeldingen_woning_id_fkey"
+            columns: ["woning_id"]
+            isOneToOne: false
+            referencedRelation: "woningen"
             referencedColumns: ["id"]
           },
         ]
@@ -686,6 +760,7 @@ export type LeadNote = Tables<"lead_notes">
 export type Erfscan = Tables<"erfscans">
 export type Aanbieder = Tables<"aanbieders">
 export type Woning = Tables<"woningen">
+export type ScrapeAfbeelding = Tables<"scrape_afbeeldingen">
 export type AanbiederUser = Tables<"aanbieder_users">
 export type LeadAanbieder = Tables<"lead_aanbieder">
 export type EmailSequenceStep = Tables<"email_sequence_steps">

@@ -339,31 +339,58 @@ function WoningForm({
       <div>
         <label className={label}>Foto&apos;s</label>
         {f.afbeeldingen.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {f.afbeeldingen.map((url) => (
-              <div key={url} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt=""
-                  className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    set(
-                      "afbeeldingen",
-                      f.afbeeldingen.filter((u) => u !== url),
-                    )
-                  }
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
-                  aria-label="Verwijderen"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+          <>
+            <p className="mb-1 text-xs text-slate-400">
+              Eerste foto = coverfoto op de site. Klik ★ om een andere als cover te zetten.
+            </p>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {f.afbeeldingen.map((url, i) => (
+                <div key={url} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt=""
+                    className={`h-16 w-16 rounded-lg border object-cover ${
+                      i === 0 ? "border-erf ring-2 ring-erf/30" : "border-slate-200"
+                    }`}
+                  />
+                  {i === 0 ? (
+                    <span className="absolute -left-1.5 -top-1.5 rounded-full bg-erf px-1 text-[10px] font-bold text-white">
+                      cover
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      title="Als coverfoto instellen"
+                      onClick={() =>
+                        set("afbeeldingen", [
+                          url,
+                          ...f.afbeeldingen.filter((u) => u !== url),
+                        ])
+                      }
+                      className="absolute -left-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px] text-white"
+                      aria-label="Als cover instellen"
+                    >
+                      ★
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set(
+                        "afbeeldingen",
+                        f.afbeeldingen.filter((u) => u !== url),
+                      )
+                    }
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                    aria-label="Verwijderen"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
         <label className="inline-block cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
           {uploading ? "Uploaden…" : "Foto's toevoegen"}
