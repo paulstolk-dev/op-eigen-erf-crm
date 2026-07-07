@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runReportGeneration, rerenderReportPdf } from "@/lib/generate-report-flow";
+import { logLeadEmail } from "@/lib/hubspot";
+import { reportBaseUrl } from "@/lib/erfcheck-report";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 async function requireUser() {
@@ -95,12 +97,13 @@ export async function sendReport(leadId: string): Promise<Result> {
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY niet gezet." };
 
   // De Erf Check wordt nu als tracbare pagina aangeboden i.p.v. PDF-bijlage.
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl").replace(/\/$/, "");
-  const pageUrl = `${base}/r/${lead!.report_token}`;
+  const pageUrl = `${reportBaseUrl()}/r/${lead!.report_token}`;
   const button = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
     <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">Bekijk je Erf Check online »</a>
   </td></tr></table>`;
   const html = toHtml(erfscan.draft_email_body || "") + button;
+  const fromEmail = process.env.REPORT_FROM_EMAIL || "opeigenerf <noreply@opeigenerf.nl>";
+  const cleanSubject = erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl";
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -109,22 +112,34 @@ export async function sendReport(leadId: string): Promise<Result> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.REPORT_FROM_EMAIL || "opeigenerf <noreply@opeigenerf.nl>",
+      from: fromEmail,
       to,
       // BCC-kopie naar het archief-adres, behalve in testmodus (gaat toch al naar test-adres).
       ...(!testTo ? { bcc: process.env.REPORT_BCC || "info@opeigenerf.nl" } : {}),
-      subject:
-        (testTo ? `[TEST → ${lead?.email ?? "?"}] ` : "") +
-        (erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl"),
+      subject: (testTo ? `[TEST → ${lead?.email ?? "?"}] ` : "") + cleanSubject,
       html,
     }),
   });
   if (!res.ok) return { ok: false, error: `Resend: ${await res.text()}` };
 
+  const sentAtIso = new Date().toISOString();
+
+  // Verzonden Erf Check-mail op de HubSpot-tijdlijn loggen (best-effort, niet in
+  // testmodus — dan gaat de mail immers naar het testadres, niet naar de lead).
+  if (!testTo && lead?.email) {
+    await logLeadEmail(leadId, {
+      subject: cleanSubject,
+      html,
+      from: fromEmail,
+      to: lead.email,
+      sentAtIso,
+    }).catch(() => {});
+  }
+
   const admin = createAdminClient();
   await admin
     .from("erfscans")
-    .update({ status: "sent", sent_at: new Date().toISOString() })
+    .update({ status: "sent", sent_at: sentAtIso })
     .eq("lead_id", leadId);
   revalidatePath(`/leads/${leadId}`);
   return { ok: true };

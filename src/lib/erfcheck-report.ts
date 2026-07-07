@@ -8,6 +8,15 @@ export const ERF = "#718d69"; // groen
 export const SCAN_URL = "https://opeigenerf.nl/haalbaarheidsscan";
 export const KENNISMAKING_URL = "https://opeigenerf.nl/kennismaking";
 
+// Basis-URL voor klantgerichte links (de Erfcheck-pagina). Valt terug op de
+// productie-CRM en negeert een localhost-waarde, zodat een test-verzending vanaf
+// de dev-server nooit een onbereikbare localhost-link in de mail zet.
+export function reportBaseUrl(): string {
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (site && !/localhost|127\.0\.0\.1/.test(site)) return site;
+  return "https://crm.opeigenerf.nl";
+}
+
 // Scan-link met de leadgegevens vooringevuld (?email=&postcode=&huisnummer=…).
 export function buildScanUrl(lead: Lead): string {
   const p = new URLSearchParams();

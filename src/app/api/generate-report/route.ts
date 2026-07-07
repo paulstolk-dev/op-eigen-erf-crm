@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { runReportGeneration } from "@/lib/generate-report-flow";
 import { sendEmail } from "@/lib/email";
 import { scoreLead } from "@/lib/lead-score";
+import { reportBaseUrl } from "@/lib/erfcheck-report";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 export const runtime = "nodejs";
@@ -78,10 +79,7 @@ export async function POST(request: NextRequest) {
         : "—";
       const m2 = (v?: number) => (v != null ? `${v} m²` : "n.b.");
 
-      const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl").replace(
-        /\/$/,
-        "",
-      );
+      const base = reportBaseUrl();
       const pageUrl = `${base}/r/${lead.report_token}`;
 
       const esc = (s: string) =>
