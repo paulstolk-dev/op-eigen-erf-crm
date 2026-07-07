@@ -40,6 +40,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/geen-toegang" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/r/") || // publieke, tokenbeveiligde Erf Check-pagina
+    pathname.startsWith("/l/") || // klik-redirect voor opvolgmail-links
     pathname.startsWith("/api/leads"); // marketing-site ingest endpoint
 
   if (!user && !isPublic) {

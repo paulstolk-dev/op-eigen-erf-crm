@@ -17,6 +17,7 @@ export function ReportPanel({
   terugbelAt,
   terugbelNotitie,
   telefoon,
+  linkClicks,
 }: {
   leadId: string;
   status: string;
@@ -30,6 +31,7 @@ export function ReportPanel({
   terugbelAt: string | null;
   terugbelNotitie: string | null;
   telefoon: string | null;
+  linkClicks: { url: string; label: string | null; clicked_at: string }[];
 }) {
   const router = useRouter();
   const [subject, setSubject] = useState(draftSubject);
@@ -47,6 +49,16 @@ export function ReportPanel({
       day: "numeric",
       month: "short",
       year: "numeric",
+    });
+  }
+
+  function datumTijdNL(iso: string | null): string {
+    if (!iso) return "";
+    return new Date(iso).toLocaleString("nl-NL", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   }
 
@@ -194,6 +206,33 @@ export function ReportPanel({
               </p>
             </div>
           )}
+
+          {/* Geklikte links uit de opvolgmails */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Geklikte links {linkClicks.length > 0 && `(${linkClicks.length})`}
+            </span>
+            {linkClicks.length === 0 ? (
+              <p className="mt-1 text-xs text-slate-400">Nog geen kliks geregistreerd.</p>
+            ) : (
+              <ul className="mt-1 space-y-1">
+                {linkClicks.map((c, i) => (
+                  <li key={i} className="flex items-baseline justify-between gap-2 text-xs">
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="truncate text-navy hover:underline"
+                      title={c.url}
+                    >
+                      {c.label || c.url}
+                    </a>
+                    <span className="shrink-0 text-slate-400">{datumTijdNL(c.clicked_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 

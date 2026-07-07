@@ -27,7 +27,29 @@ type MergeValues = {
   verdict: string;
   perceel_m2: string;
   erfcheck_url: string;
+  token: string;
 };
+
+// Herschrijft een externe link naar de klik-redirect /l/<token>?u=…&l=<label>, zodat
+// een klik als bezoek op de lead wordt geregistreerd. CRM-eigen links (bijv. de
+// /r/-pagina, die zichzelf al trackt) en niet-http links laten we ongemoeid.
+function trackedHref(v: MergeValues, rawUrl: string, label: string): string {
+  if (!v.token) return rawUrl;
+  const base = reportBaseUrl();
+  let host: string;
+  let crmHost: string;
+  try {
+    host = new URL(rawUrl).hostname.toLowerCase();
+    crmHost = new URL(base).hostname.toLowerCase();
+  } catch {
+    return rawUrl; // mailto:, tel:, relatief of ongeldig → niet wrappen
+  }
+  if (host === crmHost) return rawUrl;
+  const u = Buffer.from(rawUrl, "utf8").toString("base64url");
+  const q = new URLSearchParams({ u });
+  if (label) q.set("l", label.slice(0, 120));
+  return `${base}/l/${v.token}?${q.toString()}`;
+}
 
 function applyMerge(text: string, v: MergeValues): string {
   return text
@@ -43,12 +65,13 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Plain-text body -> HTML: escape, links klikbaar, regels -> <br>.
-function bodyToHtml(text: string): string {
-  const linked = esc(text).replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" style="color:#0a1b2b">$1</a>',
-  );
+// Plain-text body -> HTML: escape, links klikbaar (via de klik-tracker), regels -> <br>.
+function bodyToHtml(text: string, v: MergeValues): string {
+  const linked = esc(text).replace(/(https?:\/\/[^\s<]+)/g, (m) => {
+    const raw = m.replace(/&amp;/g, "&"); // esc() maakte & → &amp;: echte bestemming herstellen
+    const href = esc(trackedHref(v, raw, "body"));
+    return `<a href="${href}" style="color:#0a1b2b">${m}</a>`;
+  });
   return linked.split("\n").map((l) => l || "&nbsp;").join("<br>");
 }
 
@@ -59,18 +82,18 @@ export function renderNurtureEmail(
 ): { subject: string; html: string } {
   const subject = applyMerge(step.onderwerp, v);
   const preview = step.preview ? applyMerge(step.preview, v) : "";
-  const bodyHtml = bodyToHtml(applyMerge(step.body, v));
+  const bodyHtml = bodyToHtml(applyMerge(step.body, v), v);
 
   const button =
     step.cta_primary_label && step.cta_primary_url
       ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
-          <a href="${applyMerge(step.cta_primary_url, v)}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${esc(step.cta_primary_label)}</a>
+          <a href="${esc(trackedHref(v, applyMerge(step.cta_primary_url, v), step.cta_primary_label))}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${esc(step.cta_primary_label)}</a>
         </td></tr></table>`
       : "";
 
   const secondary =
     step.cta_secondary_label && step.cta_secondary_url
-      ? `<p style="margin:12px 0 0"><a href="${applyMerge(step.cta_secondary_url, v)}" style="color:#718d69;font-weight:600;text-decoration:none">${esc(step.cta_secondary_label)} →</a></p>`
+      ? `<p style="margin:12px 0 0"><a href="${esc(trackedHref(v, applyMerge(step.cta_secondary_url, v), step.cta_secondary_label))}" style="color:#718d69;font-weight:600;text-decoration:none">${esc(step.cta_secondary_label)} →</a></p>`
       : "";
 
   const html = `<!-- preheader -->
@@ -117,6 +140,7 @@ function mergeFor(row: ErfscanRow): MergeValues {
     verdict: row.conclusie ? VERDICT[row.conclusie] ?? row.conclusie : "nog te bepalen",
     perceel_m2: opp != null ? `± ${opp} m²` : "n.b.",
     erfcheck_url: lead.report_token ? `${reportBaseUrl()}/r/${lead.report_token}` : "",
+    token: lead.report_token ?? "",
   };
 }
 

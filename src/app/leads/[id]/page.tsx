@@ -62,6 +62,14 @@ export default async function LeadDetailPage({
     .eq("lead_id", id)
     .maybeSingle<Erfscan>();
 
+  // Klikken op links in opvolgmails (via de /l/-redirect).
+  const { data: linkClicks } = await supabase
+    .from("lead_link_clicks")
+    .select("url, label, clicked_at")
+    .eq("lead_id", id)
+    .order("clicked_at", { ascending: false })
+    .limit(50);
+
   const leadScore = scoreLead(lead, erfscan);
 
   // Deling met aanbieders (voor het deel-paneel).
@@ -258,6 +266,7 @@ export default async function LeadDetailPage({
                   terugbelAt={lead.terugbel_verzoek_at}
                   terugbelNotitie={lead.terugbel_notitie}
                   telefoon={lead.telefoon}
+                  linkClicks={linkClicks ?? []}
                 />
               </>
             ) : (

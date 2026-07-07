@@ -504,6 +504,41 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_link_clicks: {
+        Row: {
+          id: string
+          lead_id: string
+          url: string
+          label: string | null
+          clicked_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          lead_id: string
+          url: string
+          label?: string | null
+          clicked_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          lead_id?: string
+          url?: string
+          label?: string | null
+          clicked_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_link_clicks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_sequence_sends: {
         Row: {
           id: string
@@ -782,5 +817,6 @@ export type ScrapeAfbeelding = Tables<"scrape_afbeeldingen">
 export type AanbiederUser = Tables<"aanbieder_users">
 export type LeadAanbieder = Tables<"lead_aanbieder">
 export type EmailSequenceStep = Tables<"email_sequence_steps">
+export type LeadLinkClick = Tables<"lead_link_clicks">
 export type PortalLead =
   Database["public"]["Functions"]["get_portal_leads"]["Returns"][number]
