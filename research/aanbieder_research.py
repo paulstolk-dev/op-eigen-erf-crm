@@ -606,7 +606,9 @@ def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: 
                 "sha256": sha, "breedte": w, "hoogte": h, "bytes": len(content),
             })
         except Exception as e:
-            _pstat("exception")
+            _pstat(f"exc_{type(e).__name__}")
+            if len([x for x in LAST_ERRORS if x.startswith("foto ")]) < 3:
+                LAST_ERRORS.append(f"foto {im.get('url','')[:90]}: {type(e).__name__}: {e}")
             log(f"      foto-fout: {e}")
     return out
 
