@@ -92,7 +92,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "dns-retry-5"
+VERSION = "upload-diag-1"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
@@ -562,8 +562,16 @@ class Storage:
             try:
                 r = httpx.post(url, content=content, headers=headers,
                                timeout=REQUEST_TIMEOUT)
-                return r.status_code in (200, 201)
-            except Exception:
+                if r.status_code in (200, 201):
+                    return True
+                if len([x for x in LAST_ERRORS if x.startswith("upload ")]) < 2:
+                    LAST_ERRORS.append(
+                        f"upload HTTP {r.status_code}: {r.text[:160]}"
+                    )
+                return False  # echte HTTP-fout: geen retry
+            except Exception as e:
+                if len([x for x in LAST_ERRORS if x.startswith("upload ")]) < 2:
+                    LAST_ERRORS.append(f"upload {type(e).__name__}: {e}")
                 time.sleep(1.5 * (poging + 1))
         return False
 
