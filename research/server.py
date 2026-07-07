@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import threading
 
+import httpx
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
@@ -150,6 +151,14 @@ def diag(
             db.conn.close()
     except Exception as e:  # noqa: BLE001
         out["db"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    # Netwerk-/DNS-probe: kan de container een externe afbeelding ophalen?
+    test_url = "https://woningopmaat.nl/wp-content/uploads/2025/03/Sano-9-768x512.jpg"
+    try:
+        rr = httpx.get(test_url, timeout=15, follow_redirects=True,
+                       headers={"User-Agent": ar.USER_AGENT})
+        out["net"] = {"status": rr.status_code, "ctype": rr.headers.get("content-type")}
+    except Exception as e:  # noqa: BLE001
+        out["net"] = {"error": f"{type(e).__name__}: {e}"}
     return out
 
 
