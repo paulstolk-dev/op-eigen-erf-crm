@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { generateReport, saveDraft, sendReport } from "./report-actions";
+import { generateReport, rerenderReport, saveDraft, sendReport } from "./report-actions";
 
 export function ReportPanel({
   leadId,
@@ -24,6 +24,7 @@ export function ReportPanel({
   const [body, setBody] = useState(draftBody);
   const [msg, setMsg] = useState("");
   const [isGen, startGen] = useTransition();
+  const [isRerender, startRerender] = useTransition();
   const [isSave, startSave] = useTransition();
   const [isSend, startSend] = useTransition();
 
@@ -36,6 +37,18 @@ export function ReportPanel({
       if (!r.ok) setMsg(`Genereren mislukt: ${r.error}`);
       else {
         setMsg("Rapport gegenereerd.");
+        router.refresh();
+      }
+    });
+  }
+
+  function onRerender() {
+    setMsg("");
+    startRerender(async () => {
+      const r = await rerenderReport(leadId);
+      if (!r.ok) setMsg(`PDF renderen mislukt: ${r.error}`);
+      else {
+        setMsg("PDF opnieuw gerenderd (zonder Claude).");
         router.refresh();
       }
     });
@@ -85,6 +98,17 @@ export function ReportPanel({
               ? "Opnieuw genereren"
               : "Genereer rapport (Claude)"}
         </button>
+        {hasReport && (
+          <button
+            type="button"
+            disabled={isRerender}
+            onClick={onRerender}
+            title="Rendert alleen de PDF opnieuw met de bestaande conclusie — geen Claude, geen kosten."
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            {isRerender ? "Renderen…" : "Alleen PDF opnieuw renderen"}
+          </button>
+        )}
         {pdfUrl && (
           <a
             href={pdfUrl}

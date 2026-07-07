@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runReportGeneration } from "@/lib/generate-report-flow";
+import { runReportGeneration, rerenderReportPdf } from "@/lib/generate-report-flow";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 async function requireUser() {
@@ -38,6 +38,18 @@ export async function generateReport(leadId: string): Promise<Result> {
   await requireUser();
   try {
     const res = await runReportGeneration(leadId);
+    if (res.ok) revalidatePath(`/leads/${leadId}`);
+    return res;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Onbekende fout" };
+  }
+}
+
+/** Alleen de PDF opnieuw renderen (geen LLM/kosten) — na een layout-wijziging. */
+export async function rerenderReport(leadId: string): Promise<Result> {
+  await requireUser();
+  try {
+    const res = await rerenderReportPdf(leadId);
     if (res.ok) revalidatePath(`/leads/${leadId}`);
     return res;
   } catch (e) {
