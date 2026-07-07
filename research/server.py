@@ -100,6 +100,7 @@ def _background(body: RunBody) -> None:
         _last = {
             "state": "done",
             "mode": body.mode,
+            "version": getattr(ar, "VERSION", "?"),
             "aantal": len(seeds),
             "gevonden": [s.get("website_url") for s in seeds],
             "verwerkt": [
