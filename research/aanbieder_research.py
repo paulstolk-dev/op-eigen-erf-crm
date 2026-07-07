@@ -93,6 +93,12 @@ client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
+# Telt waarom kandidaatfoto's afvallen (voor diagnose).
+PHOTO_STATS: dict[str, int] = {}
+
+
+def _pstat(reason: str) -> None:
+    PHOTO_STATS[reason] = PHOTO_STATS.get(reason, 0) + 1
 
 
 # --------------------------------------------------------------------------- #
@@ -559,16 +565,21 @@ def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: 
     for i, im in enumerate(images):
         try:
             if not fetcher._allowed(im["url"]):
+                _pstat("robots")
                 continue
             fetcher._throttle(im["url"])
             r = fetcher.http.get(im["url"], headers={"Referer": im["page"]})
-            if r.status_code != 200 or not r.headers.get("content-type", "").startswith("image"):
+            ct = r.headers.get("content-type", "")
+            if r.status_code != 200 or not ct.startswith("image"):
+                _pstat(f"http_{r.status_code}" if r.status_code != 200 else "geen_image")
                 continue
             content = r.content
             if len(content) < MIN_IMG_BYTES:
+                _pstat("klein_bytes")
                 continue
             sha = hashlib.sha256(content).hexdigest()
             if sha in seen_hashes:
+                _pstat("dedup")
                 continue
             w = h = None
             if Image is not None:
@@ -576,6 +587,7 @@ def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: 
                     img = Image.open(io.BytesIO(content))
                     w, h = img.size
                     if max(w, h) < MIN_IMG_SIDE:
+                        _pstat("klein_pixels")
                         continue
                 except Exception:
                     pass
@@ -587,12 +599,14 @@ def process_images(fetcher: Fetcher, images: list[dict], slug: str, model_slug: 
             stored = False
             if storage is not None:
                 stored = storage.upload(path, content, r.headers["content-type"])
+            _pstat("ok" if stored else "upload_fail")
             out.append({
                 "bron_url": im["url"], "bron_pagina": im["page"],
                 "storage_path": path if stored else None,
                 "sha256": sha, "breedte": w, "hoogte": h, "bytes": len(content),
             })
         except Exception as e:
+            _pstat("exception")
             log(f"      foto-fout: {e}")
     return out
 
@@ -714,6 +728,7 @@ def run(seeds: list[dict], commit: bool):
     seen_hashes: set[str] = set()
     results = []
     LAST_ERRORS.clear()
+    PHOTO_STATS.clear()
 
     for seed in seeds:
         log(f"\n▶ {seed['naam']} — {seed['website_url']}")
