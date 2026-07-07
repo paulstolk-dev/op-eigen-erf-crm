@@ -83,22 +83,8 @@ export default async function ErfcheckPage({
           Een eerste, geautomatiseerde indicatie op basis van je kadastrale perceel.
         </p>
 
-        {luchtfotoUrl && (
-          <div className="mt-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={luchtfotoUrl}
-              alt="Luchtfoto van het perceel"
-              className="h-56 w-full rounded-xl object-cover"
-            />
-            <p className="mt-1 text-[11px] text-slate-400">
-              Luchtfoto · bron: PDOK (Beeldmateriaal Nederland)
-            </p>
-          </div>
-        )}
-
-        {/* Kengetallen + conclusie */}
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {/* Perceelgegevens links + vierkante luchtfoto rechts */}
+        <div className="mt-4 grid items-stretch gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Perceeloppervlakte
@@ -119,15 +105,30 @@ export default async function ErfcheckPage({
               </>
             )}
           </div>
-          <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-            <span
-              className="inline-block rounded-md px-2.5 py-1 text-sm font-bold text-white"
-              style={{ backgroundColor: c.kleur }}
-            >
-              {c.woord}
-            </span>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">{c.uitleg}</p>
-          </div>
+          {luchtfotoUrl && (
+            <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={luchtfotoUrl}
+                alt="Luchtfoto van het perceel"
+                className="aspect-square w-full rounded-xl object-cover"
+              />
+              <p className="mt-1 text-[11px] text-slate-400">
+                Luchtfoto · bron: PDOK (Beeldmateriaal Nederland)
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Oordeel */}
+        <div className="mt-3 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+          <span
+            className="inline-block rounded-md px-2.5 py-1 text-sm font-bold text-white"
+            style={{ backgroundColor: c.kleur }}
+          >
+            {c.woord}
+          </span>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">{c.uitleg}</p>
         </div>
 
         {/* Regelgeving */}
