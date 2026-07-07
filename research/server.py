@@ -94,6 +94,32 @@ def health() -> dict:
     return {"ok": True, "busy": _running.locked()}
 
 
+@app.get("/diag")
+def diag(
+    x_research_secret: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Snelle diagnose: welke env staat er en werkt de DB-connectie + Claude?"""
+    _check_secret(x_research_secret or authorization)
+    env = {
+        k: bool(os.environ.get(k))
+        for k in [
+            "ANTHROPIC_API_KEY", "CLAUDE_MODEL", "SUPABASE_DB_URL",
+            "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "RESEARCH_TRIGGER_SECRET",
+        ]
+    }
+    out: dict = {"env": env, "model": ar.CLAUDE_MODEL}
+    try:
+        db = ar.DB(os.environ["SUPABASE_DB_URL"])
+        try:
+            out["db"] = {"ok": True, "aanbieders": len(db.existing_domains())}
+        finally:
+            db.conn.close()
+    except Exception as e:  # noqa: BLE001
+        out["db"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    return out
+
+
 @app.post("/run", status_code=202)
 def run(
     body: RunBody,
@@ -101,7 +127,12 @@ def run(
     authorization: str | None = Header(default=None),
 ) -> dict:
     _check_secret(x_research_secret or authorization)
-    seeds = _seeds_for(body)
+    try:
+        seeds = _seeds_for(body)
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001 — geef de echte oorzaak terug
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
     if not seeds:
         return {"ok": True, "started": False, "reason": "geen aanbieders om te verwerken"}
     if not _running.acquire(blocking=False):
