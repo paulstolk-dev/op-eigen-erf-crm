@@ -98,7 +98,7 @@ export default async function DashboardPage({
     });
 
   const total = rows.length;
-  const qualified = rows.filter((r) => r.score.score > 50).length;
+  const qualified = rows.filter((r) => r.score.score >= 40).length;
   const gewonnen = rows.filter((r) => r.lead.status === "gewonnen").length;
   const verloren = rows.filter((r) => r.lead.status === "verloren").length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
@@ -176,7 +176,7 @@ export default async function DashboardPage({
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Aantal leads" value={total} />
           <StatCard
-            label="Qualified (score > 50)"
+            label="Qualified (score ≥ 40)"
             value={qualified}
             sub={`${pct(qualified)}%`}
             tone="erf"
