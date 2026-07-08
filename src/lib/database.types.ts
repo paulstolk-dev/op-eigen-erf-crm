@@ -504,6 +504,42 @@ export type Database = {
         }
         Relationships: []
       }
+      content_queue: {
+        Row: {
+          id: string
+          slug: string
+          props: Json
+          caption: Json
+          status: string
+          video_url: string | null
+          review_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          props: Json
+          caption: Json
+          status?: string
+          video_url?: string | null
+          review_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          props?: Json
+          caption?: Json
+          status?: string
+          video_url?: string | null
+          review_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lead_link_clicks: {
         Row: {
           id: string
@@ -818,5 +854,6 @@ export type AanbiederUser = Tables<"aanbieder_users">
 export type LeadAanbieder = Tables<"lead_aanbieder">
 export type EmailSequenceStep = Tables<"email_sequence_steps">
 export type LeadLinkClick = Tables<"lead_link_clicks">
+export type ContentQueueItem = Tables<"content_queue">
 export type PortalLead =
   Database["public"]["Functions"]["get_portal_leads"]["Returns"][number]

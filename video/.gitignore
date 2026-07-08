@@ -1,0 +1,7 @@
+node_modules/
+out/
+.env
+.env.local
+# Merk-assets worden lokaal klaargezet (zie README); binaries niet in git.
+public/*.png
+public/*.ttf
