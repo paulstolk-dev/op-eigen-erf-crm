@@ -36,14 +36,19 @@ export async function renderAll() {
 
   const rendered = [];
   for (const item of queue) {
+    // Ruime delayRender-timeout: koude Chromium + font-load haalt de default 30s
+    // niet altijd in een container.
+    const timeoutInMilliseconds = 120000;
     const composition = await selectComposition({
       serveUrl, id: "RegelgevingShort", inputProps: item.props,
+      timeoutInMilliseconds,
     });
     const outPath = `out/${item.slug}.mp4`;
     await renderMedia({
       composition, serveUrl, codec: "h264",
       inputProps: item.props,
       outputLocation: outPath,
+      timeoutInMilliseconds,
       // In een container: 1 Chromium-tab tegelijk (default = 1 per CPU-core, wat
       // op Railway het geheugen laat vollopen → OOM-kill). Overschrijfbaar via env.
       concurrency: Number(process.env.RENDER_CONCURRENCY) || 1,
