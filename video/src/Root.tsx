@@ -1,15 +1,16 @@
 import React from 'react';
 import { Composition } from 'remotion';
-import { RegelgevingShort, regelgevingSchema, SECONDS } from './RegelgevingShort';
+import { RegelgevingShort, regelgevingSchema, computeMeta } from './RegelgevingShort';
+import { defaultSettings } from './settings';
 
 export const RemotionRoot: React.FC = () => (
   <Composition
     id="RegelgevingShort"
     component={RegelgevingShort}
     schema={regelgevingSchema}
-    fps={30}
-    width={1080}
-    height={1920}
+    fps={defaultSettings.fps}
+    width={defaultSettings.width}
+    height={defaultSettings.height}
     defaultProps={{
       kicker: 'Nieuwe regelgeving',
       titel: 'Mantelzorgwoning bouwen in 2026',
@@ -22,10 +23,8 @@ export const RemotionRoot: React.FC = () => (
       bron: 'Bron: DSO omgevingsplan / Kadaster',
       laatstBijgewerkt: 'jul 2026',
       cta: 'Doe de gratis erfcheck op opeigenerf.nl',
+      settings: defaultSettings,
     }}
-    calculateMetadata={({ props }) => {
-      const total = SECONDS.intro + props.scenes.length * SECONDS.perScene + SECONDS.outro;
-      return { durationInFrames: Math.round(total * 30) };
-    }}
+    calculateMetadata={({ props }) => computeMeta(props)}
   />
 );

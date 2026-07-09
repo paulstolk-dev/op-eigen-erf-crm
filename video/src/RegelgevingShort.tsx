@@ -5,7 +5,7 @@ import {
 } from 'remotion';
 import { loadFont } from '@remotion/fonts';
 import { z } from 'zod';
-import { brand } from './brand';
+import { settingsSchema, defaultSettings, type VideoSettings } from './settings';
 
 // --- Carlito laden (metric-compatible met Calibri) ---
 const fontHandle = delayRender('Carlito laden');
@@ -14,49 +14,62 @@ Promise.all([
   loadFont({ family: 'Carlito', url: staticFile('Carlito-Bold.ttf'), weight: '700' }),
 ]).then(() => continueRender(fontHandle)).catch(() => continueRender(fontHandle));
 
-// --- Timings (gedeeld met Root voor duurberekening) ---
-export const SECONDS = { intro: 2, perScene: 4.5, outro: 3 };
+const FONT = 'Carlito, Calibri, sans-serif';
+const AMBER = '#C98A2B';
 
-// --- Props-schema: dit is óók je contract met de generatie-stap ---
+// --- Props-schema (settings optioneel; render-core merget ze in) ---
 export const regelgevingSchema = z.object({
   kicker: z.string(),
   titel: z.string(),
   scenes: z.array(z.object({ kop: z.string(), tekst: z.string() })).min(1).max(4),
-  nogNietDefinitief: z.boolean(),   // true → amber badge in beeld
-  bron: z.string(),                 // verplicht, bijv. "Bron: DSO omgevingsplan / Kadaster"
-  laatstBijgewerkt: z.string(),     // bijv. "jul 2026"
+  nogNietDefinitief: z.boolean(),
+  bron: z.string(),
+  laatstBijgewerkt: z.string(),
   cta: z.string(),
+  settings: settingsSchema.optional(),
 });
 export type RegelgevingProps = z.infer<typeof regelgevingSchema>;
 
-export const RegelgevingShort: React.FC<RegelgevingProps> = ({
-  kicker, titel, scenes, nogNietDefinitief, bron, laatstBijgewerkt, cta,
-}) => {
+// Metadata (afmeting/fps/duur) uit de settings + het aantal scenes.
+export function computeMeta(props: RegelgevingProps) {
+  const s: VideoSettings = { ...defaultSettings, ...(props.settings ?? {}) };
+  const scenes = props.scenes?.length ?? 1;
+  const total = s.intro + scenes * s.perScene + s.outro;
+  return {
+    width: s.width,
+    height: s.height,
+    fps: s.fps,
+    durationInFrames: Math.max(1, Math.round(total * s.fps)),
+  };
+}
+
+export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
+  const s: VideoSettings = { ...defaultSettings, ...(props.settings ?? {}) };
+  const { kicker, titel, scenes, nogNietDefinitief, bron, laatstBijgewerkt, cta } = props;
   const { fps } = useVideoConfig();
-  const introF = Math.round(SECONDS.intro * fps);
-  const sceneF = Math.round(SECONDS.perScene * fps);
-  const outroF = Math.round(SECONDS.outro * fps);
+  const introF = Math.round(s.intro * fps);
+  const sceneF = Math.round(s.perScene * fps);
+  const outroF = Math.round(s.outro * fps);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: brand.navy, fontFamily: brand.font }}>
-      <BackgroundAccent />
-      <ProgressBar />
-      <Img src={staticFile('oe-monogram.png')}
-           style={{ position: 'absolute', bottom: 64, right: 64, width: 120, opacity: 0.55 }} />
+    <AbsoluteFill style={{ backgroundColor: s.bg, fontFamily: FONT }}>
+      <BackgroundAccent accent={s.accent} />
+      <ProgressBar accent={s.accent} />
+      <Logo s={s} />
       {nogNietDefinitief && <DisclaimerBadge />}
 
       <Sequence durationInFrames={introF}>
-        <Intro kicker={kicker} titel={titel} />
+        <Intro kicker={kicker} titel={titel} s={s} />
       </Sequence>
 
-      {scenes.map((s, i) => (
+      {scenes.map((sc, i) => (
         <Sequence key={i} from={introF + i * sceneF} durationInFrames={sceneF}>
-          <Scene index={i} kop={s.kop} tekst={s.tekst} />
+          <Scene index={i} kop={sc.kop} tekst={sc.tekst} s={s} />
         </Sequence>
       ))}
 
       <Sequence from={introF + scenes.length * sceneF} durationInFrames={outroF}>
-        <Outro cta={cta} bron={bron} laatstBijgewerkt={laatstBijgewerkt} />
+        <Outro cta={cta} bron={bron} laatstBijgewerkt={laatstBijgewerkt} s={s} />
       </Sequence>
     </AbsoluteFill>
   );
@@ -64,84 +77,118 @@ export const RegelgevingShort: React.FC<RegelgevingProps> = ({
 
 // ---------- subcomponenten ----------
 
-const Intro: React.FC<{ kicker: string; titel: string }> = ({ kicker, titel }) => {
+const Intro: React.FC<{ kicker: string; titel: string; s: VideoSettings }> = ({ kicker, titel, s }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const e = spring({ frame, fps, config: { damping: 200 } });
-  const y = interpolate(e, [0, 1], [40, 0]);
+  const e = spring({ frame, fps, config: { damping: 200 } }); // rustig, geen overshoot
+  const y = interpolate(e, [0, 1], [24, 0]);
   return (
-    <AbsoluteFill style={{ justifyContent: 'center', padding: 90 }}>
+    <AbsoluteFill style={{ justifyContent: 'center', padding: 96 }}>
       <div style={{ opacity: e, transform: `translateY(${y}px)` }}>
-        <div style={{ color: brand.sage, fontSize: 44, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+        <div style={{ color: s.accent, fontSize: 42, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
           {kicker}
         </div>
-        <div style={{ color: brand.white, fontSize: 96, fontWeight: 700, lineHeight: 1.05, marginTop: 24 }}>
+        <div style={{ color: s.text, fontSize: 92, fontWeight: 700, lineHeight: 1.06, marginTop: 22 }}>
           {titel}
         </div>
+        <div style={{ marginTop: 28, width: 120, height: 8, borderRadius: 999, backgroundColor: s.accent }} />
       </div>
     </AbsoluteFill>
   );
 };
 
-const Scene: React.FC<{ index: number; kop: string; tekst: string }> = ({ index, kop, tekst }) => {
+const Scene: React.FC<{ index: number; kop: string; tekst: string; s: VideoSettings }> = ({ index, kop, tekst, s }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig(); // binnen Sequence = duur van deze scene
+  const { fps, durationInFrames } = useVideoConfig();
   const e = spring({ frame, fps, config: { damping: 200 } });
-  const exit = interpolate(frame, [durationInFrames - 12, durationInFrames], [1, 0],
+  const exit = interpolate(frame, [durationInFrames - 14, durationInFrames], [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  const x = interpolate(e, [0, 1], [60, 0]);
+  const y = interpolate(e, [0, 1], [28, 0]); // subtiele opkomst, geen slide
   return (
-    <AbsoluteFill style={{ justifyContent: 'center', padding: 90 }}>
-      <div style={{ opacity: Math.min(e, exit), transform: `translateX(${x}px)` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: brand.sage,
-            color: brand.navy, fontSize: 40, fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{index + 1}</div>
-          <div style={{ color: brand.sage, fontSize: 52, fontWeight: 700 }}>{kop}</div>
+    <AbsoluteFill style={{ justifyContent: 'center', padding: 72 }}>
+      <div
+        style={{
+          opacity: Math.min(e, exit),
+          transform: `translateY(${y}px)`,
+          backgroundColor: s.card,
+          borderRadius: s.radius,
+          padding: 64,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.06)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22, marginBottom: 30 }}>
+          <div style={{
+            width: 68, height: 68, borderRadius: 18, backgroundColor: s.accent,
+            color: '#fff', fontSize: 40, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>{index + 1}</div>
+          <div style={{ color: s.accent, fontSize: 50, fontWeight: 700 }}>{kop}</div>
         </div>
-        <div style={{ color: brand.white, fontSize: 64, lineHeight: 1.25 }}>{tekst}</div>
+        <div style={{ color: s.text, fontSize: 60, lineHeight: 1.28 }}>{tekst}</div>
       </div>
     </AbsoluteFill>
   );
 };
 
-const Outro: React.FC<{ cta: string; bron: string; laatstBijgewerkt: string }> =
-  ({ cta, bron, laatstBijgewerkt }) => {
+const Outro: React.FC<{ cta: string; bron: string; laatstBijgewerkt: string; s: VideoSettings }> =
+  ({ cta, bron, laatstBijgewerkt, s }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const e = spring({ frame, fps, config: { damping: 200 } });
-  const scale = interpolate(e, [0, 1], [0.9, 1]);
+  const y = interpolate(e, [0, 1], [24, 0]);
   return (
-    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: 90, textAlign: 'center' }}>
-      <Img src={staticFile('wordmark-wit.png')} style={{ width: 620, marginBottom: 48, opacity: e }} />
-      <div style={{ opacity: e, transform: `scale(${scale})`, color: brand.white, fontSize: 64, fontWeight: 700, lineHeight: 1.15 }}>
-        {cta}
-      </div>
-      <div style={{ position: 'absolute', bottom: 130, left: 90, right: 90, textAlign: 'center',
-        color: 'rgba(255,255,255,0.6)', fontSize: 30 }}>
-        {bron} · bijgewerkt {laatstBijgewerkt}
+    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: 96, textAlign: 'center' }}>
+      <div
+        style={{
+          opacity: e,
+          transform: `translateY(${y}px)`,
+          backgroundColor: s.card,
+          borderRadius: s.radius,
+          padding: 72,
+          maxWidth: 900,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.06)',
+        }}
+      >
+        {s.logoUrl ? (
+          <Img src={s.logoUrl} style={{ height: 96, marginBottom: 40, objectFit: 'contain' }} />
+        ) : null}
+        <div style={{ color: s.text, fontSize: 62, fontWeight: 700, lineHeight: 1.15 }}>{cta}</div>
+        <div style={{ marginTop: 28, color: s.accent, fontSize: 28, fontWeight: 700 }}>
+          {bron} · bijgewerkt {laatstBijgewerkt}
+        </div>
       </div>
     </AbsoluteFill>
   );
 };
 
-const ProgressBar: React.FC = () => {
+const ProgressBar: React.FC<{ accent: string }> = ({ accent }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig(); // top-level = hele video
+  const { durationInFrames } = useVideoConfig();
   const w = interpolate(frame, [0, durationInFrames], [0, 100], { extrapolateRight: 'clamp' });
-  return <div style={{ position: 'absolute', top: 0, left: 0, height: 10, width: `${w}%`, backgroundColor: brand.sage }} />;
+  return <div style={{ position: 'absolute', top: 0, left: 0, height: 8, width: `${w}%`, backgroundColor: accent }} />;
+};
+
+const Logo: React.FC<{ s: VideoSettings }> = ({ s }) => {
+  if (!s.logoUrl) return null;
+  const pos: React.CSSProperties =
+    s.logoPosition === 'linksboven'
+      ? { top: 64, left: 64 }
+      : { bottom: 64, right: 64 };
+  return (
+    <Img src={s.logoUrl} style={{ position: 'absolute', ...pos, height: 96, objectFit: 'contain', opacity: 0.9 }} />
+  );
 };
 
 const DisclaimerBadge: React.FC = () => (
-  <div style={{ position: 'absolute', top: 60, left: 60, backgroundColor: brand.amber, color: brand.navy,
-    padding: '14px 26px', borderRadius: 999, fontSize: 30, fontWeight: 700 }}>
+  <div style={{ position: 'absolute', top: 64, left: '50%', transform: 'translateX(-50%)',
+    backgroundColor: AMBER, color: '#fff', padding: '14px 28px', borderRadius: 999, fontSize: 30, fontWeight: 700 }}>
     ⚠ Nog niet definitief
   </div>
 );
 
-const BackgroundAccent: React.FC = () => (
+const BackgroundAccent: React.FC<{ accent: string }> = ({ accent }) => (
   <AbsoluteFill>
-    <div style={{ position: 'absolute', top: -200, right: -200, width: 700, height: 700, borderRadius: '50%', backgroundColor: brand.sage, opacity: 0.08 }} />
-    <div style={{ position: 'absolute', bottom: -300, left: -250, width: 800, height: 800, borderRadius: '50%', backgroundColor: brand.sage, opacity: 0.06 }} />
+    <div style={{ position: 'absolute', top: -220, right: -220, width: 720, height: 720, borderRadius: '50%', backgroundColor: accent, opacity: 0.07 }} />
+    <div style={{ position: 'absolute', bottom: -320, left: -260, width: 820, height: 820, borderRadius: '50%', backgroundColor: accent, opacity: 0.05 }} />
   </AbsoluteFill>
 );

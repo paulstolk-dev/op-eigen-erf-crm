@@ -20,15 +20,30 @@ export async function renderAll() {
 
   let sb = null;
   let queue = [];
+  let settings; // video-instellingen uit app_settings (kleuren/duur/logo/fps)
   if (useSupabase) {
     sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+    const { data: setRow } = await sb
+      .from("app_settings")
+      .select("value")
+      .eq("key", "video_settings")
+      .maybeSingle();
+    if (setRow?.value) {
+      try {
+        settings = JSON.parse(setRow.value);
+      } catch {
+        /* val terug op de template-defaults */
+      }
+    }
     const { data, error } = await sb
       .from("content_queue")
       .select("id, slug, props")
       .eq("status", "concept");
     if (error) throw error;
     queue = data ?? [];
-    console.log(`Supabase-modus: ${queue.length} concept-aflevering(en) te renderen`);
+    console.log(
+      `Supabase-modus: ${queue.length} concept-aflevering(en); settings ${settings ? "geladen" : "default"}`,
+    );
   } else {
     queue = JSON.parse(readFileSync("content/queue.json", "utf8"));
     console.log(`Offline-modus (queue.json): ${queue.length} aflevering(en)`);
@@ -39,14 +54,16 @@ export async function renderAll() {
     // Ruime delayRender-timeout: koude Chromium + font-load haalt de default 30s
     // niet altijd in een container.
     const timeoutInMilliseconds = 120000;
+    // Video-instellingen in de props mergen (kleuren/duur/logo/fps).
+    const inputProps = settings ? { ...item.props, settings } : item.props;
     const composition = await selectComposition({
-      serveUrl, id: "RegelgevingShort", inputProps: item.props,
+      serveUrl, id: "RegelgevingShort", inputProps,
       timeoutInMilliseconds,
     });
     const outPath = `out/${item.slug}.mp4`;
     await renderMedia({
       composition, serveUrl, codec: "h264",
-      inputProps: item.props,
+      inputProps,
       outputLocation: outPath,
       timeoutInMilliseconds,
       // In een container: 1 Chromium-tab tegelijk (default = 1 per CPU-core, wat

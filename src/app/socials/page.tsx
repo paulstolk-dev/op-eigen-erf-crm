@@ -3,8 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, STATUS_STYLE, CONTENT_STATUSSEN } from "@/lib/socials";
 import type { RegelgevingProps } from "@/lib/socials";
 import type { ContentQueueItem } from "@/lib/database.types";
+import { getSetting } from "@/lib/settings";
+import { VIDEO_SETTINGS_KEY, parseVideoSettings } from "@/lib/video-settings";
 import { GenerateForm } from "./generate-form";
 import { RenderButton } from "./render-button";
+import { VideoSettingsPanel } from "./video-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +31,8 @@ export default async function SocialsPage() {
     status: s,
     n: items.filter((i) => i.status === s).length,
   }));
+
+  const videoSettings = parseVideoSettings(await getSetting(VIDEO_SETTINGS_KEY));
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -54,6 +59,7 @@ export default async function SocialsPage() {
       <div className="mb-6 space-y-4">
         <GenerateForm />
         <RenderButton conceptCount={items.filter((i) => i.status === "concept").length} />
+        <VideoSettingsPanel initial={videoSettings} />
       </div>
 
       {items.length === 0 ? (
