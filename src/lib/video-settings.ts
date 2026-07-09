@@ -35,7 +35,7 @@ export const defaultVideoSettings: VideoSettings = {
   intro: 3.5,
   perScene: 9,
   outro: 4.5,
-  bg: "#f3efe6",
+  bg: "#ebe0c9", // video-veilige beige (#f3efe6 is te bleek en wast uit tot wit in h264)
   accent: "#6b8563",
   card: "#ffffff",
   text: "#2c2a24",

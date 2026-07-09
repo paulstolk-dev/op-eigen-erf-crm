@@ -10,7 +10,7 @@ export const settingsSchema = z.object({
   intro: z.number().default(3.5),
   perScene: z.number().default(9),
   outro: z.number().default(4.5),
-  bg: z.string().default("#f3efe6"),
+  bg: z.string().default("#ebe0c9"),
   accent: z.string().default("#6b8563"),
   card: z.string().default("#ffffff"),
   text: z.string().default("#2c2a24"),
