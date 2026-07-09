@@ -1,7 +1,7 @@
 # Remotion-renderserver voor Railway (Linux). macOS kan Remotion's compositor
 # vanaf macOS 13+ pas draaien; op Linux werkt het out-of-the-box mits de
 # Chromium-systeemlibs aanwezig zijn.
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 # Chrome Headless Shell / Remotion-compositor systeemafhankelijkheden.
 RUN apt-get update && apt-get install -y --no-install-recommends \
