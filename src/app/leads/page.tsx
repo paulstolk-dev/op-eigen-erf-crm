@@ -125,6 +125,10 @@ export default async function LeadsPage() {
         new Date(a.lead.created_at ?? 0).getTime(),
     );
 
+  // Besluit-alert-inschrijvingen krijgen geen erfcheck; los weergeven.
+  const leadRows = rows.filter((r) => r.lead.type !== "besluit-alert");
+  const besluitRows = rows.filter((r) => r.lead.type === "besluit-alert");
+
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
@@ -152,14 +156,14 @@ export default async function LeadsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 && (
+              {leadRows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                     Nog geen leads.
                   </td>
                 </tr>
               )}
-              {rows.map(({ lead, erfscan, score }) => {
+              {leadRows.map(({ lead, erfscan, score }) => {
                 const naam =
                   lead.naam ||
                   [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
@@ -245,6 +249,49 @@ export default async function LeadsPage() {
             </tbody>
           </table>
         </div>
+
+        {besluitRows.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-2">
+              <h2 className="text-sm font-semibold text-slate-900">Besluit-alerts</h2>
+              <p className="text-xs text-slate-500">
+                Inschrijvingen voor een besluit-alert. Hiervoor wordt geen
+                erfcheck aangemaakt.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">E-mail</th>
+                    <th className="px-4 py-3 font-medium">Ontvangen</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {besluitRows.map(({ lead }) => (
+                    <tr key={lead.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/leads/${lead.id}`}
+                          className="font-medium text-slate-900 hover:underline"
+                        >
+                          {lead.email || "—"}
+                        </Link>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        {datum(lead.created_at)}
+                      </td>
+                      <td className="hidden px-4 py-3 md:table-cell">
+                        <StatusBadge status={lead.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
