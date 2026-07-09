@@ -5,3 +5,4 @@ out/
 # Merk-assets worden lokaal klaargezet (zie README); binaries niet in git.
 public/*.png
 public/*.ttf
+content/queue.json

@@ -6,7 +6,8 @@
   "description": "Remotion-renderproject voor Op Eigen Erf regelgeving-shorts (Fase 1).",
   "scripts": {
     "studio": "remotion studio",
-    "render": "node render.mjs"
+    "render": "node render.mjs",
+    "server": "node server.mjs"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.230",

@@ -1,0 +1,10 @@
+node_modules
+out
+.env
+.env.local
+content/queue.json
+scripts
+.DS_Store
+# Merk-assets worden bij runtime uit de Supabase-bucket gehaald (ensure-assets.mjs).
+public/*.png
+public/*.ttf

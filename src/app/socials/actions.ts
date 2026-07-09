@@ -60,6 +60,37 @@ export async function generateSocials(aantal: number, thema?: string): Promise<R
   }
 }
 
+/**
+ * Start een render op de Railway-renderserver. Die haalt zelf alle
+ * concept-afleveringen uit de content_queue, rendert ze, uploadt de mp4 naar de
+ * 'socials'-bucket en zet status → gerenderd + video_url.
+ */
+export async function triggerVideoRender(): Promise<Result> {
+  await requireUser();
+  const endpoint = process.env.VIDEO_RENDER_ENDPOINT;
+  const secret = process.env.VIDEO_RENDER_SECRET;
+  if (!endpoint || !secret) {
+    return { ok: false, error: "VIDEO_RENDER_ENDPOINT/VIDEO_RENDER_SECRET niet gezet." };
+  }
+  try {
+    const res = await fetch(`${endpoint.replace(/\/$/, "")}/render`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-render-secret": secret },
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: `Renderserver ${res.status}: ${JSON.stringify(data).slice(0, 200)}`,
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Renderserver onbereikbaar." };
+  }
+}
+
 /** Caption / review-notitie / video-URL opslaan. */
 export async function saveSocial(
   id: string,

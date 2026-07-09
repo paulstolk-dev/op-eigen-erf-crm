@@ -24,7 +24,34 @@ npm install
 cp .env.example .env      # vul SUPABASE_URL + SUPABASE_SERVICE_KEY (service_role JWT)
 ```
 
-## Gebruik
+## Renderen op Railway (aanbevolen)
+
+macOS kan Remotion's compositor pas vanaf macOS 13+ draaien; op oudere macOS
+faalt de render (ffmpeg-symbol-error). Draai daarom op **Railway** (Linux),
+net als de research-crawler. De service is een kleine HTTP-server (`server.mjs`)
+die het CRM triggert.
+
+**Eenmalige deploy:**
+1. Nieuw Railway-project → deploy vanuit deze git-repo, **Root Directory = `video`**
+   (Railway pakt dan `Dockerfile` + `railway.json`).
+2. Zet op de Railway-service de env-vars:
+   - `SUPABASE_URL` = `https://eyzhcmdydisaokqzqyli.supabase.co`
+   - `SUPABASE_SERVICE_KEY` = de service_role JWT
+   - `VIDEO_RENDER_SECRET` = een zelfgekozen geheim (zelfde waarde in Vercel bij het CRM)
+3. In het CRM/Vercel: `VIDEO_RENDER_ENDPOINT` = de publieke Railway-URL,
+   `VIDEO_RENDER_SECRET` = hetzelfde geheim.
+
+De merk-assets (fonts + logo's) staan in de Supabase-bucket `socials/_assets/`
+en worden bij het opstarten opgehaald (`ensure-assets.mjs`) — ze hoeven dus niet
+in git of de image. Nieuwe/gewijzigde assets uploaden:
+`node --env-file=.env scripts/upload-assets.mjs`.
+
+**Trigger:** in het CRM op **`/socials`** → knop **Render** (POST `/render` met
+`x-render-secret`). De server rendert alle `concept`-afleveringen, uploadt de mp4
+naar de `socials`-bucket en zet ze op `gerenderd` + `video_url`.
+`GET /` is een health check.
+
+## Lokaal (alleen op macOS 13+ / Linux)
 
 Preview + handmatig bijstellen in de studio:
 

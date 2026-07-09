@@ -4,6 +4,7 @@ import { STATUS_LABEL, STATUS_STYLE, CONTENT_STATUSSEN } from "@/lib/socials";
 import type { RegelgevingProps } from "@/lib/socials";
 import type { ContentQueueItem } from "@/lib/database.types";
 import { GenerateForm } from "./generate-form";
+import { RenderButton } from "./render-button";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,9 @@ export default async function SocialsPage() {
         ))}
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-4">
         <GenerateForm />
+        <RenderButton conceptCount={items.filter((i) => i.status === "concept").length} />
       </div>
 
       {items.length === 0 ? (
