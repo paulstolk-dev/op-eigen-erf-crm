@@ -149,7 +149,7 @@ export default async function LeadsPage() {
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">Adres</th>
                 <th className="px-4 py-3 font-medium">Achtererf</th>
                 <th className="px-4 py-3 font-medium">Score</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Status</th>
+                <th className="px-4 py-3 font-medium">Geopend</th>
                 <th className="px-4 py-3 font-medium">Conclusie</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Rapport</th>
                 <th className="px-4 py-3 font-medium">Flow</th>
@@ -193,8 +193,24 @@ export default async function LeadsPage() {
                     <td className="px-4 py-3">
                       <ScoreBadge score={score.score} label={score.label} />
                     </td>
-                    <td className="hidden px-4 py-3 md:table-cell">
-                      <StatusBadge status={lead.status} />
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {(() => {
+                        const n = erfscan?.view_count ?? 0;
+                        return n > 0 ? (
+                          <span
+                            className="font-medium text-slate-900"
+                            title={
+                              erfscan?.last_viewed_at
+                                ? `Laatst geopend: ${datum(erfscan.last_viewed_at)}`
+                                : undefined
+                            }
+                          >
+                            {n}×
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">0</span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       {conclusie ? (
