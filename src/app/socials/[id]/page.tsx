@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { RegelgevingProps, Caption } from "@/lib/socials";
 import type { ContentQueueItem } from "@/lib/database.types";
 import { SocialReview } from "./review";
+import { PropsEditor } from "./props-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -63,27 +64,7 @@ export default async function SocialDetailPage({
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Script
-            </span>
-            <ol className="mt-3 space-y-3">
-              {(props?.scenes ?? []).map((s, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-erf/15 text-xs font-bold text-erf">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{s.kop}</p>
-                    <p className="text-sm text-slate-600">{s.tekst}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-4 border-t border-slate-100 pt-3 text-sm text-slate-600">
-              <span className="font-semibold text-slate-800">CTA:</span> {props?.cta}
-            </p>
-          </div>
+          <PropsEditor id={data.id} props={props} />
         </div>
 
         {/* Review-acties */}

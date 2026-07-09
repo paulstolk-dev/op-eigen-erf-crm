@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateSocialContent } from "@/lib/socials-generate";
-import { CONTENT_STATUSSEN, type ContentStatus } from "@/lib/socials";
+import { CONTENT_STATUSSEN, regelgevingSchema, type ContentStatus } from "@/lib/socials";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -109,6 +109,30 @@ export async function saveSocial(
       review_notes: data.review_notes || null,
       video_url: data.video_url || null,
     })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/socials");
+  revalidatePath(`/socials/${id}`);
+  return { ok: true };
+}
+
+/**
+ * De video-opzet (props) aanpassen na AI-generatie. Valideert tegen het
+ * template-contract (regelgevingSchema) en zet de status terug op 'concept',
+ * omdat een eventueel gerenderde video na een wijziging verouderd is.
+ */
+export async function saveProps(id: string, props: unknown): Promise<Result> {
+  const { supabase } = await requireUser();
+  const parsed = regelgevingSchema.safeParse(props);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ").slice(0, 300),
+    };
+  }
+  const { error } = await supabase
+    .from("content_queue")
+    .update({ props: parsed.data, status: "concept" })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/socials");
