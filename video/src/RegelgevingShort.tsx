@@ -53,7 +53,6 @@ export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: s.bg, fontFamily: FONT }}>
-      <BackgroundAccent accent={s.accent} />
       <ProgressBar accent={s.accent} />
       <Logo s={s} />
       {nogNietDefinitief && <DisclaimerBadge />}
@@ -150,7 +149,15 @@ const Outro: React.FC<{ cta: string; bron: string; laatstBijgewerkt: string; s: 
         }}
       >
         {s.logoUrl ? (
-          <Img src={s.logoUrl} style={{ height: Math.round(s.logoSize * 1.4), marginBottom: 40, objectFit: 'contain' }} />
+          <Img
+            src={s.logoUrl}
+            style={{
+              maxHeight: Math.round(s.logoSize * 1.4),
+              maxWidth: Math.round(s.width * 0.62),
+              marginBottom: 40,
+              objectFit: 'contain',
+            }}
+          />
         ) : null}
         <div style={{ color: s.text, fontSize: 62, fontWeight: 700, lineHeight: 1.15 }}>{cta}</div>
         <div style={{ marginTop: 28, color: s.accent, fontSize: 28, fontWeight: 700 }}>
@@ -175,7 +182,17 @@ const Logo: React.FC<{ s: VideoSettings }> = ({ s }) => {
       ? { top: 64, left: 64 }
       : { bottom: 64, right: 64 };
   return (
-    <Img src={s.logoUrl} style={{ position: 'absolute', ...pos, height: s.logoSize, objectFit: 'contain', opacity: 0.9 }} />
+    <Img
+      src={s.logoUrl}
+      style={{
+        position: 'absolute',
+        ...pos,
+        maxHeight: s.logoSize,
+        maxWidth: Math.round(s.width * 0.42), // nooit buiten beeld (brede wordmark)
+        objectFit: 'contain',
+        opacity: 0.9,
+      }}
+    />
   );
 };
 
@@ -184,11 +201,4 @@ const DisclaimerBadge: React.FC = () => (
     backgroundColor: AMBER, color: '#fff', padding: '14px 28px', borderRadius: 999, fontSize: 30, fontWeight: 700 }}>
     ⚠ Nog niet definitief
   </div>
-);
-
-const BackgroundAccent: React.FC<{ accent: string }> = ({ accent }) => (
-  <AbsoluteFill>
-    <div style={{ position: 'absolute', top: -220, right: -220, width: 720, height: 720, borderRadius: '50%', backgroundColor: accent, opacity: 0.07 }} />
-    <div style={{ position: 'absolute', bottom: -320, left: -260, width: 820, height: 820, borderRadius: '50%', backgroundColor: accent, opacity: 0.05 }} />
-  </AbsoluteFill>
 );
