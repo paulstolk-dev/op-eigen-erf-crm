@@ -44,6 +44,10 @@ export async function renderAll() {
       composition, serveUrl, codec: "h264",
       inputProps: item.props,
       outputLocation: outPath,
+      // In een container: 1 Chromium-tab tegelijk (default = 1 per CPU-core, wat
+      // op Railway het geheugen laat vollopen → OOM-kill). Overschrijfbaar via env.
+      concurrency: Number(process.env.RENDER_CONCURRENCY) || 1,
+      chromiumOptions: { enableMultiProcessOnLinux: true },
     });
     console.log("✓ gerenderd:", item.slug);
     rendered.push(item.slug);
