@@ -150,7 +150,7 @@ const Outro: React.FC<{ cta: string; bron: string; laatstBijgewerkt: string; s: 
         }}
       >
         {s.logoUrl ? (
-          <Img src={s.logoUrl} style={{ height: 96, marginBottom: 40, objectFit: 'contain' }} />
+          <Img src={s.logoUrl} style={{ height: Math.round(s.logoSize * 1.4), marginBottom: 40, objectFit: 'contain' }} />
         ) : null}
         <div style={{ color: s.text, fontSize: 62, fontWeight: 700, lineHeight: 1.15 }}>{cta}</div>
         <div style={{ marginTop: 28, color: s.accent, fontSize: 28, fontWeight: 700 }}>
@@ -175,7 +175,7 @@ const Logo: React.FC<{ s: VideoSettings }> = ({ s }) => {
       ? { top: 64, left: 64 }
       : { bottom: 64, right: 64 };
   return (
-    <Img src={s.logoUrl} style={{ position: 'absolute', ...pos, height: 96, objectFit: 'contain', opacity: 0.9 }} />
+    <Img src={s.logoUrl} style={{ position: 'absolute', ...pos, height: s.logoSize, objectFit: 'contain', opacity: 0.9 }} />
   );
 };
 

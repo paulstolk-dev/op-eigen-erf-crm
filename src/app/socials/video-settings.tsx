@@ -183,6 +183,14 @@ export function VideoSettingsPanel({ initial }: { initial: VideoSettings }) {
                 <option value="rechtsonder">Rechtsonder</option>
               </select>
             </div>
+            <Getal
+              label="Logo-grootte"
+              value={s.logoSize}
+              onChange={(v) => set("logoSize", v)}
+              suffix="px hoog"
+              step={10}
+              min={40}
+            />
           </div>
         </div>
 

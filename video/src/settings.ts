@@ -16,6 +16,7 @@ export const settingsSchema = z.object({
   text: z.string().default("#2c2a24"),
   radius: z.number().default(28),
   logoPosition: z.enum(["linksboven", "rechtsonder"]).default("rechtsonder"),
+  logoSize: z.number().default(200),
   logoUrl: z.string().nullable().default(null),
   logoPath: z.string().nullable().default(null),
 });

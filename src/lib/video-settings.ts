@@ -22,6 +22,7 @@ export type VideoSettings = {
   radius: number; // hoekafronding cards (px)
   // Logo.
   logoPosition: LogoPosition;
+  logoSize: number; // hoogte in px (op de 1920px-hoge video)
   logoPath: string | null; // pad in de 'socials'-bucket, bijv. "_assets/logo.png"
   logoUrl: string | null; // publieke URL (preview in CRM + render)
 };
@@ -40,6 +41,7 @@ export const defaultVideoSettings: VideoSettings = {
   text: "#2c2a24",
   radius: 28,
   logoPosition: "rechtsonder",
+  logoSize: 200,
   logoPath: null,
   logoUrl: null,
 };
