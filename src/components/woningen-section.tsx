@@ -9,6 +9,8 @@ import {
   AANBOD_TYPE_LABELS,
   BTW_BASIS,
   BTW_BASIS_LABELS,
+  WONINGTYPES,
+  WONINGTYPE_LABELS,
   euro,
   slugify,
 } from "@/lib/aanbieders-constants";
@@ -64,6 +66,7 @@ function WoningForm({
     beschrijving: str(initial?.beschrijving),
     gelijkvloers: triStr(initial?.gelijkvloers),
     energieneutraal_beng: triStr(initial?.energieneutraal_beng),
+    woningtypes: initial?.woningtypes ?? [],
     afbeeldingen: initial?.afbeeldingen ?? [],
     bron_url: str(initial?.bron_url),
     prijspeil: str(initial?.prijspeil),
@@ -335,6 +338,38 @@ function WoningForm({
         />
       </div>
 
+      <div>
+        <label className={label}>Type (meerdere mogelijk)</label>
+        <div className="flex flex-wrap gap-1.5">
+          {WONINGTYPES.map((t) => {
+            const actief = f.woningtypes.includes(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={actief}
+                onClick={() =>
+                  set(
+                    "woningtypes",
+                    actief
+                      ? f.woningtypes.filter((x) => x !== t)
+                      : [...f.woningtypes, t],
+                  )
+                }
+                className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition ${
+                  actief
+                    ? "bg-erf/15 text-erf ring-erf/30"
+                    : "bg-white text-slate-500 ring-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {actief ? "✓ " : ""}
+                {WONINGTYPE_LABELS[t]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Foto's */}
       <div>
         <label className={label}>Foto&apos;s</label>
@@ -604,6 +639,18 @@ export function WoningenSection({
                   {euro(w.prijs_incl_btw)}
                   {w.prijs_per_m2 != null && ` · ${euro(w.prijs_per_m2)}/m²`}
                 </div>
+                {(w.woningtypes?.length ?? 0) > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {w.woningtypes!.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded bg-erf/10 px-1.5 py-0.5 text-[11px] font-medium text-erf"
+                      >
+                        {WONINGTYPE_LABELS[t] ?? t}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </button>
               <div className="flex shrink-0 items-center gap-3">
                 <ActiefToggle

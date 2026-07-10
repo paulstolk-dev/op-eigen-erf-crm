@@ -11,6 +11,7 @@ import {
   AFWERKINGSNIVEAUS,
   AANBOD_TYPE,
   BTW_BASIS,
+  WONINGTYPES,
   slugify,
 } from "@/lib/aanbieders-constants";
 
@@ -195,6 +196,7 @@ const woningSchema = z.object({
   beschrijving: z.string().optional().transform((v) => nul(v) as string | null),
   gelijkvloers: z.boolean().nullable().optional().default(null),
   energieneutraal_beng: z.boolean().nullable().optional().default(null),
+  woningtypes: z.array(z.enum(WONINGTYPES)).optional().default([]),
   afbeeldingen: z.array(z.string()).optional().default([]),
   bron_url: z.string().optional().transform((v) => nul(v) as string | null),
   prijspeil: z.string().optional().transform((v) => nul(v) as string | null),
