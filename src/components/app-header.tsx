@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ContentMenu } from "./content-menu";
 
 export function AppHeader({ email }: { email?: string | null }) {
   return (
@@ -22,12 +23,7 @@ export function AppHeader({ email }: { email?: string | null }) {
             <Link href="/aanbieders" className="transition hover:text-navy">
               Aanbieders
             </Link>
-            <Link href="/socials" className="transition hover:text-navy">
-              Socials
-            </Link>
-            <Link href="/website" className="transition hover:text-navy">
-              Website
-            </Link>
+            <ContentMenu />
             <Link href="/instellingen" className="transition hover:text-navy">
               Instellingen
             </Link>
