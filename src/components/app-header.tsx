@@ -25,6 +25,9 @@ export function AppHeader({ email }: { email?: string | null }) {
             <Link href="/socials" className="transition hover:text-navy">
               Socials
             </Link>
+            <Link href="/website" className="transition hover:text-navy">
+              Website
+            </Link>
             <Link href="/instellingen" className="transition hover:text-navy">
               Instellingen
             </Link>

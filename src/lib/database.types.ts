@@ -510,6 +510,46 @@ export type Database = {
         }
         Relationships: []
       }
+      artikelen: {
+        Row: {
+          id: string
+          slug: string | null
+          titel: string
+          seo_titel: string | null
+          beschrijving: string | null
+          samenvatting: string | null
+          categorie: string | null
+          body_markdown: string | null
+          body_html: string | null
+          faq: Json
+          gerelateerde_links: Json
+          leestijd_minuten: number | null
+          publicatiedatum: string | null
+          auteur: string
+          bron: Json | null
+          status: string
+          afbeelding_url: string | null
+          gepubliceerd_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug?: string | null
+          titel: string
+          status?: string
+          afbeelding_url?: string | null
+        }
+        Update: {
+          slug?: string | null
+          titel?: string
+          categorie?: string | null
+          status?: string
+          afbeelding_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_queue: {
         Row: {
           id: string
@@ -861,5 +901,6 @@ export type LeadAanbieder = Tables<"lead_aanbieder">
 export type EmailSequenceStep = Tables<"email_sequence_steps">
 export type LeadLinkClick = Tables<"lead_link_clicks">
 export type ContentQueueItem = Tables<"content_queue">
+export type Artikel = Tables<"artikelen">
 export type PortalLead =
   Database["public"]["Functions"]["get_portal_leads"]["Returns"][number]
