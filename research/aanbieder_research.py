@@ -97,7 +97,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "direct-key-1"
+VERSION = "extract-diag-2"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
@@ -513,7 +513,7 @@ def extract_structured(aanbieder_seed: dict, harvest: Harvest,
     )
     resp = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=8000,
+        max_tokens=16000,
         thinking={"type": "disabled"},
         system=EXTRACT_SYSTEM,
         messages=[{"role": "user", "content": user}],
@@ -521,6 +521,10 @@ def extract_structured(aanbieder_seed: dict, harvest: Harvest,
     text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
     data = _loads_json(text)
     if not data:
+        stop = getattr(resp, "stop_reason", "?")
+        LAST_ERRORS.append(
+            f"extractie: geen JSON (model={CLAUDE_MODEL}, stop={stop}, {len(text)} tekens): {text[:200]!r}"
+        )
         return None
     # zet afbeelding_indexen om naar echte URL's
     for m in data.get("modellen", []):
