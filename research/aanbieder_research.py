@@ -92,7 +92,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "sb-probe-1"
+VERSION = "diag-skip-1"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
@@ -771,12 +771,27 @@ def run(seeds: list[dict], commit: bool):
         harvest = harvest_site(fetcher, seed["website_url"])
         if not harvest.text:
             log("  geen bruikbare inhoud, overslaan.")
+            LAST_ERRORS.append(
+                f"{seed['website_url']}: geen bruikbare inhoud "
+                f"(pagina's={len(harvest.pages)}, foto's={len(harvest.images)})"
+            )
             continue
         log(f"  {len(harvest.pages)} pagina's, {len(harvest.images)} kandidaatfoto's.")
 
-        extracted = extract_structured(seed, harvest, a_enums, w_enums)
+        try:
+            extracted = extract_structured(seed, harvest, a_enums, w_enums)
+        except Exception as e:  # noqa: BLE001
+            extracted = None
+            LAST_ERRORS.append(
+                f"{seed['website_url']}: extractie-fout {type(e).__name__}: {e}"
+            )
         if not extracted:
             log("  extractie mislukt, overslaan.")
+            if not any(seed["website_url"] in x for x in LAST_ERRORS):
+                LAST_ERRORS.append(
+                    f"{seed['website_url']}: extractie gaf geen JSON "
+                    f"(tekst={len(harvest.text)} tekens, foto's={len(harvest.images)})"
+                )
             continue
         n_models = len(extracted.get("modellen", []))
         log(f"  → {n_models} modellen geëxtraheerd.")
