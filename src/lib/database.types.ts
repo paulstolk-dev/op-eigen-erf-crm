@@ -221,6 +221,7 @@ export type Database = {
           beschrijving: string | null
           gelijkvloers: boolean | null
           energieneutraal_beng: boolean | null
+          woningtypes: string[] | null
           afbeeldingen: string[] | null
           bron_url: string | null
           prijspeil: string | null
@@ -250,6 +251,7 @@ export type Database = {
           beschrijving?: string | null
           gelijkvloers?: boolean | null
           energieneutraal_beng?: boolean | null
+          woningtypes?: string[] | null
           afbeeldingen?: string[] | null
           bron_url?: string | null
           prijspeil?: string | null
@@ -278,6 +280,7 @@ export type Database = {
           beschrijving?: string | null
           gelijkvloers?: boolean | null
           energieneutraal_beng?: boolean | null
+          woningtypes?: string[] | null
           afbeeldingen?: string[] | null
           bron_url?: string | null
           prijspeil?: string | null

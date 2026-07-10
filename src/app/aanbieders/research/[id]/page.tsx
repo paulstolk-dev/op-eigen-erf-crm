@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/app-header";
 import { euro } from "@/lib/aanbieders-constants";
 import { FotoGrid } from "./foto-grid";
 import { PublishBar } from "./publish-bar";
+import { TypeKiezer } from "./type-kiezer";
 import type { Aanbieder, Woning, ScrapeAfbeelding } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -132,6 +133,7 @@ export default async function ResearchDetailPage({
                   bron »
                 </a>
               )}
+              <TypeKiezer woningId={w.id} initial={w.woningtypes ?? []} />
               <div className="mt-3">
                 <FotoGrid fotos={fotosByWoning.get(w.id) ?? []} />
               </div>

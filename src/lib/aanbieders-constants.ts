@@ -63,6 +63,14 @@ export const SCRAPE_REVIEW_STATUS_STYLES: Record<string, string> = {
   afgewezen: "bg-red-100 text-red-700 ring-red-600/20",
 };
 
+// Modeltype (meerdere mogelijk per model) — kolom woningen.woningtypes (text[]).
+export const WONINGTYPES = ["mantelzorgwoning", "familiewoning", "tuinkantoor"] as const;
+export const WONINGTYPE_LABELS: Record<string, string> = {
+  mantelzorgwoning: "Mantelzorgwoning",
+  familiewoning: "Familiewoning",
+  tuinkantoor: "Tuinkantoor",
+};
+
 export const BTW_BASIS = ["incl", "ex"] as const;
 export const BTW_BASIS_LABELS: Record<string, string> = {
   incl: "Incl. btw",

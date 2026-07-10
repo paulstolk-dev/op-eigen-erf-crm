@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePublicSite } from "@/lib/revalidate-public";
-import { SCRAPE_REVIEW_STATUS } from "@/lib/aanbieders-constants";
+import { SCRAPE_REVIEW_STATUS, WONINGTYPES } from "@/lib/aanbieders-constants";
 import type { TablesUpdate } from "@/lib/database.types";
 
 type Result = { ok: boolean; error?: string; started?: boolean; aantal?: number };
@@ -91,6 +91,29 @@ export async function setScrapeReviewStatus(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/aanbieders/research");
   revalidatePath(`/aanbieders/research/${aanbiederId}`);
+  return { ok: true };
+}
+
+// Modeltype(s) van een woning aanpassen (woningen.woningtypes, text[]).
+export async function setWoningtypes(
+  woningId: string,
+  types: string[],
+): Promise<Result> {
+  await requireCrm();
+  const allowed = (WONINGTYPES as readonly string[]);
+  const clean = Array.from(new Set(types)).filter((t) => allowed.includes(t));
+  const admin = createAdminClient();
+  const { data: w } = await admin
+    .from("woningen")
+    .select("aanbieder_id")
+    .eq("id", woningId)
+    .maybeSingle();
+  const { error } = await admin
+    .from("woningen")
+    .update({ woningtypes: clean })
+    .eq("id", woningId);
+  if (error) return { ok: false, error: error.message };
+  if (w?.aanbieder_id) revalidatePath(`/aanbieders/research/${w.aanbieder_id}`);
   return { ok: true };
 }
 
