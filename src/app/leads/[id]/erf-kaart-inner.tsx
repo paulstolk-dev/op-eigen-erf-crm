@@ -8,7 +8,7 @@ import "leaflet/dist/leaflet.css";
 import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import area from "@turf/area";
-import { saveErfTekening } from "./erf-actions";
+import { saveErfTekening, uploadErfSnapshot } from "./erf-actions";
 import type { Json } from "@/lib/database.types";
 
 type VlakType = "erf" | "bebouwbaar" | "overig";
@@ -19,6 +19,36 @@ const TYPE_META: Record<VlakType, { label: string; kleur: string }> = {
 };
 
 type Vlak = { id: number; type: VlakType; m2: number };
+
+// WGS84 lon/lat → EPSG:3857 (web mercator) meters.
+const MERC_R = 6378137;
+function toMerc(lon: number, lat: number): [number, number] {
+  return [
+    (MERC_R * lon * Math.PI) / 180,
+    MERC_R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)),
+  ];
+}
+function hexA(hex: string, a: number): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function wmsGetMap(base: string, layers: string, format: string, transparent: boolean, bbox: string, w: number, h: number): string {
+  const p = new URLSearchParams({
+    service: "WMS", request: "GetMap", version: "1.3.0", layers, styles: "",
+    crs: "EPSG:3857", bbox, width: String(w), height: String(h), format,
+    transparent: String(transparent),
+  });
+  return `${base}?${p.toString()}`;
+}
+function loadImg(url: string): Promise<HTMLImageElement> {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = url;
+  });
+}
 
 function styleLayer(layer: any, type: VlakType) {
   layer.options.erftype = type;
@@ -31,13 +61,16 @@ function Tekenlaag({
   initial,
   typeRef,
   onChange,
+  onMap,
 }: {
   initial: any;
   typeRef: React.MutableRefObject<VlakType>;
   onChange: (vlakken: Vlak[], group: L.FeatureGroup) => void;
+  onMap: (map: L.Map) => void;
 }) {
   const map = useMap();
   useEffect(() => {
+    onMap(map);
     const group = new L.FeatureGroup().addTo(map);
     (map as any).pm.setGlobalOptions({ layerGroup: group });
     (map as any).pm.addControls({
@@ -110,11 +143,13 @@ export default function ErfKaartInner({
   lat,
   lon,
   initial,
+  initialSnapshotUrl,
 }: {
   leadId: string;
   lat: number;
   lon: number;
   initial: any;
+  initialSnapshotUrl?: string | null;
 }) {
   const [vlakken, setVlakken] = useState<Vlak[]>([]);
   const [type, setType] = useState<VlakType>("erf");
@@ -122,13 +157,69 @@ export default function ErfKaartInner({
   const [showBag, setShowBag] = useState(false);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(initialSnapshotUrl ?? null);
   const typeRef = useRef<VlakType>("erf");
   const groupRef = useRef<L.FeatureGroup | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
   typeRef.current = type;
 
   function onChange(v: Vlak[], group: L.FeatureGroup) {
     setVlakken(v);
     groupRef.current = group;
+  }
+
+  // Platte PNG: PDOK-luchtfoto + kadaster + de ingetekende vlakken op één canvas.
+  async function makeSnapshot(): Promise<Blob | null> {
+    const map = mapRef.current;
+    const group = groupRef.current;
+    if (!map) return null;
+    const b = map.getBounds();
+    const [minX, minY] = toMerc(b.getWest(), b.getSouth());
+    const [maxX, maxY] = toMerc(b.getEast(), b.getNorth());
+    const W = 1200;
+    const H = Math.max(300, Math.min(1400, Math.round((W * (maxY - minY)) / (maxX - minX))));
+    const bbox = `${minX},${minY},${maxX},${maxY}`;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const aerial = await loadImg(
+      wmsGetMap("https://service.pdok.nl/hwh/luchtfotorgb/wms/v1_0", "Actueel_orthoHR", "image/jpeg", false, bbox, W, H),
+    );
+    ctx.drawImage(aerial, 0, 0, W, H);
+    try {
+      const kad = await loadImg(
+        wmsGetMap("https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0", "Kadastralekaart", "image/png", true, bbox, W, H),
+      );
+      ctx.drawImage(kad, 0, 0, W, H);
+    } catch {
+      /* kadaster-laag optioneel */
+    }
+
+    group?.eachLayer((layer: any) => {
+      const gj = layer.toGeoJSON();
+      const ring: number[][] = gj.geometry?.coordinates?.[0] ?? [];
+      if (ring.length < 3) return;
+      const kleur = TYPE_META[(layer.options.erftype as VlakType) ?? "erf"].kleur;
+      ctx.beginPath();
+      ring.forEach(([lo, la], i) => {
+        const [X, Y] = toMerc(lo, la);
+        const px = ((X - minX) / (maxX - minX)) * W;
+        const py = ((maxY - Y) / (maxY - minY)) * H;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.fillStyle = hexA(kleur, 0.28);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = kleur;
+      ctx.stroke();
+    });
+
+    return await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
   }
 
   async function save() {
@@ -145,8 +236,28 @@ export default function ErfKaartInner({
     const fc =
       features.length > 0 ? ({ type: "FeatureCollection", features } as unknown as Json) : null;
     const r = await saveErfTekening(leadId, fc);
+    if (!r.ok) {
+      setSaving(false);
+      setMsg(`Opslaan mislukt: ${r.error}`);
+      return;
+    }
+    // Platte afbeelding genereren + uploaden (best-effort — vectoren zijn al bewaard).
+    let imgOk = false;
+    try {
+      const blob = await makeSnapshot();
+      if (blob) {
+        const fd = new FormData();
+        fd.set("lead_id", leadId);
+        fd.set("file", new File([blob], "tekening.png", { type: "image/png" }));
+        const up = await uploadErfSnapshot(fd);
+        imgOk = up.ok;
+        if (up.ok) setSnapshotUrl(URL.createObjectURL(blob));
+      }
+    } catch {
+      /* afbeelding optioneel */
+    }
     setSaving(false);
-    setMsg(r.ok ? "Tekening opgeslagen." : `Opslaan mislukt: ${r.error}`);
+    setMsg(imgOk ? "Tekening + afbeelding opgeslagen." : "Tekening opgeslagen (afbeelding mislukt).");
   }
 
   const totaal = (t: VlakType) =>
@@ -220,7 +331,12 @@ export default function ErfKaartInner({
               maxZoom={22}
             />
           )}
-          <Tekenlaag initial={initial} typeRef={typeRef} onChange={onChange} />
+          <Tekenlaag
+            initial={initial}
+            typeRef={typeRef}
+            onChange={onChange}
+            onMap={(m) => (mapRef.current = m)}
+          />
         </MapContainer>
       </div>
 
@@ -254,6 +370,20 @@ export default function ErfKaartInner({
           </button>
         </div>
       </div>
+
+      {snapshotUrl && (
+        <div className="mt-4">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Opgeslagen afbeelding
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={snapshotUrl}
+            alt="Erf-intekening"
+            className="max-h-64 w-auto rounded-lg border border-slate-200"
+          />
+        </div>
+      )}
     </div>
   );
 }

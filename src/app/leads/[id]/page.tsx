@@ -134,6 +134,20 @@ export default async function LeadDetailPage({
     }
   }
 
+  // Signed URL voor de opgeslagen erf-intekening (PNG).
+  let tekeningUrl: string | null = null;
+  if (erfscan?.tekening_path) {
+    try {
+      const admin = createAdminClient();
+      const { data: signed } = await admin.storage
+        .from("erfscans")
+        .createSignedUrl(erfscan.tekening_path, 3600);
+      tekeningUrl = signed?.signedUrl ? `${signed.signedUrl}&v=${Date.now()}` : null;
+    } catch {
+      tekeningUrl = null;
+    }
+  }
+
   let reportPdfUrl: string | null = null;
   if (erfscan?.report_pdf_path) {
     try {
@@ -240,6 +254,7 @@ export default async function LeadDetailPage({
                         lat={loc.lat}
                         lon={loc.lon}
                         initial={erfscan.tekening ?? null}
+                        initialSnapshotUrl={tekeningUrl}
                       />
                     </div>
                   );

@@ -17,6 +17,7 @@ export function ErfKaart(props: {
   lat: number;
   lon: number;
   initial: unknown;
+  initialSnapshotUrl?: string | null;
 }) {
   return <ErfKaartInner {...props} initial={props.initial} />;
 }
