@@ -79,6 +79,11 @@ import anthropic
 # web_search-tool. Overschrijfbaar via env; kies een model dat web_search_20260209
 # ondersteunt (Sonnet 5 / Opus 4.6+).
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
+# Via de Vercel AI Gateway heet het model 'anthropic/claude-...'; de directe
+# Anthropic-API wil het zonder prefix. Bij directe API (geen ANTHROPIC_BASE_URL)
+# strippen we de prefix, zodat omschakelen alleen de key/base_url vergt.
+if not os.environ.get("ANTHROPIC_BASE_URL"):
+    CLAUDE_MODEL = CLAUDE_MODEL.removeprefix("anthropic/")
 BUCKET = "aanbieder-scrape"
 USER_AGENT = "OpEigenErfResearchBot/1.0 (+https://opeigenerf.nl; onderzoek naar aanbieders)"
 PAGE_HINTS = ("model", "woning", "prijs", "aanbod", "type", "chalet", "mantelzorg", "over", "contact")
@@ -92,7 +97,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "diag-skip-1"
+VERSION = "direct-key-1"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
