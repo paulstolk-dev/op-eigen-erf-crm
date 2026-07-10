@@ -51,6 +51,20 @@ export async function startResearch(limit: number): Promise<Result> {
   return res;
 }
 
+// Scrape één specifieke, zelf opgegeven website als (concept-)aanbieder.
+export async function scrapeUrl(url: string, naam?: string): Promise<Result> {
+  await requireCrm();
+  const website_url = (url || "").trim();
+  if (!website_url || /\s/.test(website_url) || !website_url.includes(".")) {
+    return { ok: false, error: "Geef een geldige website-URL op (bijv. https://voorbeeld.nl)." };
+  }
+  const seed: Record<string, string> = { website_url };
+  if (naam?.trim()) seed.naam = naam.trim();
+  const res = await triggerCrawler({ mode: "seed", seeds: [seed] });
+  revalidatePath("/aanbieders/research");
+  return res;
+}
+
 // Her-scrape een bestaande aanbieder om ontbrekende modellen/foto's aan te vullen.
 export async function refreshAanbieder(aanbiederId: string): Promise<Result> {
   await requireCrm();

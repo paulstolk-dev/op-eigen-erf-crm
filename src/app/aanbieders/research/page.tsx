@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { ZoekKnop } from "./zoek-knop";
+import { ScrapeUrl } from "./scrape-url";
 import {
   SCRAPE_REVIEW_STATUS,
   SCRAPE_REVIEW_STATUS_LABELS,
@@ -63,8 +64,19 @@ export default async function ResearchPage() {
           </p>
         </div>
 
-        <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
-          <ZoekKnop />
+        <div className="mb-5 space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Automatisch zoeken
+            </p>
+            <ZoekKnop />
+          </div>
+          <div className="border-t border-slate-100 pt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Specifieke website scrapen
+            </p>
+            <ScrapeUrl />
+          </div>
         </div>
 
         <div className="mb-5 grid grid-cols-3 gap-3">
