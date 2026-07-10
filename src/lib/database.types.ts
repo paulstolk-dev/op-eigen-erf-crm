@@ -103,6 +103,7 @@ export type Database = {
           naam: string
           website_url: string | null
           logo_url: string | null
+          team_foto_url: string | null
           beschrijving: string | null
           vestigingsplaats: string | null
           servicegebied: string | null
@@ -138,6 +139,7 @@ export type Database = {
           naam: string
           website_url?: string | null
           logo_url?: string | null
+          team_foto_url?: string | null
           beschrijving?: string | null
           vestigingsplaats?: string | null
           servicegebied?: string | null
@@ -172,6 +174,7 @@ export type Database = {
           naam?: string
           website_url?: string | null
           logo_url?: string | null
+          team_foto_url?: string | null
           beschrijving?: string | null
           vestigingsplaats?: string | null
           servicegebied?: string | null

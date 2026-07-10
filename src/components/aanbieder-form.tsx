@@ -45,6 +45,7 @@ export function AanbiederForm({
     slug: str(initial?.slug),
     website_url: str(initial?.website_url),
     logo_url: str(initial?.logo_url),
+    team_foto_url: str(initial?.team_foto_url),
     beschrijving: str(initial?.beschrijving),
     vestigingsplaats: str(initial?.vestigingsplaats),
     servicegebied: str(initial?.servicegebied),
@@ -90,19 +91,19 @@ export function AanbiederForm({
     }));
   }
 
-  async function onLogo(file: File) {
+  async function onUpload(file: File, prefix: string, field: "logo_url" | "team_foto_url") {
     setUploading(true);
     setError(null);
     const fd = new FormData();
     fd.set("file", file);
-    fd.set("prefix", "logos");
+    fd.set("prefix", prefix);
     const res = await uploadAanbiedersFile(fd);
     setUploading(false);
     if (!res.ok || !res.url) {
       setError(res.error ?? "Upload mislukt.");
       return;
     }
-    set("logo_url", res.url);
+    set(field, res.url);
   }
 
   function submit(e: React.FormEvent) {
@@ -213,7 +214,7 @@ export function AanbiederForm({
               disabled={uploading}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) onLogo(file);
+                if (file) onUpload(file, "logos", "logo_url");
               }}
             />
           </label>
@@ -226,6 +227,53 @@ export function AanbiederForm({
               Verwijderen
             </button>
           )}
+        </div>
+      </section>
+
+      {/* Header-afbeelding */}
+      <section>
+        <label className={label}>Header-afbeelding</label>
+        <div className="space-y-2">
+          {f.team_foto_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={f.team_foto_url}
+              alt="header"
+              className="h-32 w-full rounded-lg border border-slate-200 object-cover"
+            />
+          ) : (
+            <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed border-slate-300 text-xs text-slate-400">
+              geen header-afbeelding
+            </div>
+          )}
+          <div className="flex items-center gap-4">
+            <label className="cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+              {uploading ? "Uploaden…" : "Header uploaden"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onUpload(file, "headers", "team_foto_url");
+                }}
+              />
+            </label>
+            {f.team_foto_url && (
+              <button
+                type="button"
+                onClick={() => set("team_foto_url", "")}
+                className="text-sm text-slate-400 hover:text-red-600"
+              >
+                Verwijderen
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-400">
+            Brede afbeelding bovenaan het aanbiederprofiel (zoals GoudStaete). Liggend
+            formaat werkt het best.
+          </p>
         </div>
       </section>
 

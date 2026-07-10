@@ -55,6 +55,7 @@ const aanbiederSchema = z.object({
   slug: z.string().trim().optional().transform((v) => nul(v) as string | null),
   website_url: z.string().trim().optional().transform((v) => nul(v) as string | null),
   logo_url: z.string().trim().optional().transform((v) => nul(v) as string | null),
+  team_foto_url: z.string().trim().optional().transform((v) => nul(v) as string | null),
   beschrijving: z.string().optional().transform((v) => nul(v) as string | null),
   vestigingsplaats: z.string().optional().transform((v) => nul(v) as string | null),
   servicegebied: z.string().optional().transform((v) => nul(v) as string | null),
