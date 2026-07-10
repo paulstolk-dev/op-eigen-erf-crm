@@ -97,7 +97,7 @@ OUT_DIR = Path("out")
 client = anthropic.Anthropic()         # leest ANTHROPIC_API_KEY uit env
 
 # Versiemarker (bump bij crawler-wijzigingen; zichtbaar via GET /).
-VERSION = "extract-diag-2"
+VERSION = "detail-enrich-1"
 
 # Verzamelt DB-schrijffouten van de laatste run (voor diagnose via de server).
 LAST_ERRORS: list[str] = []
@@ -239,6 +239,25 @@ class DB:
         with self.conn.cursor() as cur:
             cur.execute(sql, [payload[c] for c in cols])
 
+    def get_woning_by_slug(self, aanbieder_id: str, slug: str) -> dict | None:
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "select * from public.woningen where aanbieder_id = %s and slug = %s",
+                (aanbieder_id, slug),
+            )
+            return cur.fetchone()
+
+    def update_woning(self, woning_id: str, patch: dict) -> None:
+        if not patch:
+            return
+        cols = list(patch.keys())
+        sets = ", ".join(f"{c} = %s" for c in cols)
+        with self.conn.cursor() as cur:
+            cur.execute(
+                f"update public.woningen set {sets} where id = %s",
+                [patch[c] for c in cols] + [woning_id],
+            )
+
     def commit(self):
         self.conn.commit()
 
@@ -303,6 +322,7 @@ class Harvest:
     pages: list[str] = field(default_factory=list)
     text: str = ""
     images: list[dict] = field(default_factory=list)   # {url, alt, context, page}
+    links: list[dict] = field(default_factory=list)    # {url, anchor} — kandidaat-detailpagina's
 
 
 def discover_subpages(base_url: str, home_html: str) -> list[str]:
@@ -412,6 +432,8 @@ def harvest_site(fetcher: Fetcher, base_url: str) -> Harvest:
     pages = discover_subpages(base_url, home.text)
     texts: list[str] = []
     seen_img: set[str] = set()
+    seen_link: set[str] = set()
+    base_dom = registrable_domain(base_url)
 
     for page in pages:
         resp = home if page == base_url else fetcher.get(page)
@@ -420,8 +442,9 @@ def harvest_site(fetcher: Fetcher, base_url: str) -> Harvest:
         h.pages.append(page)
         soup = BeautifulSoup(resp.text, "html.parser")
         # Eerst afbeeldingen oogsten uit de VOLLEDIGE HTML (incl. lazy/srcset/
-        # noscript/background), dan pas scripts strippen voor de tekst.
+        # noscript/background), dan kandidaat-detaillinks, dan scripts strippen.
         _collect_images(soup, page, seen_img, h.images)
+        _collect_links(soup, page, base_dom, seen_link, h.links)
         for tag in soup(["script", "style", "noscript", "svg"]):
             tag.decompose()
         page_text = re.sub(r"\s+", " ", soup.get_text(" ")).strip()
@@ -429,6 +452,34 @@ def harvest_site(fetcher: Fetcher, base_url: str) -> Harvest:
 
     h.text = "".join(texts)[:45000]
     return h
+
+
+# Paden die zelden een modeldetailpagina zijn — uit de kandidatenlijst houden.
+_LINK_SKIP = re.compile(
+    r"(?:^|/)(?:contact|over|about|blog|nieuws|news|privacy|cookie|voorwaarden|"
+    r"algemene|winkelmand|cart|checkout|account|inloggen|login|zoeken|search|"
+    r"category|categorie|tag|author|feed|wp-|#)", re.I,
+)
+
+
+def _collect_links(soup, page: str, base_dom: str, seen: set[str], out: list[dict]) -> None:
+    """Same-domain hyperlinks + ankertekst als kandidaat-detailpagina's (max 120)."""
+    if len(out) >= 120:
+        return
+    for a in soup.find_all("a", href=True):
+        href = urljoin(page, a["href"].split("#")[0]).rstrip("/")
+        if not href or href in seen:
+            continue
+        if registrable_domain(href) != base_dom:
+            continue
+        path = urlparse(href).path
+        if path in ("", "/") or _LINK_SKIP.search(path):
+            continue
+        anchor = re.sub(r"\s+", " ", a.get_text(" ")).strip()[:80]
+        seen.add(href)
+        out.append({"url": href, "anchor": anchor})
+        if len(out) >= 120:
+            return
 
 
 # --------------------------------------------------------------------------- #
@@ -479,6 +530,8 @@ def extract_structured(aanbieder_seed: dict, harvest: Harvest,
                        aanbieder_enums: dict, woning_enums: dict) -> dict | None:
     img_list = "\n".join(f"[{i}] {im['url']}  (alt: {im['alt']}; ctx: {im['context']})"
                          for i, im in enumerate(harvest.images[:60]))
+    link_list = "\n".join(f"[{i}] {ln['url']}  (link: {ln['anchor']})"
+                          for i, ln in enumerate(harvest.links[:120]))
     schema_hint = {
         "aanbieder": {
             "naam": "str", "website_url": "str", "beschrijving": "str|null",
@@ -502,6 +555,7 @@ def extract_structured(aanbieder_seed: dict, harvest: Harvest,
             "gelijkvloers": "bool|null", "energieneutraal_beng": "bool|null",
             "prijspeil": "str|null", "bron_url": "str (pagina waar dit model staat)",
             "afbeelding_indexen": "list[int] (indexen uit de kandidatenlijst die bij dit model horen)",
+            "detail_url_index": "int|null (index uit KANDIDAAT-LINKS naar de EIGEN detailpagina van dit model, of null)",
         }],
     }
     user = (
@@ -509,6 +563,7 @@ def extract_structured(aanbieder_seed: dict, harvest: Harvest,
         f"Gewenst JSON-formaat (waarden zijn typehints/toegestane enums):\n"
         f"{json.dumps(schema_hint, ensure_ascii=False, indent=2)}\n\n"
         f"KANDIDAAT-AFBEELDINGEN (kies per model de bijpassende indexen):\n{img_list}\n\n"
+        f"KANDIDAAT-LINKS (kies per model de index van z'n eigen detailpagina, indien aanwezig):\n{link_list}\n\n"
         f"WEBSITE-INHOUD:\n{harvest.text}"
     )
     resp = client.messages.create(
@@ -526,13 +581,16 @@ def extract_structured(aanbieder_seed: dict, harvest: Harvest,
             f"extractie: geen JSON (model={CLAUDE_MODEL}, stop={stop}, {len(text)} tekens): {text[:200]!r}"
         )
         return None
-    # zet afbeelding_indexen om naar echte URL's
+    # zet afbeelding_indexen + detail_url_index om naar echte URL's
     for m in data.get("modellen", []):
         urls = []
         for idx in (m.pop("afbeelding_indexen", None) or []):
             if isinstance(idx, int) and 0 <= idx < len(harvest.images):
                 urls.append(harvest.images[idx])
         m["_afbeeldingen"] = urls
+        di = m.pop("detail_url_index", None)
+        if isinstance(di, int) and 0 <= di < len(harvest.links):
+            m["_detail_url"] = harvest.links[di]["url"]
     return data
 
 
@@ -546,6 +604,74 @@ def _loads_json(text: str) -> dict | None:
         return json.loads(m.group(0))
     except json.JSONDecodeError:
         return None
+
+
+ENRICH_SYSTEM = (
+    "Je haalt de beschrijving en kerngegevens van ÉÉN woningmodel uit de tekst van "
+    "z'n detailpagina. Verzin NIETS; onbekend veld = null; prijzen als heel getal in "
+    "euro's (geen punten/komma's). De 'beschrijving' is 2-5 vlotte zinnen in het "
+    "Nederlands, feitelijk, zonder verkooppraat/superlatieven. Antwoord UITSLUITEND "
+    "met JSON, geen tekst eromheen."
+)
+
+# Velden die we (indien nog leeg) mogen aanvullen vanaf de detailpagina.
+_ENRICH_FIELDS = (
+    "beschrijving", "oppervlakte_m2", "oppervlakte_max_m2", "slaapkamers",
+    "prijs_incl_btw", "in_prijs_inbegrepen", "gelijkvloers",
+    "energieneutraal_beng", "prijspeil",
+)
+
+
+def enrich_models(fetcher: "Fetcher", models: list[dict], *, cap: int = 45) -> int:
+    """Vult per model lege velden (m.n. 'beschrijving') aan vanaf z'n detailpagina.
+    Slaat modellen zonder detail-URL of mét beschrijving over. Retourneert #verrijkt."""
+    schema = {f: ("str|null" if f in ("beschrijving", "in_prijs_inbegrepen", "prijspeil")
+                  else "bool|null" if f in ("gelijkvloers", "energieneutraal_beng")
+                  else "int|null")
+              for f in _ENRICH_FIELDS}
+    done = 0
+    for m in models:
+        if done >= cap:
+            break
+        url = m.get("_detail_url")
+        if not url or (m.get("beschrijving") or "").strip():
+            continue
+        resp = fetcher.get(url)
+        if not resp:
+            continue
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup(["script", "style", "noscript", "svg"]):
+            tag.decompose()
+        page_text = re.sub(r"\s+", " ", soup.get_text(" ")).strip()[:8000]
+        if not page_text:
+            continue
+        user = (
+            f"Model: {m.get('naam', '?')}\nDetailpagina: {url}\n\n"
+            f"Gewenst JSON-formaat:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
+            f"PAGINA-INHOUD:\n{page_text}"
+        )
+        try:
+            r = client.messages.create(
+                model=CLAUDE_MODEL, max_tokens=1500, thinking={"type": "disabled"},
+                system=ENRICH_SYSTEM, messages=[{"role": "user", "content": user}],
+            )
+        except Exception as e:  # noqa: BLE001
+            if len([x for x in LAST_ERRORS if x.startswith("verrijk ")]) < 3:
+                LAST_ERRORS.append(f"verrijk {url}: {type(e).__name__}: {e}")
+            continue
+        data = _loads_json("".join(b.text for b in r.content if getattr(b, "type", "") == "text"))
+        if not data:
+            continue
+        # Alleen nog-lege velden vullen; detailpagina wordt de bron.
+        for k in _ENRICH_FIELDS:
+            v = data.get(k)
+            if v in (None, "", []):
+                continue
+            if not m.get(k):
+                m[k] = v
+        m["bron_url"] = url
+        done += 1
+    return done
 
 
 # --------------------------------------------------------------------------- #
@@ -805,6 +931,11 @@ def run(seeds: list[dict], commit: bool):
         n_models = len(extracted.get("modellen", []))
         log(f"  → {n_models} modellen geëxtraheerd.")
 
+        # Verrijk modellen met tekst/specs van hun eigen detailpagina (nieuw + refresh).
+        verrijkt = enrich_models(fetcher, extracted.get("modellen", []))
+        if verrijkt:
+            log(f"  + {verrijkt} modellen verrijkt via detailpagina.")
+
         toegewezen = sum(
             len(m.get("_afbeeldingen", [])) for m in extracted.get("modellen", [])
         )
@@ -813,6 +944,7 @@ def run(seeds: list[dict], commit: bool):
             "extracted": extracted,
             "images": len(harvest.images),   # geoogste kandidaatfoto's
             "toegewezen": toegewezen,        # door LLM aan modellen gekoppeld
+            "verrijkt": verrijkt,            # modellen aangevuld via detailpagina
             "fotos": 0,                      # daadwerkelijk geüpload (na writes)
         }
         results.append(record)
@@ -843,11 +975,33 @@ def run(seeds: list[dict], commit: bool):
                     continue
                 bestaande_slugs = set()
 
+            # Kolommen die we bij een bestaand model NIET overschrijven.
+            _KEEP = {"slug", "aanbieder_id", "laatst_gecontroleerd", "actief",
+                     "uitgelicht", "bron", "review_status", "afbeeldingen"}
             nieuw = 0
+            bijgewerkt = 0
             for m in extracted.get("modellen", []):
                 w_payload, m_slug = build_woning_payload(m, aanbieder_id, a_slug, w_cols, w_enums)
                 if refresh_id and m_slug in bestaande_slugs:
-                    continue  # model bestaat al onder deze aanbieder — geen duplicaat
+                    # Bestaand model: lege velden aanvullen (bv. beschrijving) i.p.v.
+                    # overslaan; ook eventuele nieuwe foto's toevoegen (sha256-dedupe).
+                    existing = db.get_woning_by_slug(aanbieder_id, m_slug)
+                    if not existing:
+                        continue
+                    patch = {
+                        c: v for c, v in w_payload.items()
+                        if c not in _KEEP and existing.get(c) in (None, "", [])
+                    }
+                    if patch:
+                        patch["laatst_gecontroleerd"] = date.today().isoformat()
+                        db.update_woning(existing["id"], patch)
+                        bijgewerkt += 1
+                        log(f"    ~ {m.get('naam','?')}: {len(patch)} veld(en) bijgewerkt")
+                    fotos = process_images(fetcher, m.get("_afbeeldingen", []), a_slug, m_slug, storage, seen_hashes)
+                    for f in fotos:
+                        db.insert_foto({**f, "aanbieder_id": aanbieder_id, "woning_id": existing["id"]})
+                    record["fotos"] += len(fotos)
+                    continue
                 woning_id = db.insert_woning(w_payload)
                 fotos = process_images(fetcher, m.get("_afbeeldingen", []), a_slug, m_slug, storage, seen_hashes)
                 for f in fotos:
@@ -857,8 +1011,9 @@ def run(seeds: list[dict], commit: bool):
                 log(f"    · {m.get('naam','?')}: {len(fotos)} foto's")
 
             db.commit()
+            record["bijgewerkt"] = bijgewerkt
             if refresh_id:
-                log(f"  ✔ her-scrape: {nieuw} nieuwe concept-modellen gestaged.")
+                log(f"  ✔ her-scrape: {nieuw} nieuwe + {bijgewerkt} bijgewerkte concept-modellen.")
             else:
                 log(f"  ✔ opgeslagen als concept (actief=false).")
         except Exception as e:

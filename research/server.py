@@ -109,6 +109,8 @@ def _background(body: RunBody) -> None:
                     "modellen": len((r.get("extracted") or {}).get("modellen", [])),
                     "images": r.get("images", 0),
                     "toegewezen": r.get("toegewezen", 0),
+                    "verrijkt": r.get("verrijkt", 0),
+                    "bijgewerkt": r.get("bijgewerkt", 0),
                     "fotos": r.get("fotos", 0),
                 }
                 for r in results
