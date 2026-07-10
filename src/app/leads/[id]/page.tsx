@@ -14,6 +14,7 @@ import { NurturePanel } from "./nurture-panel";
 import { NotesSection } from "./notes-section";
 import { hubspotConfigured } from "@/lib/hubspot";
 import { ErfscanPanel } from "./erfscan-panel";
+import { ErfKaart } from "./erf-kaart";
 import { ErfscanReview } from "./erfscan-review";
 import { ReportPanel } from "./report-panel";
 import { ScoreBadge } from "@/components/score-badge";
@@ -221,6 +222,28 @@ export default async function LeadDetailPage({
             {erfscan ? (
               <>
                 <ErfscanPanel erfscan={erfscan} luchtfotoUrl={luchtfotoUrl} />
+                {(() => {
+                  const loc = (erfscan.dossier as { locatie?: { lat?: number; lon?: number } })
+                    ?.locatie;
+                  if (typeof loc?.lat !== "number" || typeof loc?.lon !== "number") return null;
+                  return (
+                    <div className="rounded-xl border border-slate-200 bg-white p-5">
+                      <h2 className="mb-1 text-sm font-semibold text-slate-900">
+                        Erf intekenen
+                      </h2>
+                      <p className="mb-3 text-xs text-slate-500">
+                        Luchtfoto met kadastrale perceelgrenzen. Teken het erf/achtererf en het
+                        bebouwbare vlak; de oppervlakte (m²) wordt automatisch berekend.
+                      </p>
+                      <ErfKaart
+                        leadId={lead.id}
+                        lat={loc.lat}
+                        lon={loc.lon}
+                        initial={erfscan.tekening ?? null}
+                      />
+                    </div>
+                  );
+                })()}
                 <ErfscanReview
                   leadId={lead.id}
                   initialTier3={

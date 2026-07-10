@@ -702,6 +702,7 @@ export type Database = {
           tier3: Json
           luchtfoto_path: string | null
           report_pdf_path: string | null
+          tekening: Json | null
           draft_email_subject: string | null
           draft_email_body: string | null
           error: string | null
@@ -722,6 +723,7 @@ export type Database = {
           tier3?: Json
           luchtfoto_path?: string | null
           report_pdf_path?: string | null
+          tekening?: Json | null
           draft_email_subject?: string | null
           draft_email_body?: string | null
           error?: string | null
@@ -742,6 +744,7 @@ export type Database = {
           tier3?: Json
           luchtfoto_path?: string | null
           report_pdf_path?: string | null
+          tekening?: Json | null
           draft_email_subject?: string | null
           draft_email_body?: string | null
           error?: string | null
