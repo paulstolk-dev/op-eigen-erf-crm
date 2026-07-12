@@ -419,6 +419,8 @@ export type Database = {
           gedeeld_by: string | null
           vrijgegeven_at: string | null
           gereageerd_at: string | null
+          tekening: Json | null
+          tekening_path: string | null
         }
         Insert: {
           id?: string
@@ -441,6 +443,8 @@ export type Database = {
           gedeeld_by?: string | null
           vrijgegeven_at?: string | null
           gereageerd_at?: string | null
+          tekening?: Json | null
+          tekening_path?: string | null
         }
         Relationships: [
           {
@@ -890,6 +894,12 @@ export type Database = {
           bebouwingsgebied_m2: number | null
           kansen: Json | null
           aandachtspunten: Json | null
+          lat: number | null
+          lon: number | null
+          crm_tekening: Json | null
+          crm_tekening_path: string | null
+          partner_tekening: Json | null
+          partner_tekening_path: string | null
         }[]
       }
     }

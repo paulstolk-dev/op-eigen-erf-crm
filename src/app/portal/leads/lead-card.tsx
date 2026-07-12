@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { reageerOpLead } from "../actions";
+import { ErfKaart } from "@/app/leads/[id]/erf-kaart";
+import { savePortalErfTekening, uploadPortalErfSnapshot } from "./erf-actions";
 import type { PortalLead } from "@/lib/database.types";
 
 const REACTIE_LABELS: Record<string, string> = {
@@ -40,9 +42,16 @@ function Metric({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-export function LeadCard({ lead }: { lead: PortalLead }) {
+export function LeadCard({
+  lead,
+  snapshotUrl,
+}: {
+  lead: PortalLead;
+  snapshotUrl?: string | null;
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
   const naam = [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") || lead.naam;
   const kansen = (Array.isArray(lead.kansen) ? lead.kansen : []) as string[];
   const aandachtspunten = (Array.isArray(lead.aandachtspunten) ? lead.aandachtspunten : []) as string[];
@@ -166,6 +175,49 @@ export function LeadCard({ lead }: { lead: PortalLead }) {
             >
               Bekijk de volledige Erf Check-pagina »
             </a>
+          )}
+        </div>
+      )}
+
+      {/* Erf-intekening: opgeslagen afbeelding + zelf tekenen op de kaart */}
+      {(snapshotUrl || (lead.lat != null && lead.lon != null)) && (
+        <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Erf-intekening
+            </span>
+            {lead.lat != null && lead.lon != null && (
+              <button
+                type="button"
+                onClick={() => setShowMap((v) => !v)}
+                className="text-xs font-medium text-navy hover:underline"
+              >
+                {showMap ? "Kaart verbergen" : "Achtererf intekenen / aanpassen"}
+              </button>
+            )}
+          </div>
+
+          {snapshotUrl && !showMap && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={snapshotUrl}
+              alt="Erf-intekening"
+              className="mt-2 max-h-64 w-auto rounded-lg border border-slate-200"
+            />
+          )}
+
+          {showMap && lead.lat != null && lead.lon != null && (
+            <div className="mt-2">
+              <ErfKaart
+                leadId={lead.lead_id}
+                lat={lead.lat}
+                lon={lead.lon}
+                initial={lead.partner_tekening ?? lead.crm_tekening ?? null}
+                initialSnapshotUrl={snapshotUrl}
+                saveTekening={savePortalErfTekening}
+                saveSnapshot={uploadPortalErfSnapshot}
+              />
+            </div>
           )}
         </div>
       )}

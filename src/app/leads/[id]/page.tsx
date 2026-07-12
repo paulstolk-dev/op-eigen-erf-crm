@@ -15,6 +15,7 @@ import { NotesSection } from "./notes-section";
 import { hubspotConfigured } from "@/lib/hubspot";
 import { ErfscanPanel } from "./erfscan-panel";
 import { ErfKaart } from "./erf-kaart";
+import { saveErfTekening, uploadErfSnapshot } from "./erf-actions";
 import { ErfscanReview } from "./erfscan-review";
 import { ReportPanel } from "./report-panel";
 import { ScoreBadge } from "@/components/score-badge";
@@ -255,6 +256,8 @@ export default async function LeadDetailPage({
                         lon={loc.lon}
                         initial={erfscan.tekening ?? null}
                         initialSnapshotUrl={tekeningUrl}
+                        saveTekening={saveErfTekening}
+                        saveSnapshot={uploadErfSnapshot}
                       />
                     </div>
                   );

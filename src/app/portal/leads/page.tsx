@@ -1,4 +1,5 @@
 import { requireApprovedAanbieder } from "@/lib/portal";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PortalHeader } from "@/components/portal-header";
 import { LeadCard } from "./lead-card";
 import type { PortalLead } from "@/lib/database.types";
@@ -10,6 +11,22 @@ export default async function PortalLeadsPage() {
 
   const { data } = await supabase.rpc("get_portal_leads");
   const leads = (data ?? []) as PortalLead[];
+
+  // Signed URL voor de opgeslagen erf-intekening (eigen intekening wint van de interne).
+  const admin = createAdminClient();
+  const snapshotByLead = new Map<string, string>();
+  for (const lead of leads) {
+    const path = lead.partner_tekening_path || lead.crm_tekening_path;
+    if (!path) continue;
+    try {
+      const { data: signed } = await admin.storage
+        .from("erfscans")
+        .createSignedUrl(path, 3600);
+      if (signed?.signedUrl) snapshotByLead.set(lead.lead_id, `${signed.signedUrl}&v=${Date.now()}`);
+    } catch {
+      /* geen afbeelding */
+    }
+  }
 
   return (
     <div className="min-h-screen">
@@ -30,7 +47,11 @@ export default async function PortalLeadsPage() {
         ) : (
           <ul className="space-y-3">
             {leads.map((lead) => (
-              <LeadCard key={lead.share_id} lead={lead} />
+              <LeadCard
+                key={lead.share_id}
+                lead={lead}
+                snapshotUrl={snapshotByLead.get(lead.lead_id) ?? null}
+              />
             ))}
           </ul>
         )}

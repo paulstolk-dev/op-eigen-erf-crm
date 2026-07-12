@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ErfKaartProps } from "./erf-kaart-inner";
 
 // Leaflet raakt `window` aan bij import → alleen client-side laden.
 const ErfKaartInner = dynamic(() => import("./erf-kaart-inner"), {
@@ -12,12 +13,6 @@ const ErfKaartInner = dynamic(() => import("./erf-kaart-inner"), {
   ),
 });
 
-export function ErfKaart(props: {
-  leadId: string;
-  lat: number;
-  lon: number;
-  initial: unknown;
-  initialSnapshotUrl?: string | null;
-}) {
-  return <ErfKaartInner {...props} initial={props.initial} />;
+export function ErfKaart(props: ErfKaartProps) {
+  return <ErfKaartInner {...props} />;
 }

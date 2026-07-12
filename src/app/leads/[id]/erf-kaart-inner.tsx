@@ -8,8 +8,18 @@ import "leaflet/dist/leaflet.css";
 import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import area from "@turf/area";
-import { saveErfTekening, uploadErfSnapshot } from "./erf-actions";
 import type { Json } from "@/lib/database.types";
+
+type SaveResult = { ok: boolean; error?: string };
+export type ErfKaartProps = {
+  leadId: string;
+  lat: number;
+  lon: number;
+  initial: unknown;
+  initialSnapshotUrl?: string | null;
+  saveTekening: (leadId: string, tekening: Json | null) => Promise<SaveResult>;
+  saveSnapshot: (formData: FormData) => Promise<SaveResult>;
+};
 
 type VlakType = "erf" | "bebouwbaar" | "overig";
 const TYPE_META: Record<VlakType, { label: string; kleur: string }> = {
@@ -144,13 +154,9 @@ export default function ErfKaartInner({
   lon,
   initial,
   initialSnapshotUrl,
-}: {
-  leadId: string;
-  lat: number;
-  lon: number;
-  initial: any;
-  initialSnapshotUrl?: string | null;
-}) {
+  saveTekening,
+  saveSnapshot,
+}: ErfKaartProps) {
   const [vlakken, setVlakken] = useState<Vlak[]>([]);
   const [type, setType] = useState<VlakType>("erf");
   const [showKadaster, setShowKadaster] = useState(true);
@@ -235,7 +241,7 @@ export default function ErfKaartInner({
     });
     const fc =
       features.length > 0 ? ({ type: "FeatureCollection", features } as unknown as Json) : null;
-    const r = await saveErfTekening(leadId, fc);
+    const r = await saveTekening(leadId, fc);
     if (!r.ok) {
       setSaving(false);
       setMsg(`Opslaan mislukt: ${r.error}`);
@@ -249,7 +255,7 @@ export default function ErfKaartInner({
         const fd = new FormData();
         fd.set("lead_id", leadId);
         fd.set("file", new File([blob], "tekening.png", { type: "image/png" }));
-        const up = await uploadErfSnapshot(fd);
+        const up = await saveSnapshot(fd);
         imgOk = up.ok;
         if (up.ok) setSnapshotUrl(URL.createObjectURL(blob));
       }
