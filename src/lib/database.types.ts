@@ -879,6 +879,11 @@ export type Database = {
           postcode: string | null
           huisnummer: string | null
           toevoeging: string | null
+          erfcheck_conclusie: string | null
+          perceel_m2: number | null
+          achtererf_m2: number | null
+          max_vergunningvrij_m2: number | null
+          report_token: string | null
         }[]
       }
     }

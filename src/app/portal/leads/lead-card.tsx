@@ -14,6 +14,11 @@ const REACTIE_STYLES: Record<string, string> = {
   geinteresseerd: "bg-green-100 text-green-700 ring-green-600/20",
   afgewezen: "bg-red-100 text-red-700 ring-red-600/20",
 };
+const CONCL: Record<string, { woord: string; kleur: string }> = {
+  groen: { woord: "Kansrijk", kleur: "#16a34a" },
+  oranje: { woord: "Twijfelachtig", kleur: "#d97706" },
+  rood: { woord: "Complex", kleur: "#dc2626" },
+};
 
 function datum(iso: string | null): string {
   if (!iso) return "—";
@@ -68,6 +73,57 @@ export function LeadCard({ lead }: { lead: PortalLead }) {
         </span>
       </div>
 
+      {/* Erf Check — alle gescande info wordt met de aanbieder gedeeld */}
+      {(lead.erfcheck_conclusie ||
+        lead.perceel_m2 != null ||
+        lead.report_token) && (
+        <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Erf Check
+            </span>
+            {lead.erfcheck_conclusie && (
+              <span
+                className="rounded-md px-2 py-0.5 text-xs font-bold text-white"
+                style={{ backgroundColor: CONCL[lead.erfcheck_conclusie]?.kleur ?? "#64748b" }}
+              >
+                {CONCL[lead.erfcheck_conclusie]?.woord ?? lead.erfcheck_conclusie}
+              </span>
+            )}
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <div>
+              <div className="text-[11px] text-slate-400">Perceel</div>
+              <div className="text-sm font-semibold text-slate-800">
+                {lead.perceel_m2 != null ? `± ${lead.perceel_m2} m²` : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-slate-400">Achtererf</div>
+              <div className="text-sm font-semibold text-slate-800">
+                {lead.achtererf_m2 != null ? `± ${lead.achtererf_m2} m²` : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-slate-400">Vergunningvrij</div>
+              <div className="text-sm font-semibold text-slate-800">
+                {lead.max_vergunningvrij_m2 != null ? `± ${lead.max_vergunningvrij_m2} m²` : "—"}
+              </div>
+            </div>
+          </div>
+          {lead.report_token && (
+            <a
+              href={`/r/${lead.report_token}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block text-xs font-medium text-navy hover:underline"
+            >
+              Bekijk de volledige Erf Check »
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Contactgegevens: alleen zichtbaar na vrijgave door opeigenerf */}
       {lead.contact_vrijgegeven ? (
         <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
@@ -94,13 +150,6 @@ export function LeadCard({ lead }: { lead: PortalLead }) {
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        <button
-          onClick={() => reageer("geinteresseerd")}
-          disabled={isPending || lead.reactie_status === "geinteresseerd"}
-          className="rounded-lg bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
-        >
-          Geïnteresseerd
-        </button>
         <button
           onClick={() => reageer("afgewezen")}
           disabled={isPending || lead.reactie_status === "afgewezen"}
