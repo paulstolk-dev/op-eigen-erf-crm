@@ -884,6 +884,12 @@ export type Database = {
           achtererf_m2: number | null
           max_vergunningvrij_m2: number | null
           report_token: string | null
+          adres: string | null
+          bouwjaar: string | null
+          footprint_m2: number | null
+          bebouwingsgebied_m2: number | null
+          kansen: Json | null
+          aandachtspunten: Json | null
         }[]
       }
     }

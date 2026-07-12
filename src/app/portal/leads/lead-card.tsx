@@ -29,10 +29,27 @@ function datum(iso: string | null): string {
   });
 }
 
+function Metric({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-slate-200">
+      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="text-sm font-semibold text-slate-800">
+        {value != null ? `± ${value.toLocaleString("nl-NL")} m²` : "—"}
+      </div>
+    </div>
+  );
+}
+
 export function LeadCard({ lead }: { lead: PortalLead }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const naam = [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") || lead.naam;
+  const kansen = (Array.isArray(lead.kansen) ? lead.kansen : []) as string[];
+  const aandachtspunten = (Array.isArray(lead.aandachtspunten) ? lead.aandachtspunten : []) as string[];
+  const heeftErfcheck =
+    lead.erfcheck_conclusie != null ||
+    lead.perceel_m2 != null ||
+    lead.report_token != null;
 
   function reageer(status: "geinteresseerd" | "afgewezen") {
     setError(null);
@@ -46,16 +63,11 @@ export function LeadCard({ lead }: { lead: PortalLead }) {
     <li className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-900">
-              {lead.audience || "Aanvraag"}
-              {lead.regio_postcode && (
-                <span className="font-normal text-slate-500">
-                  {" "}
-                  · regio {lead.regio_postcode}
-                </span>
-              )}
-            </span>
+          <div className="text-sm font-medium text-slate-900">
+            {lead.audience || "Aanvraag"}
+            {lead.regio_postcode && (
+              <span className="font-normal text-slate-500"> · regio {lead.regio_postcode}</span>
+            )}
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
             {lead.budget && <span>Budget: {lead.budget}</span>}
@@ -73,10 +85,25 @@ export function LeadCard({ lead }: { lead: PortalLead }) {
         </span>
       </div>
 
-      {/* Erf Check — alle gescande info wordt met de aanbieder gedeeld */}
-      {(lead.erfcheck_conclusie ||
-        lead.perceel_m2 != null ||
-        lead.report_token) && (
+      {/* Contactgegevens — direct zichtbaar */}
+      <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Contactgegevens
+        </div>
+        <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-800">
+          {naam && <span className="col-span-2 font-medium">{naam}</span>}
+          {lead.email && <span>{lead.email}</span>}
+          {lead.telefoon && <span>{lead.telefoon}</span>}
+          {(lead.postcode || lead.huisnummer) && (
+            <span className="col-span-2">
+              {[lead.postcode, lead.huisnummer, lead.toevoeging].filter(Boolean).join(" ")}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Volledige Erf Check */}
+      {heeftErfcheck && (
         <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -91,62 +118,56 @@ export function LeadCard({ lead }: { lead: PortalLead }) {
               </span>
             )}
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            <div>
-              <div className="text-[11px] text-slate-400">Perceel</div>
-              <div className="text-sm font-semibold text-slate-800">
-                {lead.perceel_m2 != null ? `± ${lead.perceel_m2} m²` : "—"}
-              </div>
-            </div>
-            <div>
-              <div className="text-[11px] text-slate-400">Achtererf</div>
-              <div className="text-sm font-semibold text-slate-800">
-                {lead.achtererf_m2 != null ? `± ${lead.achtererf_m2} m²` : "—"}
-              </div>
-            </div>
-            <div>
-              <div className="text-[11px] text-slate-400">Vergunningvrij</div>
-              <div className="text-sm font-semibold text-slate-800">
-                {lead.max_vergunningvrij_m2 != null ? `± ${lead.max_vergunningvrij_m2} m²` : "—"}
-              </div>
-            </div>
+
+          {(lead.adres || lead.bouwjaar) && (
+            <p className="mt-1 text-xs text-slate-500">
+              {lead.adres}
+              {lead.bouwjaar ? ` · bouwjaar ${lead.bouwjaar}` : ""}
+            </p>
+          )}
+
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <Metric label="Perceel" value={lead.perceel_m2} />
+            <Metric label="Huidige bebouwing" value={lead.footprint_m2} />
+            <Metric label="Bebouwingsgebied" value={lead.bebouwingsgebied_m2} />
+            <Metric label="Achtererf" value={lead.achtererf_m2} />
+            <Metric label="Vergunningvrij (indic.)" value={lead.max_vergunningvrij_m2} />
           </div>
+
+          {kansen.length > 0 && (
+            <div className="mt-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-erf">Kansen</div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-slate-600">
+                {kansen.map((k, i) => (
+                  <li key={i}>{k}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {aandachtspunten.length > 0 && (
+            <div className="mt-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-600">
+                Aandachtspunten
+              </div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-slate-600">
+                {aandachtspunten.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {lead.report_token && (
             <a
               href={`/r/${lead.report_token}`}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-block text-xs font-medium text-navy hover:underline"
+              className="mt-3 inline-block text-xs font-medium text-navy hover:underline"
             >
-              Bekijk de volledige Erf Check »
+              Bekijk de volledige Erf Check-pagina »
             </a>
           )}
         </div>
-      )}
-
-      {/* Contactgegevens: alleen zichtbaar na vrijgave door opeigenerf */}
-      {lead.contact_vrijgegeven ? (
-        <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Contactgegevens
-          </div>
-          <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-800">
-            {naam && <span className="col-span-2 font-medium">{naam}</span>}
-            {lead.email && <span>{lead.email}</span>}
-            {lead.telefoon && <span>{lead.telefoon}</span>}
-            {(lead.postcode || lead.huisnummer) && (
-              <span className="col-span-2">
-                {[lead.postcode, lead.huisnummer, lead.toevoeging]
-                  .filter(Boolean)
-                  .join(" ")}
-              </span>
-            )}
-          </div>
-        </div>
-      ) : (
-        <p className="mt-3 rounded-lg border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
-          Contactgegevens worden vrijgegeven door opeigenerf zodra er een match is.
-        </p>
       )}
 
       <div className="mt-3 flex items-center gap-2">
