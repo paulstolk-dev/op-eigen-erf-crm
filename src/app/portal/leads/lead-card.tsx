@@ -31,6 +31,17 @@ function datum(iso: string | null): string {
   });
 }
 
+function InfoChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-slate-50 p-2.5 ring-1 ring-inset ring-slate-200">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+        {label}
+      </div>
+      <div className="mt-0.5 text-sm font-semibold leading-tight text-slate-900">{value}</div>
+    </div>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-slate-200">
@@ -78,12 +89,6 @@ export function LeadCard({
               <span className="font-normal text-slate-500"> · regio {lead.regio_postcode}</span>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-            {lead.budget && <span>Budget: {lead.budget}</span>}
-            {lead.planning && <span>Planning: {lead.planning}</span>}
-            {lead.startdatum && <span>Start: {lead.startdatum}</span>}
-            <span>Gedeeld: {datum(lead.gedeeld_at)}</span>
-          </div>
         </div>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
@@ -92,6 +97,14 @@ export function LeadCard({
         >
           {REACTIE_LABELS[lead.reactie_status] ?? lead.reactie_status}
         </span>
+      </div>
+
+      {/* Budget · planning · start · gedeeld — duidelijk in beeld */}
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {lead.budget && <InfoChip label="Budget" value={lead.budget} />}
+        {lead.planning && <InfoChip label="Planning" value={lead.planning} />}
+        {lead.startdatum && <InfoChip label="Start" value={lead.startdatum} />}
+        <InfoChip label="Gedeeld" value={datum(lead.gedeeld_at)} />
       </div>
 
       {/* Contactgegevens — direct zichtbaar */}

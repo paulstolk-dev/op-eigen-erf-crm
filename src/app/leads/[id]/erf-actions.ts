@@ -13,17 +13,54 @@ async function requireUser() {
   if (!user) throw new Error("Niet ingelogd.");
 }
 
-/** Ingetekende erf-vlakken (GeoJSON FeatureCollection) opslaan op de erfscan. */
+// Vergunningvrij-staffel (Bbl), identiek aan de Python-engine: cap 100 m².
+function staffelMaxVergunningvrij(bebouwingsgebied: number, cap = 100): number {
+  const b = bebouwingsgebied;
+  const opp = b <= 100 ? 0.5 * b : b <= 300 ? 50 + 0.2 * (b - 100) : 90 + 0.1 * (b - 300);
+  return Math.round(Math.min(opp, cap));
+}
+
+// Totale m² van de ingetekende 'erf/achtererf'-vlakken uit de FeatureCollection.
+function erfAreaUitTekening(tekening: Json | null): number {
+  const fc = tekening as { features?: { properties?: { type?: string; m2?: number } }[] } | null;
+  if (!fc?.features?.length) return 0;
+  return fc.features
+    .filter((f) => (f?.properties?.type ?? "erf") === "erf")
+    .reduce((s, f) => s + (Number(f?.properties?.m2) || 0), 0);
+}
+
+/** Ingetekende erf-vlakken opslaan + achtererf/max-bebouwing herrekenen op basis
+ *  van de ingetekende achtererf-oppervlakte. */
 export async function saveErfTekening(
   leadId: string,
   tekening: Json | null,
 ): Promise<{ ok: boolean; error?: string }> {
   await requireUser();
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("erfscans")
-    .update({ tekening })
-    .eq("lead_id", leadId);
+
+  const patch: { tekening: Json | null; dossier?: Json } = { tekening };
+
+  // Achtererf ingetekend → achtererf_proxy_m2, bebouwingsgebied_m2 en
+  // max_vergunningvrij_m2 in het dossier herrekenen (footprint blijft).
+  const erfArea = Math.round(erfAreaUitTekening(tekening));
+  if (erfArea > 0) {
+    const { data: erf } = await admin
+      .from("erfscans")
+      .select("dossier")
+      .eq("lead_id", leadId)
+      .maybeSingle();
+    const dossier = (erf?.dossier ?? {}) as Record<string, unknown>;
+    const ruimtelijk = { ...((dossier.ruimtelijk ?? {}) as Record<string, unknown>) };
+    const footprint = Number(ruimtelijk.footprint_hoofdgebouw_m2) || 0;
+    const bebouwingsgebied = erfArea + footprint;
+    ruimtelijk.achtererf_proxy_m2 = erfArea;
+    ruimtelijk.bebouwingsgebied_m2 = bebouwingsgebied;
+    ruimtelijk.max_vergunningvrij_m2 = staffelMaxVergunningvrij(bebouwingsgebied);
+    ruimtelijk.achtererf_bron = "handmatig ingetekend";
+    patch.dossier = { ...dossier, ruimtelijk } as Json;
+  }
+
+  const { error } = await admin.from("erfscans").update(patch).eq("lead_id", leadId);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/leads/${leadId}`);
   return { ok: true };

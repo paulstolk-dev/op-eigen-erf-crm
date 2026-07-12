@@ -19,6 +19,8 @@ type Dossier = {
     max_vergunningvrij_m2?: number | string;
     bebouwingsgebied_m2?: number | string;
     footprint_hoofdgebouw_m2?: number | string;
+    achtererf_proxy_m2?: number | string;
+    achtererf_bron?: string;
   };
   adres_invoer?: { postcode?: string; huisnummer?: string; toevoeging?: string };
   kansen?: string[];
@@ -56,6 +58,77 @@ function List({
         </li>
       ))}
     </ul>
+  );
+}
+
+function num(v: number | string | undefined): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+/** Uitgelicht blok: max. vergunningvrije bebouwing + waar die op berekend is. */
+function MaxBebouwing({ r }: { r: NonNullable<Dossier["ruimtelijk"]> }) {
+  const achtererf = num(r.achtererf_proxy_m2);
+  const footprint = num(r.footprint_hoofdgebouw_m2);
+  const bebgebied = num(r.bebouwingsgebied_m2);
+  const max = num(r.max_vergunningvrij_m2);
+  const handmatig = r.achtererf_bron === "handmatig ingetekend";
+  if (max == null) return null;
+
+  return (
+    <div className="mb-4 rounded-xl border border-erf/30 bg-erf/5 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <div>
+          <div className="text-xs font-medium uppercase tracking-wide text-erf">
+            Maximaal te bebouwen (vergunningvrij)
+          </div>
+          <div className="mt-0.5 text-3xl font-bold leading-none text-slate-900">
+            ± {max.toLocaleString("nl-NL")} m²
+          </div>
+        </div>
+        {handmatig && (
+          <span className="shrink-0 rounded-full bg-erf/10 px-2 py-0.5 text-[11px] font-medium text-erf ring-1 ring-inset ring-erf/30">
+            ✎ achtererf ingetekend
+          </span>
+        )}
+      </div>
+
+      {bebgebied != null && (
+        <div className="mt-3 border-t border-erf/20 pt-3">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            Berekend op basis van
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-700">
+            <span>
+              Achtererf{" "}
+              <strong className="text-slate-900">
+                ± {(achtererf ?? 0).toLocaleString("nl-NL")} m²
+              </strong>
+            </span>
+            <span className="text-slate-400">+</span>
+            <span>
+              hoofdgebouw{" "}
+              <strong className="text-slate-900">
+                ± {(footprint ?? 0).toLocaleString("nl-NL")} m²
+              </strong>
+            </span>
+            <span className="text-slate-400">=</span>
+            <span>
+              bebouwingsgebied{" "}
+              <strong className="text-slate-900">
+                ± {bebgebied.toLocaleString("nl-NL")} m²
+              </strong>
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            {handmatig
+              ? "De achtererf-oppervlakte komt uit de handmatige intekening op de kaart. Pas je de tekening aan, dan verandert de maximale bebouwing mee."
+              : "De achtererf-oppervlakte is automatisch berekend. Teken het achtererf in op de kaart om dit te verfijnen."}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -112,6 +185,8 @@ export function ErfscanPanel({
         </div>
       )}
 
+      {d.ruimtelijk && <MaxBebouwing r={d.ruimtelijk} />}
+
       <dl className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <dt className="text-xs uppercase tracking-wide text-slate-400">Adres</dt>
@@ -149,11 +224,11 @@ export function ErfscanPanel({
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-slate-400">
-            Vergunningvrij (indicatie)
+            Achtererf
           </dt>
           <dd className="mt-0.5 text-slate-900">
-            {d.ruimtelijk?.max_vergunningvrij_m2
-              ? `± ${d.ruimtelijk.max_vergunningvrij_m2} m²`
+            {d.ruimtelijk?.achtererf_proxy_m2
+              ? `± ${num(d.ruimtelijk.achtererf_proxy_m2)?.toLocaleString("nl-NL")} m²`
               : "—"}
           </dd>
         </div>
