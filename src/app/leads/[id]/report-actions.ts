@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { runReportGeneration, rerenderReportPdf } from "@/lib/generate-report-flow";
 import { logLeadEmail } from "@/lib/hubspot";
 import { reportBaseUrl } from "@/lib/erfcheck-report";
+import { buildErfplanMagicLink } from "@/lib/portaal-magic-link";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 async function requireUser() {
@@ -96,10 +97,15 @@ export async function sendReport(leadId: string): Promise<Result> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY niet gezet." };
 
-  // De Erf Check wordt nu als tracbare pagina aangeboden i.p.v. PDF-bijlage.
-  const pageUrl = `${reportBaseUrl()}/r/${lead!.report_token}`;
+  // Voorkeur: magic-link naar "Mijn Erfplan" (/mijn/erf) — de klant landt met één
+  // klik ingelogd op z'n erfcheck. Lukt dat niet, dan de trackbare CRM-pagina.
+  const magicUrl = lead?.email ? await buildErfplanMagicLink(lead.email) : null;
+  const pageUrl = magicUrl ?? `${reportBaseUrl()}/r/${lead!.report_token}`;
+  const buttonLabel = magicUrl
+    ? "Bekijk je Erf Check in Mijn Erfplan »"
+    : "Bekijk je Erf Check online »";
   const button = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
-    <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">Bekijk je Erf Check online »</a>
+    <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${buttonLabel}</a>
   </td></tr></table>`;
   const html = toHtml(erfscan.draft_email_body || "") + button;
   const fromEmail = process.env.REPORT_FROM_EMAIL || "opeigenerf <noreply@opeigenerf.nl>";
