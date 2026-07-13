@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
-import { euro } from "@/lib/aanbieders-constants";
+import { euro, hostnameOf } from "@/lib/aanbieders-constants";
 import { FotoGrid } from "./foto-grid";
 import { PublishBar } from "./publish-bar";
 import { TypeKiezer } from "./type-kiezer";
@@ -66,9 +66,7 @@ export default async function ResearchDetailPage({
     fotosByWoning.set(f.woning_id, arr);
   }
 
-  const domein = aanbieder.website_url
-    ? new URL(aanbieder.website_url).hostname.replace(/^www\./, "")
-    : null;
+  const domein = aanbieder.website_url ? hostnameOf(aanbieder.website_url) : null;
 
   return (
     <div className="min-h-screen">

@@ -92,3 +92,15 @@ export function euro(n: number | null | undefined): string {
   if (n === null || n === undefined) return "Op aanvraag";
   return "€ " + n.toLocaleString("nl-NL");
 }
+
+// Toon-hostname uit een website-URL. Robuust tegen ontbrekende scheme
+// (bv. "woningopmaat.nl") zodat een kale domeinwaarde de pagina niet laat crashen.
+export function hostnameOf(url: string | null | undefined): string {
+  if (!url) return "—";
+  const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  try {
+    return new URL(withScheme).hostname.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\//i, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  }
+}

@@ -8,6 +8,7 @@ import {
   SCRAPE_REVIEW_STATUS,
   SCRAPE_REVIEW_STATUS_LABELS,
   SCRAPE_REVIEW_STATUS_STYLES,
+  hostnameOf,
 } from "@/lib/aanbieders-constants";
 
 export const dynamic = "force-dynamic";
@@ -120,7 +121,7 @@ export default async function ResearchPage() {
                     </Link>
                   </td>
                   <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">
-                    {r.website_url ? new URL(r.website_url).hostname.replace(/^www\./, "") : "—"}
+                    {hostnameOf(r.website_url)}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{modelCount.get(r.id) ?? 0}</td>
                   <td className="px-4 py-3 text-slate-600">{fotoCount.get(r.id) ?? 0}</td>
