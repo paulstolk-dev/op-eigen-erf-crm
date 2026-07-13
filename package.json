@@ -10,6 +10,7 @@
     "types": "echo \"Run: npx supabase gen types ... (see README)\""
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.96",
     "@geoman-io/leaflet-geoman-free": "^2.20.0",
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.7.0",

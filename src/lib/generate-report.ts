@@ -1,6 +1,7 @@
 import "server-only";
 
 import { generateObject } from "ai";
+import { chatModel } from "./ai-model";
 import { reportSchema, type ReportContent } from "./report-schema";
 import { getSetting, DEFAULT_EMAIL_PROMPT, SETTING_KEYS } from "./settings";
 import type { Lead, Erfscan } from "./database.types";
@@ -103,7 +104,7 @@ export async function generateReportContent(
     DEFAULT_EMAIL_PROMPT,
   );
   const { object } = await generateObject({
-    model,
+    model: chatModel(model),
     schema: reportSchema,
     system: SYSTEM,
     prompt:

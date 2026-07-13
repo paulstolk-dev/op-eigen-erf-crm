@@ -2,6 +2,7 @@ import "server-only";
 
 import { generateObject } from "ai";
 import { z } from "zod";
+import { chatModel } from "./ai-model";
 import {
   regelgevingSchema,
   captionSchema,
@@ -63,7 +64,7 @@ export async function generateSocialContent(
   const n = Math.max(1, Math.min(5, Math.round(aantal || 1)));
   const model = process.env.SOCIAL_MODEL || process.env.REPORT_MODEL || "anthropic/claude-haiku-4-5";
   const { object } = await generateObject({
-    model,
+    model: chatModel(model),
     schema: batchSchema,
     system: SOCIAL_SYSTEM,
     prompt:
