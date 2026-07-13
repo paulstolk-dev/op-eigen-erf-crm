@@ -13,7 +13,13 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type Row = { id: string; naam: string; website_url: string | null; review_status: string };
+type Row = {
+  id: string;
+  naam: string;
+  website_url: string | null;
+  review_status: string;
+  bron: string | null;
+};
 
 export default async function ResearchPage() {
   const supabase = await createClient();
@@ -22,12 +28,31 @@ export default async function ResearchPage() {
   } = await supabase.auth.getUser();
 
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("aanbieders")
-    .select("id,naam,website_url,review_status")
-    .eq("bron", "scrape")
-    .order("naam", { ascending: true });
-  const rows = (data ?? []) as Row[];
+  // Gescrapete concept-aanbieders (bron='scrape') + bestaande aanbieders waaronder
+  // een refresh-scrape concept-modellen/foto's heeft gestaged (die hebben
+  // scrape_afbeeldingen). Zo verschijnt bv. Mevena hier na "Modellen bijwerken via scrape".
+  const [{ data: scrapeAanb }, { data: fotoAanbRows }] = await Promise.all([
+    admin
+      .from("aanbieders")
+      .select("id,naam,website_url,review_status,bron")
+      .eq("bron", "scrape"),
+    admin.from("scrape_afbeeldingen").select("aanbieder_id"),
+  ]);
+  const scrapeIds = new Set((scrapeAanb ?? []).map((a) => a.id));
+  const extraIds = [
+    ...new Set(
+      (fotoAanbRows ?? []).map((f) => f.aanbieder_id).filter(Boolean) as string[],
+    ),
+  ].filter((x) => !scrapeIds.has(x));
+  let extra: Row[] = [];
+  if (extraIds.length) {
+    const { data } = await admin
+      .from("aanbieders")
+      .select("id,naam,website_url,review_status,bron")
+      .in("id", extraIds);
+    extra = (data ?? []) as Row[];
+  }
+  const rows = [...((scrapeAanb ?? []) as Row[]), ...extra];
 
   // Aantallen modellen/foto's per gescrapete aanbieder.
   const ids = rows.map((r) => r.id);
@@ -35,7 +60,8 @@ export default async function ResearchPage() {
   const fotoCount = new Map<string, number>();
   if (ids.length) {
     const [{ data: woningen }, { data: fotos }] = await Promise.all([
-      admin.from("woningen").select("aanbieder_id").in("aanbieder_id", ids),
+      // Alleen concept-modellen (actief=false) tellen — dat is wat er te beoordelen valt.
+      admin.from("woningen").select("aanbieder_id").eq("actief", false).in("aanbieder_id", ids),
       admin.from("scrape_afbeeldingen").select("aanbieder_id").in("aanbieder_id", ids),
     ]);
     for (const w of woningen ?? [])
@@ -119,6 +145,11 @@ export default async function ResearchPage() {
                     >
                       {r.naam}
                     </Link>
+                    {r.bron !== "scrape" && (
+                      <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        bestaand
+                      </span>
+                    )}
                   </td>
                   <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">
                     {hostnameOf(r.website_url)}
