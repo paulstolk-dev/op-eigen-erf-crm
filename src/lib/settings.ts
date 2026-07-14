@@ -24,6 +24,7 @@ als "eerste richting", niet als "volledig onderzocht".
 
 export const SETTING_KEYS = {
   reportEmailPrompt: "report_email_prompt",
+  socialsArtikelPrompt: "socials_artikel_prompt",
   nurtureFrom: "nurture_from",
   nurtureReplyTo: "nurture_reply_to",
   nurtureBcc: "nurture_bcc",
@@ -43,6 +44,45 @@ export const SETTING_KEYS = {
   partnerPitchDelay2: "partner_pitch_delay2_dagen",
   partnerPitchDelay3: "partner_pitch_delay3_dagen",
 } as const;
+
+// Master-prompt voor de per-artikel social-video (tekstlaag + 3 Veo-beeldprompts +
+// captions). Bewerkbaar via de UI op /socials; de generatie leest deze setting.
+export const DEFAULT_SOCIALS_ARTIKEL_PROMPT = `Je genereert een korte social-video (~25 seconden, 9:16 verticaal) voor Op Eigen
+Erf, een ONAFHANKELIJK adviesbureau voor een familie-/mantelzorgwoning op eigen
+erf. Lever UITSLUITEND geldige JSON volgens het schema — geen uitleg.
+
+Een video heeft twee lagen:
+- TEKSTLAAG (Remotion): kicker, titel, 3 korte scenes, bron en CTA.
+  ALLE feiten, cijfers en tekst horen in deze laag.
+- BEELDLAAG (Veo): 3 sfeershots van elk 8s die samen (~24s) onder de tekst lopen.
+  De beeldlaag bevat NOOIT tekst of feiten — puur sfeer.
+
+REGELS TEKSTLAAG (defensible-claims-standaard):
+- Max 3 scenes; elke tekst <= 16 woorden, feitelijk, geen jargon zonder uitleg.
+- bron verplicht en concreet (Kadaster, DSO omgevingsplan, wettekst).
+- nogNietDefinitief = true zodra het over de familiewoning of nog niet ingegane
+  regels gaat.
+- Geen superlatieven, geen "beste/goedkoopste", geen garanties/beloftes (ACM/AVG).
+- Prijzen alleen als prijsband met prijspeil; bij twijfel weglaten.
+- Nooit stellig een vergunningsuitkomst claimen - verwijs naar de gratis erfcheck.
+
+REGELS BEELDLAAG (veo_prompt, per shot):
+- Schrijf in het ENGELS, cinematisch, 9:16, 8 seconden, rustige documentaire-stijl.
+- Onderwerp: Nederlandse woonsetting passend bij bouwen op eigen erf - ruime
+  achtertuin, klein bijgebouw/tuinhuis, vrijstaande woning, groen erf, of een licht
+  verhoogd overzicht van een perceel. Optioneel een oudere ouder + volwassen kind,
+  van veraf of van achteren.
+- VERBODEN in beeld: leesbare tekst, borden, logo's, merknamen, adressen;
+  herkenbare gezichten in close-up; en alles wat als claim/belofte kan lezen.
+- STYLE-LOCK - neem deze tokens LETTERLIJK op in elk van de 3 shots, zodat de
+  montage een geheel wordt:
+  "soft overcast Dutch daylight, muted natural palette with earthy sage-green
+   tones, calm slow camera drift, photoreal, no text, no signage, no logos".
+- Shot 2 en 3 sluiten in locatie en licht aan op shot 1.
+- Geen dialoog; alleen subtiel omgevingsgeluid of geen audio.
+
+Vul in broll het pad in als "broll/{slug}-1.mp4", "-2.mp4", "-3.mp4" met dezelfde
+slug als het "slug"-veld.`;
 
 // Eerste versie van de preferred-partner-pitch (bewerkbaar via de UI).
 export const DEFAULT_PARTNER_PITCH_SUBJECT =

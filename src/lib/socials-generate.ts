@@ -11,6 +11,7 @@ import {
   type Caption,
   type Broll,
 } from "./socials";
+import { getSetting, SETTING_KEYS, DEFAULT_SOCIALS_ARTIKEL_PROMPT } from "./settings";
 
 // Server-only: de AI-generatie van social-scripts. Gescheiden van socials.ts zodat
 // client-componenten de status-constanten/schemas kunnen importeren zonder de
@@ -82,43 +83,6 @@ export async function generateSocialContent(
 // Per-artikel video-aflevering: tekstlaag (Remotion) + beeldlaag (3 Veo-prompts)
 // + captions, in één keer. Master-prompt met defensible-claims + privacy/merk.
 // ---------------------------------------------------------------------------
-const ARTIKEL_SYSTEM = `Je genereert een korte social-video (~25 seconden, 9:16 verticaal) voor Op Eigen
-Erf, een ONAFHANKELIJK adviesbureau voor een familie-/mantelzorgwoning op eigen
-erf. Lever UITSLUITEND geldige JSON volgens het schema — geen uitleg.
-
-Een video heeft twee lagen:
-- TEKSTLAAG (Remotion): kicker, titel, 3 korte scenes, bron en CTA.
-  ALLE feiten, cijfers en tekst horen in deze laag.
-- BEELDLAAG (Veo): 3 sfeershots van elk 8s die samen (~24s) onder de tekst lopen.
-  De beeldlaag bevat NOOIT tekst of feiten — puur sfeer.
-
-REGELS TEKSTLAAG (defensible-claims-standaard):
-- Max 3 scenes; elke tekst <= 16 woorden, feitelijk, geen jargon zonder uitleg.
-- bron verplicht en concreet (Kadaster, DSO omgevingsplan, wettekst).
-- nogNietDefinitief = true zodra het over de familiewoning of nog niet ingegane
-  regels gaat.
-- Geen superlatieven, geen "beste/goedkoopste", geen garanties/beloftes (ACM/AVG).
-- Prijzen alleen als prijsband met prijspeil; bij twijfel weglaten.
-- Nooit stellig een vergunningsuitkomst claimen - verwijs naar de gratis erfcheck.
-
-REGELS BEELDLAAG (veo_prompt, per shot):
-- Schrijf in het ENGELS, cinematisch, 9:16, 8 seconden, rustige documentaire-stijl.
-- Onderwerp: Nederlandse woonsetting passend bij bouwen op eigen erf - ruime
-  achtertuin, klein bijgebouw/tuinhuis, vrijstaande woning, groen erf, of een licht
-  verhoogd overzicht van een perceel. Optioneel een oudere ouder + volwassen kind,
-  van veraf of van achteren.
-- VERBODEN in beeld: leesbare tekst, borden, logo's, merknamen, adressen;
-  herkenbare gezichten in close-up; en alles wat als claim/belofte kan lezen.
-- STYLE-LOCK - neem deze tokens LETTERLIJK op in elk van de 3 shots, zodat de
-  montage een geheel wordt:
-  "soft overcast Dutch daylight, muted natural palette with earthy sage-green
-   tones, calm slow camera drift, photoreal, no text, no signage, no logos".
-- Shot 2 en 3 sluiten in locatie en licht aan op shot 1.
-- Geen dialoog; alleen subtiel omgevingsgeluid of geen audio.
-
-Vul in broll het pad in als "broll/{slug}-1.mp4", "-2.mp4", "-3.mp4" met dezelfde
-slug als het "slug"-veld.`;
-
 export type GeneratedAflevering = {
   slug: string;
   props: RegelgevingProps;
@@ -150,10 +114,14 @@ export async function generateArtikelSocial(artikel: {
     .filter(Boolean)
     .join("\n");
 
+  const system = await getSetting(
+    SETTING_KEYS.socialsArtikelPrompt,
+    DEFAULT_SOCIALS_ARTIKEL_PROMPT,
+  );
   const { object } = await generateObject({
     model: chatModel(model),
     schema: afleveringGenSchema,
-    system: ARTIKEL_SYSTEM,
+    system,
     prompt: `ONDERWERP VAN DEZE AFLEVERING:\n${onderwerp}`,
   });
   return object;

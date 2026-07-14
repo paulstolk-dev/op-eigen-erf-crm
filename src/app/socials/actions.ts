@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateSocialContent, generateArtikelSocial } from "@/lib/socials-generate";
+import { setSetting, SETTING_KEYS } from "@/lib/settings";
 import { CONTENT_STATUSSEN, regelgevingSchema, type ContentStatus } from "@/lib/socials";
 
 async function requireUser() {
@@ -58,6 +59,19 @@ export async function generateSocials(aantal: number, thema?: string): Promise<R
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Onbekende fout" };
+  }
+}
+
+/** Master-prompt voor de per-artikel video-generatie opslaan (app_settings). */
+export async function saveArtikelPrompt(prompt: string): Promise<Result> {
+  await requireUser();
+  if (!prompt.trim()) return { ok: false, error: "Prompt mag niet leeg zijn." };
+  try {
+    await setSetting(SETTING_KEYS.socialsArtikelPrompt, prompt.trim());
+    revalidatePath("/socials");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Opslaan mislukt." };
   }
 }
 

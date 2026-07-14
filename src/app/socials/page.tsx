@@ -3,11 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, STATUS_STYLE, CONTENT_STATUSSEN } from "@/lib/socials";
 import type { RegelgevingProps } from "@/lib/socials";
 import type { ContentQueueItem } from "@/lib/database.types";
-import { getSetting } from "@/lib/settings";
+import {
+  getSetting,
+  SETTING_KEYS,
+  DEFAULT_SOCIALS_ARTIKEL_PROMPT,
+} from "@/lib/settings";
 import { VIDEO_SETTINGS_KEY, parseVideoSettings } from "@/lib/video-settings";
 import { GenerateForm } from "./generate-form";
 import { RenderButton } from "./render-button";
 import { VideoSettingsPanel } from "./video-settings";
+import { PromptEditor } from "./prompt-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +38,10 @@ export default async function SocialsPage() {
   }));
 
   const videoSettings = parseVideoSettings(await getSetting(VIDEO_SETTINGS_KEY));
+  const artikelPrompt = await getSetting(
+    SETTING_KEYS.socialsArtikelPrompt,
+    DEFAULT_SOCIALS_ARTIKEL_PROMPT,
+  );
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -60,6 +69,15 @@ export default async function SocialsPage() {
         <GenerateForm />
         <RenderButton conceptCount={items.filter((i) => i.status === "concept").length} />
         <VideoSettingsPanel initial={videoSettings} />
+
+        <details className="rounded-xl border border-slate-200 bg-white p-5">
+          <summary className="cursor-pointer text-base font-semibold text-slate-900">
+            Video-prompt bewerken (per artikel)
+          </summary>
+          <div className="mt-4">
+            <PromptEditor initial={artikelPrompt} />
+          </div>
+        </details>
       </div>
 
       {items.length === 0 ? (
