@@ -64,6 +64,32 @@ export default async function SocialDetailPage({
             </div>
           )}
 
+          {(data.video_url || data.video_url_landscape) && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-slate-500">Download:</span>
+              {data.video_url && (
+                <a
+                  href={data.video_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md border border-slate-300 px-2.5 py-1 font-medium text-navy hover:bg-slate-50"
+                >
+                  9:16 (short/reel) ↓
+                </a>
+              )}
+              {data.video_url_landscape && (
+                <a
+                  href={data.video_url_landscape}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md border border-slate-300 px-2.5 py-1 font-medium text-navy hover:bg-slate-50"
+                >
+                  16:9 (YouTube) ↓
+                </a>
+              )}
+            </div>
+          )}
+
           <PropsEditor id={data.id} props={props} />
         </div>
 

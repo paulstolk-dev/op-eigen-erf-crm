@@ -36,6 +36,34 @@ export default async function WebsitePage() {
     .order("created_at", { ascending: false });
   const artikelen = (data ?? []) as Artikel[];
 
+  // Gekoppelde video-afleveringen (per artikel) uit de content-queue.
+  type Afl = {
+    id: string;
+    slug: string;
+    status: string;
+    broll_status: string;
+    video_url: string | null;
+    video_url_landscape: string | null;
+    artikel_id: string | null;
+  };
+  const artikelIds = artikelen.map((a) => a.id);
+  let afleveringen: Afl[] = [];
+  if (artikelIds.length) {
+    const { data: aflData } = await admin
+      .from("content_queue")
+      .select("id, slug, status, broll_status, video_url, video_url_landscape, artikel_id")
+      .in("artikel_id", artikelIds)
+      .order("created_at", { ascending: false });
+    afleveringen = (aflData ?? []) as Afl[];
+  }
+  const aflByArtikel = new Map<string, Afl[]>();
+  for (const r of afleveringen) {
+    if (!r.artikel_id) continue;
+    const arr = aflByArtikel.get(r.artikel_id) ?? [];
+    arr.push(r);
+    aflByArtikel.set(r.artikel_id, arr);
+  }
+
   const telling = (s: string) => artikelen.filter((a) => a.status === s).length;
 
   return (
@@ -113,6 +141,62 @@ export default async function WebsitePage() {
                       yt_post_tekst: a.yt_post_tekst ?? "",
                     }}
                   />
+
+                  {(aflByArtikel.get(a.id) ?? []).length > 0 && (
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Video-afleveringen
+                      </p>
+                      <ul className="space-y-2">
+                        {(aflByArtikel.get(a.id) ?? []).map((r) => (
+                          <li
+                            key={r.id}
+                            className="flex flex-wrap items-center gap-2.5 text-sm text-slate-700"
+                          >
+                            <span className="font-medium text-slate-900">{r.slug}</span>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                              {r.status}
+                            </span>
+                            {r.broll_status !== "geen" && (
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                                b-roll: {r.broll_status}
+                              </span>
+                            )}
+                            {r.video_url ? (
+                              <a
+                                href={r.video_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-md border border-slate-300 px-2 py-0.5 text-xs font-medium text-navy hover:bg-slate-50"
+                              >
+                                9:16 ↓
+                              </a>
+                            ) : (
+                              <span className="text-xs text-slate-400">9:16 —</span>
+                            )}
+                            {r.video_url_landscape ? (
+                              <a
+                                href={r.video_url_landscape}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-md border border-slate-300 px-2 py-0.5 text-xs font-medium text-navy hover:bg-slate-50"
+                              >
+                                16:9 ↓
+                              </a>
+                            ) : (
+                              <span className="text-xs text-slate-400">16:9 —</span>
+                            )}
+                            <a
+                              href={`/socials/${r.id}`}
+                              className="text-xs font-medium text-slate-500 hover:underline"
+                            >
+                              bewerken →
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </details>
               </li>
             ))}
