@@ -10,7 +10,7 @@ const SECRET = process.env.VIDEO_RENDER_SECRET;
 
 // Versiemarker: bump bij elke worker-wijziging zodat je in de startup-log en op
 // GET /status ziet welke code live is (voorkomt gokken op deploy/commit).
-const VERSION = "veo-broll-personall-3";
+const VERSION = "landscape-scale-outrologo-5";
 
 let running = false;
 let last = { state: "idle" };

@@ -115,16 +115,23 @@ const BrollLaag: React.FC<{ urls: string[]; seconds: number }> = ({ urls, second
   );
 };
 
+// Landscape (16:9) is maar 1080px hoog i.p.v. 1920 → tekst/kaart iets kleiner zodat
+// de b-roll beter zichtbaar blijft. Portret houdt schaal 1.
+function contentScale(width: number, height: number): number {
+  return width > height ? 0.78 : 1;
+}
+
 const Intro: React.FC<{ kicker: string; titel: string; s: VideoSettings; overBroll: boolean }> = ({ kicker, titel, s, overBroll }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const k = contentScale(width, height);
   const e = spring({ frame, fps, config: { damping: 200 } }); // rustig, geen overshoot
   const y = interpolate(e, [0, 1], [24, 0]);
   const titelKleur = overBroll ? '#ffffff' : s.text;
   const schaduw = overBroll ? '0 2px 18px rgba(0,0,0,0.55)' : 'none';
   return (
     <AbsoluteFill style={{ justifyContent: 'center', padding: 96 }}>
-      <div style={{ opacity: e, transform: `translateY(${y}px)`, textShadow: schaduw }}>
+      <div style={{ opacity: e, transform: `translateY(${y}px) scale(${k})`, transformOrigin: 'left center', textShadow: schaduw }}>
         <div style={{ color: overBroll ? '#efe4cf' : s.accent, fontSize: 42, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
           {kicker}
         </div>
@@ -139,20 +146,23 @@ const Intro: React.FC<{ kicker: string; titel: string; s: VideoSettings; overBro
 
 const Scene: React.FC<{ index: number; kop: string; tekst: string; s: VideoSettings }> = ({ index, kop, tekst, s }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps, durationInFrames, width, height } = useVideoConfig();
+  const k = contentScale(width, height);
   const e = spring({ frame, fps, config: { damping: 200 } });
   const exit = interpolate(frame, [durationInFrames - 14, durationInFrames], [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const y = interpolate(e, [0, 1], [28, 0]); // subtiele opkomst, geen slide
   return (
-    <AbsoluteFill style={{ justifyContent: 'center', padding: 72 }}>
+    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: 72 }}>
       <div
         style={{
           opacity: Math.min(e, exit),
-          transform: `translateY(${y}px)`,
+          transform: `translateY(${y}px) scale(${k})`,
+          transformOrigin: 'center',
           backgroundColor: s.card,
           borderRadius: s.radius,
           padding: 64,
+          maxWidth: 900,
           boxShadow: '0 24px 60px rgba(0,0,0,0.06)',
         }}
       >
@@ -173,7 +183,8 @@ const Scene: React.FC<{ index: number; kop: string; tekst: string; s: VideoSetti
 const Outro: React.FC<{ cta: string; bron: string; laatstBijgewerkt: string; s: VideoSettings }> =
   ({ cta, bron, laatstBijgewerkt, s }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const k = contentScale(width, height);
   const e = spring({ frame, fps, config: { damping: 200 } });
   const y = interpolate(e, [0, 1], [24, 0]);
   return (
@@ -181,7 +192,8 @@ const Outro: React.FC<{ cta: string; bron: string; laatstBijgewerkt: string; s: 
       <div
         style={{
           opacity: e,
-          transform: `translateY(${y}px)`,
+          transform: `translateY(${y}px) scale(${k})`,
+          transformOrigin: 'center',
           backgroundColor: s.card,
           borderRadius: s.radius,
           padding: 72,
