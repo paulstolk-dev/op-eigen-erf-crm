@@ -7,6 +7,16 @@ import {
   DEFAULT_PARTNER_PITCH_BODY,
   DEFAULT_PARTNER_PITCH_CTA_LABEL,
   DEFAULT_PARTNER_PITCH_CTA_URL,
+  DEFAULT_PARTNER_PITCH2_SUBJECT,
+  DEFAULT_PARTNER_PITCH2_BODY,
+  DEFAULT_PARTNER_PITCH2_CTA_LABEL,
+  DEFAULT_PARTNER_PITCH2_CTA_URL,
+  DEFAULT_PARTNER_PITCH3_SUBJECT,
+  DEFAULT_PARTNER_PITCH3_BODY,
+  DEFAULT_PARTNER_PITCH3_CTA_LABEL,
+  DEFAULT_PARTNER_PITCH3_CTA_URL,
+  DEFAULT_PARTNER_PITCH_DELAY2,
+  DEFAULT_PARTNER_PITCH_DELAY3,
 } from "@/lib/settings";
 
 export type Pitch = {
@@ -16,14 +26,75 @@ export type Pitch = {
   ctaUrl: string;
 };
 
-export async function getPitch(): Promise<Pitch> {
+// Per-stap settingsleutels + defaults (1 = eerste pitch, 2/3 = vervolgmails).
+const STEP_KEYS = {
+  1: {
+    subject: SETTING_KEYS.partnerPitchSubject,
+    body: SETTING_KEYS.partnerPitchBody,
+    ctaLabel: SETTING_KEYS.partnerPitchCtaLabel,
+    ctaUrl: SETTING_KEYS.partnerPitchCtaUrl,
+    def: {
+      subject: DEFAULT_PARTNER_PITCH_SUBJECT,
+      body: DEFAULT_PARTNER_PITCH_BODY,
+      ctaLabel: DEFAULT_PARTNER_PITCH_CTA_LABEL,
+      ctaUrl: DEFAULT_PARTNER_PITCH_CTA_URL,
+    },
+  },
+  2: {
+    subject: SETTING_KEYS.partnerPitch2Subject,
+    body: SETTING_KEYS.partnerPitch2Body,
+    ctaLabel: SETTING_KEYS.partnerPitch2CtaLabel,
+    ctaUrl: SETTING_KEYS.partnerPitch2CtaUrl,
+    def: {
+      subject: DEFAULT_PARTNER_PITCH2_SUBJECT,
+      body: DEFAULT_PARTNER_PITCH2_BODY,
+      ctaLabel: DEFAULT_PARTNER_PITCH2_CTA_LABEL,
+      ctaUrl: DEFAULT_PARTNER_PITCH2_CTA_URL,
+    },
+  },
+  3: {
+    subject: SETTING_KEYS.partnerPitch3Subject,
+    body: SETTING_KEYS.partnerPitch3Body,
+    ctaLabel: SETTING_KEYS.partnerPitch3CtaLabel,
+    ctaUrl: SETTING_KEYS.partnerPitch3CtaUrl,
+    def: {
+      subject: DEFAULT_PARTNER_PITCH3_SUBJECT,
+      body: DEFAULT_PARTNER_PITCH3_BODY,
+      ctaLabel: DEFAULT_PARTNER_PITCH3_CTA_LABEL,
+      ctaUrl: DEFAULT_PARTNER_PITCH3_CTA_URL,
+    },
+  },
+} as const;
+
+export type PitchStep = 1 | 2 | 3;
+
+export async function getPitchStep(step: PitchStep): Promise<Pitch> {
+  const k = STEP_KEYS[step];
   const [subject, body, ctaLabel, ctaUrl] = await Promise.all([
-    getSetting(SETTING_KEYS.partnerPitchSubject, DEFAULT_PARTNER_PITCH_SUBJECT),
-    getSetting(SETTING_KEYS.partnerPitchBody, DEFAULT_PARTNER_PITCH_BODY),
-    getSetting(SETTING_KEYS.partnerPitchCtaLabel, DEFAULT_PARTNER_PITCH_CTA_LABEL),
-    getSetting(SETTING_KEYS.partnerPitchCtaUrl, DEFAULT_PARTNER_PITCH_CTA_URL),
+    getSetting(k.subject, k.def.subject),
+    getSetting(k.body, k.def.body),
+    getSetting(k.ctaLabel, k.def.ctaLabel),
+    getSetting(k.ctaUrl, k.def.ctaUrl),
   ]);
   return { subject, body, ctaLabel, ctaUrl };
+}
+
+// Eerste pitch (stap 1) — behouden voor bestaande aanroepers.
+export async function getPitch(): Promise<Pitch> {
+  return getPitchStep(1);
+}
+
+// Wachttijden (dagen): mail 2 X dagen na mail 1; mail 3 Y dagen na mail 2.
+export async function getPitchDelays(): Promise<{ delay2: number; delay3: number }> {
+  const [d2, d3] = await Promise.all([
+    getSetting(SETTING_KEYS.partnerPitchDelay2, DEFAULT_PARTNER_PITCH_DELAY2),
+    getSetting(SETTING_KEYS.partnerPitchDelay3, DEFAULT_PARTNER_PITCH_DELAY3),
+  ]);
+  const clamp = (s: string, fb: number) => {
+    const n = Math.round(Number(s));
+    return Number.isFinite(n) && n >= 0 ? n : fb;
+  };
+  return { delay2: clamp(d2, 10), delay3: clamp(d3, 14) };
 }
 
 function esc(s: string): string {

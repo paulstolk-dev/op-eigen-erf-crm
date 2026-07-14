@@ -103,9 +103,15 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
   if (!ok) return { ok: false, error: "Versturen mislukt (RESEND_API_KEY of adres?)." };
 
   const sentAtIso = new Date().toISOString();
+  // Start (of herstart) de wervingssequence op stap 1; anker voor de vervolgmails.
   await admin
     .from("aanbieders")
-    .update({ partner_status: "benaderd", partner_benaderd_at: sentAtIso })
+    .update({
+      partner_status: "benaderd",
+      partner_benaderd_at: sentAtIso,
+      partner_pitch_step: 1,
+      partner_pitch_last_at: sentAtIso,
+    })
     .eq("id", aanbiederId);
   // Eerst company/contact (her)syncen, dan de verstuurde mail op de HubSpot-
   // tijdlijn loggen. Beide best-effort: HubSpot-fouten blokkeren de verzending niet.
@@ -136,6 +142,52 @@ export async function savePitch(
     await setSetting(SETTING_KEYS.partnerPitchBody, body.trim());
     await setSetting(SETTING_KEYS.partnerPitchCtaLabel, ctaLabel.trim());
     await setSetting(SETTING_KEYS.partnerPitchCtaUrl, ctaUrl.trim());
+    revalidatePath("/aanbieders/partners");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Opslaan mislukt." };
+  }
+}
+
+type SequenceStep = { subject: string; body: string; ctaLabel: string; ctaUrl: string };
+
+// Slaat de hele wervingssequence op: 3 mails + de twee wachttijden (dagen).
+export async function savePartnerSequence(payload: {
+  step1: SequenceStep;
+  step2: SequenceStep;
+  step3: SequenceStep;
+  delay2: string;
+  delay3: string;
+}): Promise<Result> {
+  await requireCrm();
+  const { step1, step2, step3 } = payload;
+  if (!step1.subject.trim() || !step1.body.trim()) {
+    return { ok: false, error: "Mail 1 heeft een onderwerp en body nodig." };
+  }
+  const dagen = (s: string) => {
+    const n = Math.round(Number(s));
+    return Number.isFinite(n) && n >= 0 ? String(n) : "";
+  };
+  const d2 = dagen(payload.delay2);
+  const d3 = dagen(payload.delay3);
+  if (!d2 || !d3) return { ok: false, error: "Wachttijden moeten gehele dagen (≥ 0) zijn." };
+  try {
+    await Promise.all([
+      setSetting(SETTING_KEYS.partnerPitchSubject, step1.subject.trim()),
+      setSetting(SETTING_KEYS.partnerPitchBody, step1.body.trim()),
+      setSetting(SETTING_KEYS.partnerPitchCtaLabel, step1.ctaLabel.trim()),
+      setSetting(SETTING_KEYS.partnerPitchCtaUrl, step1.ctaUrl.trim()),
+      setSetting(SETTING_KEYS.partnerPitch2Subject, step2.subject.trim()),
+      setSetting(SETTING_KEYS.partnerPitch2Body, step2.body.trim()),
+      setSetting(SETTING_KEYS.partnerPitch2CtaLabel, step2.ctaLabel.trim()),
+      setSetting(SETTING_KEYS.partnerPitch2CtaUrl, step2.ctaUrl.trim()),
+      setSetting(SETTING_KEYS.partnerPitch3Subject, step3.subject.trim()),
+      setSetting(SETTING_KEYS.partnerPitch3Body, step3.body.trim()),
+      setSetting(SETTING_KEYS.partnerPitch3CtaLabel, step3.ctaLabel.trim()),
+      setSetting(SETTING_KEYS.partnerPitch3CtaUrl, step3.ctaUrl.trim()),
+      setSetting(SETTING_KEYS.partnerPitchDelay2, d2),
+      setSetting(SETTING_KEYS.partnerPitchDelay3, d3),
+    ]);
     revalidatePath("/aanbieders/partners");
     return { ok: true };
   } catch (e) {

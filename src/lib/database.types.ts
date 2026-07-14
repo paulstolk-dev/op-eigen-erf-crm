@@ -126,6 +126,8 @@ export type Database = {
           contact_email: string | null
           partner_status: string
           partner_benaderd_at: string | null
+          partner_pitch_step: number
+          partner_pitch_last_at: string | null
           bron: string
           review_status: string
           actief: boolean
@@ -162,6 +164,8 @@ export type Database = {
           contact_email?: string | null
           partner_status?: string
           partner_benaderd_at?: string | null
+          partner_pitch_step?: number
+          partner_pitch_last_at?: string | null
           bron?: string
           review_status?: string
           actief?: boolean
@@ -197,6 +201,8 @@ export type Database = {
           contact_email?: string | null
           partner_status?: string
           partner_benaderd_at?: string | null
+          partner_pitch_step?: number
+          partner_pitch_last_at?: string | null
           bron?: string
           review_status?: string
           actief?: boolean

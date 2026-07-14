@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { PartnerRow } from "./partner-row";
 import { PitchEditor } from "./pitch-editor";
-import { getPitch } from "@/lib/partner-pitch";
+import { getPitchStep, getPitchDelays } from "@/lib/partner-pitch";
 import { PARTNER_STATUS, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ type Row = {
   contact_email: string | null;
   partner_status: string;
   partner_benaderd_at: string | null;
+  partner_pitch_step: number | null;
 };
 
 export default async function PartnersPage() {
@@ -27,10 +28,17 @@ export default async function PartnersPage() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("aanbieders")
-    .select("id,naam,contact_naam,contact_email,partner_status,partner_benaderd_at")
+    .select(
+      "id,naam,contact_naam,contact_email,partner_status,partner_benaderd_at,partner_pitch_step",
+    )
     .order("naam", { ascending: true });
   const rows = (data ?? []) as Row[];
-  const pitch = await getPitch();
+  const [step1, step2, step3, delays] = await Promise.all([
+    getPitchStep(1),
+    getPitchStep(2),
+    getPitchStep(3),
+    getPitchDelays(),
+  ]);
 
   const telling = (s: string) => rows.filter((r) => r.partner_status === s).length;
 
@@ -65,17 +73,18 @@ export default async function PartnersPage() {
           ))}
         </div>
 
-        {/* Pitch bewerken */}
+        {/* Wervingssequence bewerken (3 mails + wachttijden) */}
         <details className="mb-5 rounded-xl border border-slate-200 bg-white p-5">
           <summary className="cursor-pointer text-base font-semibold text-slate-900">
-            Wervingsmail (pitch) bewerken
+            Wervingssequence bewerken (3 mails + wachttijden)
           </summary>
           <div className="mt-4">
             <PitchEditor
-              subject={pitch.subject}
-              body={pitch.body}
-              ctaLabel={pitch.ctaLabel}
-              ctaUrl={pitch.ctaUrl}
+              step1={step1}
+              step2={step2}
+              step3={step3}
+              delay2={delays.delay2}
+              delay3={delays.delay3}
             />
           </div>
         </details>

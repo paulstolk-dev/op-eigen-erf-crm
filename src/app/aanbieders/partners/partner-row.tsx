@@ -16,6 +16,7 @@ type Row = {
   contact_email: string | null;
   partner_status: string;
   partner_benaderd_at: string | null;
+  partner_pitch_step: number | null;
 };
 
 const inp =
@@ -114,6 +115,11 @@ export function PartnerRow({ row }: { row: Row }) {
               month: "short",
             })
           : "—"}
+        {row.partner_pitch_step && row.partner_pitch_step > 0 && (
+          <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+            mail {row.partner_pitch_step}/3
+          </span>
+        )}
       </td>
       <td className="px-3 py-3 text-right">
         <button

@@ -31,6 +31,17 @@ export const SETTING_KEYS = {
   partnerPitchBody: "partner_pitch_body",
   partnerPitchCtaLabel: "partner_pitch_cta_label",
   partnerPitchCtaUrl: "partner_pitch_cta_url",
+  // Vervolgmails 2 en 3 van de wervingssequence + instelbare wachttijden (dagen).
+  partnerPitch2Subject: "partner_pitch2_subject",
+  partnerPitch2Body: "partner_pitch2_body",
+  partnerPitch2CtaLabel: "partner_pitch2_cta_label",
+  partnerPitch2CtaUrl: "partner_pitch2_cta_url",
+  partnerPitch3Subject: "partner_pitch3_subject",
+  partnerPitch3Body: "partner_pitch3_body",
+  partnerPitch3CtaLabel: "partner_pitch3_cta_label",
+  partnerPitch3CtaUrl: "partner_pitch3_cta_url",
+  partnerPitchDelay2: "partner_pitch_delay2_dagen",
+  partnerPitchDelay3: "partner_pitch_delay3_dagen",
 } as const;
 
 // Eerste versie van de preferred-partner-pitch (bewerkbaar via de UI).
@@ -56,6 +67,65 @@ Met vriendelijke groet,
 opeigenerf.nl`;
 export const DEFAULT_PARTNER_PITCH_CTA_LABEL = "Plan een kennismaking";
 export const DEFAULT_PARTNER_PITCH_CTA_URL = "https://opeigenerf.nl/kennismaking";
+
+// Mail 2 — update + nogmaals verzoek om beeldmateriaal (standaard ~10 dagen na mail 1).
+export const DEFAULT_PARTNER_PITCH2_SUBJECT =
+  "Update Op Eigen Erf – eerste resultaten en uw vermelding";
+export const DEFAULT_PARTNER_PITCH2_BODY = `Beste {{contact_naam}},
+
+Onlangs stuurde ik u een bericht over uw vermelding op Op Eigen Erf. Inmiddels wilde ik u graag een korte update geven.
+
+Het platform groeit sneller dan verwacht. De afgelopen periode hebben we inmiddels:
+- ruim 4.500 bezoekers ontvangen;
+- 120 aanvragen voor een erfcheck verwerkt;
+- de eerste 2 klanten begeleid richting een aankooptraject.
+
+Steeds meer bezoekers gebruiken de aanbiederspagina's om verschillende woningtypen en aanbieders met elkaar te vergelijken voordat zij contact opnemen.
+
+Een aantal aanbieders heeft inmiddels de vermelding aangevuld met eigen beeldmateriaal, waardoor bezoekers een veel beter beeld krijgen van hun woningen. Enkele voorbeelden:
+- https://opeigenerf.nl/aanbieders/compact-housing
+- https://opeigenerf.nl/aanbieders/goudstaete
+- https://opeigenerf.nl/aanbieders/opus-pod
+
+Ik zou uw pagina graag dezelfde kwaliteit geven. Mocht u een logo en enkele foto's (liefst in hoge resolutie) kunnen toesturen, dan vervang ik de huidige tijdelijke afbeeldingen kosteloos. Uiteraard controleer ik meteen of prijzen, specificaties en modellen nog actueel zijn.
+
+Alvast hartelijk dank. Ik hoor graag van u.
+
+Met vriendelijke groet,
+Paul Stolk
+OpEigenErf.nl`;
+export const DEFAULT_PARTNER_PITCH2_CTA_LABEL = "";
+export const DEFAULT_PARTNER_PITCH2_CTA_URL = "";
+
+// Mail 3 — kennismaking preferred partners (standaard ~14 dagen na mail 2).
+export const DEFAULT_PARTNER_PITCH3_SUBJECT = "Samenwerking Op Eigen Erf";
+export const DEFAULT_PARTNER_PITCH3_BODY = `Beste {{contact_naam}},
+
+Ik wilde nog één keer contact opnemen omdat Op Eigen Erf zich momenteel in een interessante fase bevindt.
+
+Steeds meer mensen oriënteren zich op een woning op eigen erf. Inmiddels begeleiden we bezoekers vanaf de eerste erfcheck tot – wanneer zij daar klaar voor zijn – richting passende aanbieders.
+
+Om de kwaliteit voor bezoekers hoog te houden wil ik slechts met een beperkt aantal aanbieders intensiever samenwerken.
+
+Daarbij denk ik niet aan een standaard advertentiemodel, maar aan een inhoudelijke samenwerking waarbij we:
+- bezoekers objectief blijven informeren;
+- alleen passende aanvragen doorverwijzen;
+- uw modellen zo volledig en aantrekkelijk mogelijk presenteren;
+- samen kijken hoe we de klantreis kunnen verbeteren.
+
+Ik ben benieuwd hoe u tegen deze ontwikkeling aankijkt en of een vrijblijvende kennismaking interessant lijkt. Een korte online afspraak of kop koffie is wat mij betreft voldoende om te kijken of er een goede match is.
+
+Ik hoor graag van u.
+
+Met vriendelijke groet,
+Paul Stolk
+OpEigenErf.nl`;
+export const DEFAULT_PARTNER_PITCH3_CTA_LABEL = "Plan een kennismaking";
+export const DEFAULT_PARTNER_PITCH3_CTA_URL = "https://opeigenerf.nl/kennismaking";
+
+// Instelbare wachttijden (dagen). Mail 2 na X dagen; mail 3 na Y dagen ná mail 2.
+export const DEFAULT_PARTNER_PITCH_DELAY2 = "10";
+export const DEFAULT_PARTNER_PITCH_DELAY3 = "14";
 
 // Fallbacks (UI-instelling wint, dan env, dan deze default).
 export const DEFAULT_NURTURE_FROM =

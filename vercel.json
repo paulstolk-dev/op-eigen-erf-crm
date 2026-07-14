@@ -6,6 +6,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/partner-sequence",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/ads-sync",
       "schedule": "0 6 * * *"
     }
