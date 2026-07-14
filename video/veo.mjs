@@ -11,14 +11,18 @@ function apiKey() {
 const MODEL = () => process.env.VEO_MODEL || "veo-3.1-fast-generate-preview";
 // Bronverhouding van de b-roll. 16:9 = native landscape + nette center-crop naar 9:16.
 const ASPECT = () => process.env.VEO_ASPECT || "16:9";
+// personGeneration: 'allow_all' (mensen van veraf toegestaan) of leeg om te omitten.
+// 'allow_adult' wordt door de Gemini-Veo-endpoint (nog) niet geaccepteerd.
+const PERSON = () => (process.env.VEO_PERSON ?? "allow_all");
 
 async function startVeo(prompt) {
+  const person = PERSON();
   const res = await fetch(`${API}/models/${MODEL()}:predictLongRunning`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey() },
     body: JSON.stringify({
       instances: [{ prompt }],
-      parameters: { aspectRatio: ASPECT(), personGeneration: "allow_adult" },
+      parameters: { aspectRatio: ASPECT(), ...(person ? { personGeneration: person } : {}) },
     }),
   });
   const data = await res.json().catch(() => ({}));
