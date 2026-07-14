@@ -67,7 +67,10 @@ REGELS TEKSTLAAG (defensible-claims-standaard):
 - Nooit stellig een vergunningsuitkomst claimen - verwijs naar de gratis erfcheck.
 
 REGELS BEELDLAAG (veo_prompt, per shot):
-- Schrijf in het ENGELS, cinematisch, 9:16, 8 seconden, rustige documentaire-stijl.
+- Schrijf in het ENGELS, cinematisch, ~8 seconden, rustige documentaire-stijl.
+- Vermeld GEEN beeldverhouding/aspect ratio in de prompt: dus NIET "9:16", "16:9",
+  "vertical", "horizontal", "portrait" of "landscape". De verhouding wordt apart
+  ingesteld; noem alleen het beeld en de sfeer.
 - Kies het ONDERWERP en de SCÈNE van de 3 shots passend bij DIT specifieke artikel
   (het onderwerp staat onderaan). Nederlandse woonsetting, maar afgestemd op het type:
   * mantelzorg / ouder op eigen erf -> een oudere ouder en een volwassen kind samen,

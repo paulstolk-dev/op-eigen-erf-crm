@@ -96,11 +96,19 @@ const BrollLaag: React.FC<{ urls: string[]; seconds: number }> = ({ urls, second
         <Series>
           {urls.map((url, i) => (
             <Series.Sequence key={i} durationInFrames={clipF}>
-              <OffthreadVideo
-                src={url}
-                muted
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+              <AbsoluteFill>
+                <OffthreadVideo
+                  src={url}
+                  muted
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              </AbsoluteFill>
             </Series.Sequence>
           ))}
         </Series>
