@@ -68,10 +68,16 @@ REGELS TEKSTLAAG (defensible-claims-standaard):
 
 REGELS BEELDLAAG (veo_prompt, per shot):
 - Schrijf in het ENGELS, cinematisch, 9:16, 8 seconden, rustige documentaire-stijl.
-- Onderwerp: Nederlandse woonsetting passend bij bouwen op eigen erf - ruime
-  achtertuin, klein bijgebouw/tuinhuis, vrijstaande woning, groen erf, of een licht
-  verhoogd overzicht van een perceel. Optioneel een oudere ouder + volwassen kind,
-  van veraf of van achteren.
+- Kies het ONDERWERP en de SCÈNE van de 3 shots passend bij DIT specifieke artikel
+  (het onderwerp staat onderaan). Nederlandse woonsetting, maar afgestemd op het type:
+  * mantelzorg / ouder op eigen erf -> een oudere ouder en een volwassen kind samen,
+    van veraf of van achteren, bij een klein bijgebouw of aanbouw;
+  * familiewoning / woning voor je kind -> een ruimer groen perceel met een
+    vrijstaande of dubbele woning, gezinssfeer;
+  * tuinkantoor / klein bijgebouw -> een compact, modern tuinhuis in een verzorgde tuin;
+  * vergunning / regels / algemeen -> een rustig, licht verhoogd overzicht van een
+    achtererf met bestaande bebouwing en ruimte om te bouwen.
+  Houd het herkenbaar Nederlands en inhoudelijk passend, maar verzin geen concrete claims.
 - VERBODEN in beeld: leesbare tekst, borden, logo's, merknamen, adressen;
   herkenbare gezichten in close-up; en alles wat als claim/belofte kan lezen.
 - STYLE-LOCK - neem deze tokens LETTERLIJK op in elk van de 3 shots, zodat de
