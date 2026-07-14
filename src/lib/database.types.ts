@@ -539,6 +539,11 @@ export type Database = {
           bron: Json | null
           status: string
           afbeelding_url: string | null
+          content_processed: boolean
+          ytvideo_url: string | null
+          instapost_tekst: string | null
+          yt_post_tekst: string | null
+          instareel_url: string | null
           gepubliceerd_at: string | null
           created_at: string
           updated_at: string
@@ -549,6 +554,11 @@ export type Database = {
           titel: string
           status?: string
           afbeelding_url?: string | null
+          content_processed?: boolean
+          ytvideo_url?: string | null
+          instapost_tekst?: string | null
+          yt_post_tekst?: string | null
+          instareel_url?: string | null
         }
         Update: {
           slug?: string | null
@@ -556,6 +566,11 @@ export type Database = {
           categorie?: string | null
           status?: string
           afbeelding_url?: string | null
+          content_processed?: boolean
+          ytvideo_url?: string | null
+          instapost_tekst?: string | null
+          yt_post_tekst?: string | null
+          instareel_url?: string | null
           updated_at?: string
         }
         Relationships: []
