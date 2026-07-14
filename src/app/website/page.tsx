@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import type { Artikel } from "@/lib/database.types";
 import { ArtikelAfbeelding } from "./artikel-afbeelding";
+import { ArtikelContent } from "./artikel-content";
 
 export const dynamic = "force-dynamic";
 
@@ -70,25 +71,49 @@ export default async function WebsitePage() {
         ) : (
           <ul className="space-y-2">
             {artikelen.map((a) => (
-              <li
-                key={a.id}
-                className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4"
-              >
-                <ArtikelAfbeelding artikelId={a.id} url={a.afbeelding_url} />
-                <div className="min-w-[14rem] flex-1">
-                  <p className="text-sm font-semibold text-slate-900">{a.titel}</p>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {a.categorie ?? "—"} · {datumNL(a.publicatiedatum)}
-                    {a.slug ? ` · /${a.slug}` : ""}
-                  </p>
+              <li key={a.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <ArtikelAfbeelding artikelId={a.id} url={a.afbeelding_url} />
+                  <div className="min-w-[14rem] flex-1">
+                    <p className="text-sm font-semibold text-slate-900">{a.titel}</p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {a.categorie ?? "—"} · {datumNL(a.publicatiedatum)}
+                      {a.slug ? ` · /${a.slug}` : ""}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                      a.content_processed
+                        ? "bg-green-100 text-green-800 ring-green-600/20"
+                        : "bg-slate-100 text-slate-500 ring-slate-400/20"
+                    }`}
+                  >
+                    {a.content_processed ? "✓ verwerkt" : "niet verwerkt"}
+                  </span>
+                  <span
+                    className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                      STATUS_STYLE[a.status] ?? STATUS_STYLE.concept
+                    }`}
+                  >
+                    {a.status}
+                  </span>
                 </div>
-                <span
-                  className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                    STATUS_STYLE[a.status] ?? STATUS_STYLE.concept
-                  }`}
-                >
-                  {a.status}
-                </span>
+
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-xs font-medium text-navy hover:underline">
+                    Content (video + socials)
+                  </summary>
+                  <ArtikelContent
+                    artikelId={a.id}
+                    initial={{
+                      content_processed: a.content_processed,
+                      ytvideo_url: a.ytvideo_url ?? "",
+                      instareel_url: a.instareel_url ?? "",
+                      instapost_tekst: a.instapost_tekst ?? "",
+                      yt_post_tekst: a.yt_post_tekst ?? "",
+                    }}
+                  />
+                </details>
               </li>
             ))}
           </ul>

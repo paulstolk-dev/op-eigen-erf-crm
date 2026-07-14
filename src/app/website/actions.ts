@@ -44,6 +44,36 @@ export async function uploadArtikelAfbeelding(formData: FormData): Promise<Resul
   return { ok: true, url: pub.publicUrl };
 }
 
+/** Content-velden opslaan: verwerkstatus + YouTube/Instagram-uitwerkingen. */
+export async function saveArtikelContent(
+  artikelId: string,
+  velden: {
+    content_processed: boolean;
+    ytvideo_url: string;
+    instareel_url: string;
+    instapost_tekst: string;
+    yt_post_tekst: string;
+  },
+): Promise<Result> {
+  await requireCrm();
+  if (!artikelId) return { ok: false, error: "Geen artikel." };
+  const trimOrNull = (s: string) => (s.trim() ? s.trim() : null);
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artikelen")
+    .update({
+      content_processed: velden.content_processed,
+      ytvideo_url: trimOrNull(velden.ytvideo_url),
+      instareel_url: trimOrNull(velden.instareel_url),
+      instapost_tekst: trimOrNull(velden.instapost_tekst),
+      yt_post_tekst: trimOrNull(velden.yt_post_tekst),
+    })
+    .eq("id", artikelId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/website");
+  return { ok: true };
+}
+
 /** Uitgelichte afbeelding losmaken (bestand blijft in de bucket). */
 export async function clearArtikelAfbeelding(artikelId: string): Promise<Result> {
   await requireCrm();
