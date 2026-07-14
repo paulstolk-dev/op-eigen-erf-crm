@@ -1,6 +1,7 @@
 import React from 'react';
 import {
-  AbsoluteFill, Img, Sequence, interpolate, spring, staticFile,
+  AbsoluteFill, Img, Sequence, Series, Loop, OffthreadVideo,
+  interpolate, spring, staticFile,
   useCurrentFrame, useVideoConfig, continueRender, delayRender,
 } from 'remotion';
 import { loadFont } from '@remotion/fonts';
@@ -27,6 +28,10 @@ export const regelgevingSchema = z.object({
   laatstBijgewerkt: z.string(),
   cta: z.string(),
   settings: settingsSchema.optional(),
+  // Optionele Veo-beeldlaag: publieke URLs van de b-roll-clips. Leeg = de
+  // klassieke egale achtergrond (bestaand gedrag).
+  broll: z.array(z.string()).optional(),
+  brollSeconds: z.number().optional(),
 });
 export type RegelgevingProps = z.infer<typeof regelgevingSchema>;
 
@@ -45,20 +50,22 @@ export function computeMeta(props: RegelgevingProps) {
 
 export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
   const s: VideoSettings = { ...defaultSettings, ...(props.settings ?? {}) };
-  const { kicker, titel, scenes, nogNietDefinitief, bron, laatstBijgewerkt, cta } = props;
+  const { kicker, titel, scenes, nogNietDefinitief, bron, laatstBijgewerkt, cta, broll } = props;
   const { fps } = useVideoConfig();
   const introF = Math.round(s.intro * fps);
   const sceneF = Math.round(s.perScene * fps);
   const outroF = Math.round(s.outro * fps);
+  const overBroll = Boolean(broll && broll.length > 0);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: s.bg, fontFamily: FONT }}>
+    <AbsoluteFill style={{ backgroundColor: overBroll ? '#1c1a16' : s.bg, fontFamily: FONT }}>
+      {overBroll && <BrollLaag urls={broll!} seconds={props.brollSeconds ?? 8} />}
       <ProgressBar accent={s.accent} />
       <Logo s={s} />
       {nogNietDefinitief && <DisclaimerBadge />}
 
       <Sequence durationInFrames={introF}>
-        <Intro kicker={kicker} titel={titel} s={s} />
+        <Intro kicker={kicker} titel={titel} s={s} overBroll={overBroll} />
       </Sequence>
 
       {scenes.map((sc, i) => (
@@ -76,18 +83,50 @@ export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
 
 // ---------- subcomponenten ----------
 
-const Intro: React.FC<{ kicker: string; titel: string; s: VideoSettings }> = ({ kicker, titel, s }) => {
+// Veo-beeldlaag: 3 clips achter elkaar (Series), geloopt over de hele duur, met
+// een donkere scrim zodat de tekst/cards leesbaar blijven.
+const BrollLaag: React.FC<{ urls: string[]; seconds: number }> = ({ urls, seconds }) => {
+  const { fps, durationInFrames } = useVideoConfig();
+  const clipF = Math.max(1, Math.round(seconds * fps));
+  return (
+    <AbsoluteFill>
+      <Loop durationInFrames={durationInFrames}>
+        <Series>
+          {urls.map((url, i) => (
+            <Series.Sequence key={i} durationInFrames={clipF}>
+              <OffthreadVideo
+                src={url}
+                muted
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </Series.Sequence>
+          ))}
+        </Series>
+      </Loop>
+      <AbsoluteFill
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(20,18,14,0.42), rgba(20,18,14,0.18) 38%, rgba(20,18,14,0.42))',
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+const Intro: React.FC<{ kicker: string; titel: string; s: VideoSettings; overBroll: boolean }> = ({ kicker, titel, s, overBroll }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const e = spring({ frame, fps, config: { damping: 200 } }); // rustig, geen overshoot
   const y = interpolate(e, [0, 1], [24, 0]);
+  const titelKleur = overBroll ? '#ffffff' : s.text;
+  const schaduw = overBroll ? '0 2px 18px rgba(0,0,0,0.55)' : 'none';
   return (
     <AbsoluteFill style={{ justifyContent: 'center', padding: 96 }}>
-      <div style={{ opacity: e, transform: `translateY(${y}px)` }}>
-        <div style={{ color: s.accent, fontSize: 42, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
+      <div style={{ opacity: e, transform: `translateY(${y}px)`, textShadow: schaduw }}>
+        <div style={{ color: overBroll ? '#efe4cf' : s.accent, fontSize: 42, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
           {kicker}
         </div>
-        <div style={{ color: s.text, fontSize: 92, fontWeight: 700, lineHeight: 1.06, marginTop: 22 }}>
+        <div style={{ color: titelKleur, fontSize: 92, fontWeight: 700, lineHeight: 1.06, marginTop: 22 }}>
           {titel}
         </div>
         <div style={{ marginTop: 28, width: 120, height: 8, borderRadius: 999, backgroundColor: s.accent }} />
