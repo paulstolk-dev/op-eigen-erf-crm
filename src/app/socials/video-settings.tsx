@@ -197,6 +197,15 @@ export function VideoSettingsPanel({ initial }: { initial: VideoSettings }) {
         {/* Logo */}
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-erf">Logo</p>
+          <label className="mb-3 flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={s.logoOpOutro}
+              onChange={(e) => set("logoOpOutro", e.target.checked)}
+            />
+            Hoek-logo óók op de laatste slide (outro) tonen
+            <span className="text-xs text-slate-400">— de outro heeft al een eigen gecentreerd logo</span>
+          </label>
           <div className="flex items-center gap-4">
             <div
               className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 ring-slate-200"

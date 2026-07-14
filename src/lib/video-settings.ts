@@ -25,6 +25,7 @@ export type VideoSettings = {
   logoSize: number; // hoogte in px (op de 1920px-hoge video)
   logoPath: string | null; // pad in de 'socials'-bucket, bijv. "_assets/logo.png"
   logoUrl: string | null; // publieke URL (preview in CRM + render)
+  logoOpOutro: boolean; // hoek-logo óók op de outro-slide tonen (die heeft al een eigen logo)
 };
 
 // Defaults = de afgesproken huisstijl (beige/donkergroen/witte cards, rustig).
@@ -44,6 +45,7 @@ export const defaultVideoSettings: VideoSettings = {
   logoSize: 200,
   logoPath: null,
   logoUrl: null,
+  logoOpOutro: false, // standaard uit: de outro heeft al een eigen gecentreerd logo
 };
 
 // Totale duur (sec) bij een gegeven aantal scenes.

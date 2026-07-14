@@ -19,6 +19,7 @@ export const settingsSchema = z.object({
   logoSize: z.number().default(200),
   logoUrl: z.string().nullable().default(null),
   logoPath: z.string().nullable().default(null),
+  logoOpOutro: z.boolean().default(false),
 });
 
 export type VideoSettings = z.infer<typeof settingsSchema>;

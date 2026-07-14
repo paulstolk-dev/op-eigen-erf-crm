@@ -56,12 +56,14 @@ export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
   const sceneF = Math.round(s.perScene * fps);
   const outroF = Math.round(s.outro * fps);
   const overBroll = Boolean(broll && broll.length > 0);
+  // Begin van de outro-slide; hoek-logo hier verbergen tenzij logoOpOutro aan staat.
+  const outroStart = introF + scenes.length * sceneF;
 
   return (
     <AbsoluteFill style={{ backgroundColor: overBroll ? '#1c1a16' : s.bg, fontFamily: FONT }}>
       {overBroll && <BrollLaag urls={broll!} seconds={props.brollSeconds ?? 8} />}
       <ProgressBar accent={s.accent} />
-      <Logo s={s} />
+      <Logo s={s} hideFromFrame={s.logoOpOutro ? null : outroStart} />
       {nogNietDefinitief && <DisclaimerBadge />}
 
       <Sequence durationInFrames={introF}>
@@ -214,8 +216,10 @@ const ProgressBar: React.FC<{ accent: string }> = ({ accent }) => {
   return <div style={{ position: 'absolute', top: 0, left: 0, height: 8, width: `${w}%`, backgroundColor: accent }} />;
 };
 
-const Logo: React.FC<{ s: VideoSettings }> = ({ s }) => {
+const Logo: React.FC<{ s: VideoSettings; hideFromFrame?: number | null }> = ({ s, hideFromFrame }) => {
+  const frame = useCurrentFrame();
   if (!s.logoUrl) return null;
+  if (hideFromFrame != null && frame >= hideFromFrame) return null;
   const pos: React.CSSProperties =
     s.logoPosition === 'linksboven'
       ? { top: 64, left: 64 }
