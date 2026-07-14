@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { generateSocialContent } from "@/lib/socials-generate";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { generateSocialContent, generateArtikelSocial } from "@/lib/socials-generate";
 import { CONTENT_STATUSSEN, regelgevingSchema, type ContentStatus } from "@/lib/socials";
 
 async function requireUser() {
@@ -57,6 +58,48 @@ export async function generateSocials(aantal: number, thema?: string): Promise<R
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Onbekende fout" };
+  }
+}
+
+/**
+ * Genereert één video-aflevering (tekstlaag + 3 Veo-b-roll-prompts + captions)
+ * voor een specifiek artikel en zet die als concept in de queue. De zware
+ * beeld-/render-stappen (Veo + Remotion) draaien daarna op de renderworker.
+ */
+export async function generateArtikelVideo(artikelId: string): Promise<Result> {
+  await requireUser();
+  const admin = createAdminClient();
+  const { data: artikel } = await admin
+    .from("artikelen")
+    .select("id, titel, samenvatting, beschrijving, categorie")
+    .eq("id", artikelId)
+    .maybeSingle();
+  if (!artikel) return { ok: false, error: "Artikel niet gevonden." };
+  try {
+    const gen = await generateArtikelSocial(artikel);
+    // Slug uniek maken t.o.v. de queue.
+    let slug = slugify(gen.slug || gen.props.titel);
+    const { data: bestaand } = await admin.from("content_queue").select("slug");
+    const gebruikt = new Set((bestaand ?? []).map((r) => r.slug));
+    while (gebruikt.has(slug)) slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+    // Bestandspaden in de broll uitlijnen op de definitieve slug.
+    const broll = gen.broll.map((s) => ({ ...s, bestand: `broll/${slug}-${s.shot}.mp4` }));
+
+    const { error } = await admin.from("content_queue").insert({
+      slug,
+      props: gen.props,
+      caption: gen.caption,
+      broll,
+      artikel_id: artikel.id,
+      status: "concept",
+      broll_status: "geen",
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/socials");
+    revalidatePath("/website");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Generatie mislukt." };
   }
 }
 

@@ -34,6 +34,28 @@ export const captionSchema = z.object({
 });
 export type Caption = z.infer<typeof captionSchema>;
 
+// --- Beeldlaag (Veo b-roll) -------------------------------------------------
+// 3 sfeershots van 8s die samen (~24s) onder de tekstlaag lopen. De veo_prompt
+// is Engels/cinematisch; bevat NOOIT tekst of feiten (puur sfeer).
+export const brollShotSchema = z.object({
+  shot: z.number().int().min(1).max(3),
+  bestand: z.string().describe("Relatief pad, bijv. 'broll/{slug}-1.mp4'."),
+  veo_prompt: z.string().describe("Engelse, cinematische Veo-prompt (9:16, 8s, style-lock)."),
+});
+export type BrollShot = z.infer<typeof brollShotSchema>;
+
+export const brollSchema = z.array(brollShotSchema).length(3);
+export type Broll = z.infer<typeof brollSchema>;
+
+// Volledige per-artikel-aflevering: tekstlaag (props) + beeldlaag (broll) + caption.
+export const afleveringSchema = z.object({
+  slug: z.string().describe("Korte kebab-case naam."),
+  props: regelgevingSchema,
+  broll: brollSchema,
+  caption: captionSchema,
+});
+export type Aflevering = z.infer<typeof afleveringSchema>;
+
 // --- Statusflow -------------------------------------------------------------
 export const CONTENT_STATUSSEN = [
   "concept",

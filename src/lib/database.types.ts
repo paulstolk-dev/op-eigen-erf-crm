@@ -584,6 +584,11 @@ export type Database = {
           status: string
           video_url: string | null
           review_notes: string | null
+          artikel_id: string | null
+          broll: Json | null
+          broll_urls: Json | null
+          broll_status: string
+          video_url_landscape: string | null
           created_at: string
           updated_at: string
         }
@@ -595,6 +600,11 @@ export type Database = {
           status?: string
           video_url?: string | null
           review_notes?: string | null
+          artikel_id?: string | null
+          broll?: Json | null
+          broll_urls?: Json | null
+          broll_status?: string
+          video_url_landscape?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -606,6 +616,11 @@ export type Database = {
           status?: string
           video_url?: string | null
           review_notes?: string | null
+          artikel_id?: string | null
+          broll?: Json | null
+          broll_urls?: Json | null
+          broll_status?: string
+          video_url_landscape?: string | null
           created_at?: string
           updated_at?: string
         }

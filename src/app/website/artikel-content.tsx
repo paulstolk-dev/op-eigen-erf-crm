@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { saveArtikelContent } from "./actions";
+import { generateArtikelVideo } from "../socials/actions";
 
 const inp =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900";
@@ -25,6 +26,20 @@ export function ArtikelContent({
   const [f, setF] = useState<Velden>(initial);
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [genPending, startGen] = useTransition();
+  const [genMsg, setGenMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function genereerVideo() {
+    setGenMsg(null);
+    startGen(async () => {
+      const res = await generateArtikelVideo(artikelId);
+      setGenMsg(
+        res.ok
+          ? { ok: true, text: "Concept-aflevering aangemaakt — zie /socials." }
+          : { ok: false, text: res.error ?? "Mislukt." },
+      );
+    });
+  }
 
   function set<K extends keyof Velden>(k: K, v: Velden[K]) {
     setF((p) => ({ ...p, [k]: v }));
@@ -91,7 +106,7 @@ export function ArtikelContent({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={save}
           disabled={isPending}
@@ -101,6 +116,22 @@ export function ArtikelContent({
         </button>
         {msg && (
           <span className={`text-sm ${msg.ok ? "text-green-600" : "text-red-600"}`}>{msg.text}</span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
+        <button
+          onClick={genereerVideo}
+          disabled={genPending}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+        >
+          {genPending ? "Genereren…" : "Genereer socialvideo (AI)"}
+        </button>
+        <span className="text-xs text-slate-400">
+          Maakt een concept-aflevering (tekst + 3 Veo-beeldprompts + captions) onder /socials.
+        </span>
+        {genMsg && (
+          <span className={`text-sm ${genMsg.ok ? "text-green-600" : "text-red-600"}`}>{genMsg.text}</span>
         )}
       </div>
     </div>
