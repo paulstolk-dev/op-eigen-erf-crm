@@ -8,6 +8,10 @@ import { renderAll } from "./render-core.mjs";
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.VIDEO_RENDER_SECRET;
 
+// Versiemarker: bump bij elke worker-wijziging zodat je in de startup-log en op
+// GET /status ziet welke code live is (voorkomt gokken op deploy/commit).
+const VERSION = "veo-broll-personall-3";
+
 let running = false;
 let last = { state: "idle" };
 
@@ -34,7 +38,7 @@ const server = http.createServer((req, res) => {
   };
 
   if (req.method === "GET" && (req.url === "/" || req.url === "/status")) {
-    return send(200, { ok: true, running, last });
+    return send(200, { ok: true, version: VERSION, running, last });
   }
 
   if (req.method === "POST" && req.url === "/render") {
@@ -52,4 +56,4 @@ const server = http.createServer((req, res) => {
   send(404, { error: "Not found" });
 });
 
-server.listen(PORT, () => console.log(`video-render server op :${PORT}`));
+server.listen(PORT, () => console.log(`video-render server op :${PORT} — versie ${VERSION}`));
