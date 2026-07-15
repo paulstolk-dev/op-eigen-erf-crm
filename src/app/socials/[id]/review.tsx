@@ -12,6 +12,7 @@ export function SocialReview({
   youtubeTitle,
   videoUrl,
   reviewNotes,
+  hideCaption = false,
 }: {
   id: string;
   status: string;
@@ -19,6 +20,10 @@ export function SocialReview({
   youtubeTitle: string;
   videoUrl: string;
   reviewNotes: string;
+  // Bij een gekoppeld artikel worden Instagram-tekst + YouTube-titel in het
+  // Social-uitwerking-blok bewerkt; hier verbergen we ze dan om dubbeling te
+  // voorkomen (en raken we de caption bij opslaan niet aan).
+  hideCaption?: boolean;
 }) {
   const router = useRouter();
   const [ig, setIg] = useState(instagram);
@@ -34,8 +39,7 @@ export function SocialReview({
     setMsg("");
     startSave(async () => {
       const r = await saveSocial(id, {
-        instagram: ig,
-        youtube_title: yt,
+        ...(hideCaption ? {} : { instagram: ig, youtube_title: yt }),
         review_notes: notes,
         video_url: video,
       });
@@ -99,27 +103,31 @@ export function SocialReview({
       {/* Caption + video + notities */}
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Instagram-caption
-            </label>
-            <textarea
-              value={ig}
-              onChange={(e) => setIg(e.target.value)}
-              rows={7}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-navy"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              YouTube-titel
-            </label>
-            <input
-              value={yt}
-              onChange={(e) => setYt(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-navy"
-            />
-          </div>
+          {!hideCaption && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Instagram-caption
+              </label>
+              <textarea
+                value={ig}
+                onChange={(e) => setIg(e.target.value)}
+                rows={7}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-navy"
+              />
+            </div>
+          )}
+          {!hideCaption && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                YouTube-titel
+              </label>
+              <input
+                value={yt}
+                onChange={(e) => setYt(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-navy"
+              />
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
               Video-URL (mp4)

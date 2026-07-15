@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { AppHeader } from "@/components/app-header";
 import type { RegelgevingProps, Caption } from "@/lib/socials";
-import type { ContentQueueItem } from "@/lib/database.types";
+import type { ContentQueueItem, Artikel } from "@/lib/database.types";
 import { SocialReview } from "./review";
 import { PropsEditor } from "./props-editor";
+import { ArtikelFields } from "./artikel-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +18,9 @@ export default async function SocialDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data } = await supabase
     .from("content_queue")
     .select("*")
@@ -25,8 +31,22 @@ export default async function SocialDetailPage({
   const props = data.props as unknown as RegelgevingProps;
   const caption = data.caption as unknown as Caption;
 
+  // Gekoppeld artikel (indien aanwezig) — de social-uitwerkingen bewerken we hier.
+  let artikel: Artikel | null = null;
+  if (data.artikel_id) {
+    const admin = createAdminClient();
+    const { data: a } = await admin
+      .from("artikelen")
+      .select("*")
+      .eq("id", data.artikel_id)
+      .maybeSingle<Artikel>();
+    artikel = a ?? null;
+  }
+
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <div className="min-h-screen">
+      <AppHeader email={user?.email} />
+      <main className="mx-auto max-w-5xl px-4 py-8">
       <Link href="/socials" className="text-sm text-slate-500 hover:text-navy">
         ← Terug naar Socials
       </Link>
@@ -101,8 +121,30 @@ export default async function SocialDetailPage({
           youtubeTitle={caption?.youtube_title ?? ""}
           videoUrl={data.video_url ?? ""}
           reviewNotes={data.review_notes ?? ""}
+          hideCaption={!!artikel}
         />
       </div>
-    </main>
+
+      {artikel && (
+        <div className="mt-6">
+          <ArtikelFields
+            afleveringId={data.id}
+            artikelId={artikel.id}
+            artikelTitel={artikel.titel}
+            initial={{
+              content_processed: artikel.content_processed,
+              ytvideo_url: artikel.ytvideo_url ?? "",
+              instareel_url: artikel.instareel_url ?? "",
+              // Instagram-tekst: val terug op de gegenereerde caption als het
+              // artikelveld nog leeg is (de inhoud van de oude "Instagram-caption").
+              instapost_tekst: artikel.instapost_tekst ?? caption?.instagram ?? "",
+              youtube_title: caption?.youtube_title ?? "",
+              yt_post_tekst: artikel.yt_post_tekst ?? "",
+            }}
+          />
+        </div>
+      )}
+      </main>
+    </div>
   );
 }

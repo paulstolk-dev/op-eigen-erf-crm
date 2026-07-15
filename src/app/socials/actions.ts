@@ -152,24 +152,82 @@ export async function triggerVideoRender(): Promise<Result> {
 export async function saveSocial(
   id: string,
   data: {
-    instagram: string;
-    youtube_title: string;
+    // caption (instagram/youtube_title) is optioneel: bij een gekoppeld artikel
+    // wordt de caption via saveArtikelSocial beheerd, dan laten we 'm hier ongemoeid.
+    instagram?: string;
+    youtube_title?: string;
     review_notes: string;
     video_url: string;
   },
 ): Promise<Result> {
   const { supabase } = await requireUser();
+  const caption =
+    data.instagram !== undefined || data.youtube_title !== undefined
+      ? { instagram: data.instagram ?? "", youtube_title: data.youtube_title ?? "" }
+      : undefined;
   const { error } = await supabase
     .from("content_queue")
     .update({
-      caption: { instagram: data.instagram, youtube_title: data.youtube_title },
       review_notes: data.review_notes || null,
       video_url: data.video_url || null,
+      ...(caption ? { caption } : {}),
     })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/socials");
   revalidatePath(`/socials/${id}`);
+  return { ok: true };
+}
+
+/**
+ * Social-uitwerking van een aflevering + gekoppeld artikel in één keer opslaan.
+ * De post-teksten/URL's staan op `artikelen`; de YouTube-titel + Instagram-tekst
+ * synct mee naar `content_queue.caption` (publiceer-klaar, review_notes/video_url
+ * blijven ongemoeid).
+ */
+export async function saveArtikelSocial(
+  afleveringId: string,
+  artikelId: string,
+  data: {
+    content_processed: boolean;
+    ytvideo_url: string;
+    instareel_url: string;
+    instapost_tekst: string;
+    yt_post_tekst: string;
+    youtube_title: string;
+  },
+): Promise<Result> {
+  await requireUser();
+  if (!artikelId) return { ok: false, error: "Geen artikel." };
+  const trimOrNull = (s: string) => (s.trim() ? s.trim() : null);
+  const admin = createAdminClient();
+
+  const { error: aErr } = await admin
+    .from("artikelen")
+    .update({
+      content_processed: data.content_processed,
+      ytvideo_url: trimOrNull(data.ytvideo_url),
+      instareel_url: trimOrNull(data.instareel_url),
+      instapost_tekst: trimOrNull(data.instapost_tekst),
+      yt_post_tekst: trimOrNull(data.yt_post_tekst),
+    })
+    .eq("id", artikelId);
+  if (aErr) return { ok: false, error: aErr.message };
+
+  const { error: cErr } = await admin
+    .from("content_queue")
+    .update({
+      caption: {
+        instagram: data.instapost_tekst.trim(),
+        youtube_title: data.youtube_title.trim(),
+      },
+    })
+    .eq("id", afleveringId);
+  if (cErr) return { ok: false, error: cErr.message };
+
+  revalidatePath("/website");
+  revalidatePath("/socials");
+  revalidatePath(`/socials/${afleveringId}`);
   return { ok: true };
 }
 

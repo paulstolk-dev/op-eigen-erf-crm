@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/app-header";
 import { STATUS_LABEL, STATUS_STYLE, CONTENT_STATUSSEN } from "@/lib/socials";
 import type { RegelgevingProps } from "@/lib/socials";
 import type { ContentQueueItem } from "@/lib/database.types";
@@ -26,6 +27,9 @@ function datumNL(iso: string): string {
 
 export default async function SocialsPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data } = await supabase
     .from("content_queue")
     .select("*")
@@ -44,7 +48,9 @@ export default async function SocialsPage() {
   );
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <div className="min-h-screen">
+      <AppHeader email={user?.email} />
+      <main className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Socials</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -123,6 +129,7 @@ export default async function SocialsPage() {
           })}
         </ul>
       )}
-    </main>
+      </main>
+    </div>
   );
 }

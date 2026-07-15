@@ -71,6 +71,7 @@ export async function saveArtikelContent(
     .eq("id", artikelId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/website");
+  revalidatePath("/socials");
   return { ok: true };
 }
 
