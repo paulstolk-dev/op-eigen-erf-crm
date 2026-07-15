@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  AbsoluteFill, Img, Sequence, Series, Loop, OffthreadVideo,
+  AbsoluteFill, Img, Audio, Sequence, Series, Loop, OffthreadVideo,
   interpolate, spring, staticFile,
   useCurrentFrame, useVideoConfig, continueRender, delayRender,
 } from 'remotion';
@@ -51,7 +51,7 @@ export function computeMeta(props: RegelgevingProps) {
 export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
   const s: VideoSettings = { ...defaultSettings, ...(props.settings ?? {}) };
   const { kicker, titel, scenes, nogNietDefinitief, bron, laatstBijgewerkt, cta, broll } = props;
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const introF = Math.round(s.intro * fps);
   const sceneF = Math.round(s.perScene * fps);
   const outroF = Math.round(s.outro * fps);
@@ -62,6 +62,20 @@ export const RegelgevingShort: React.FC<RegelgevingProps> = (props) => {
   return (
     <AbsoluteFill style={{ backgroundColor: overBroll ? '#1c1a16' : s.bg, fontFamily: FONT }}>
       {overBroll && <BrollLaag urls={broll!} seconds={props.brollSeconds ?? 8} />}
+      {s.musicUrl ? (
+        <Audio
+          src={s.musicUrl}
+          loop
+          volume={(f) =>
+            interpolate(
+              f,
+              [0, Math.round(fps * 0.6), durationInFrames - Math.round(fps * 0.8), durationInFrames],
+              [0, s.musicVolume, s.musicVolume, 0],
+              { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+            )
+          }
+        />
+      ) : null}
       <ProgressBar accent={s.accent} />
       <Logo s={s} hideFromFrame={s.logoOpOutro ? null : outroStart} />
       {nogNietDefinitief && <DisclaimerBadge />}

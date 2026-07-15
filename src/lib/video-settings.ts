@@ -26,6 +26,10 @@ export type VideoSettings = {
   logoPath: string | null; // pad in de 'socials'-bucket, bijv. "_assets/logo.png"
   logoUrl: string | null; // publieke URL (preview in CRM + render)
   logoOpOutro: boolean; // hoek-logo óók op de outro-slide tonen (die heeft al een eigen logo)
+  // Achtergrondmuziek (royaltyvrij; loopt onder de hele video).
+  musicPath: string | null;
+  musicUrl: string | null;
+  musicVolume: number; // 0..1
 };
 
 // Defaults = de afgesproken huisstijl (beige/donkergroen/witte cards, rustig).
@@ -46,6 +50,9 @@ export const defaultVideoSettings: VideoSettings = {
   logoPath: null,
   logoUrl: null,
   logoOpOutro: false, // standaard uit: de outro heeft al een eigen gecentreerd logo
+  musicPath: null,
+  musicUrl: null,
+  musicVolume: 0.5,
 };
 
 // Totale duur (sec) bij een gegeven aantal scenes.

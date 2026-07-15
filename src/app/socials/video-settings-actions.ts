@@ -78,6 +78,67 @@ export async function uploadVideoLogo(
   }
 }
 
+/** Achtergrondmuziek uploaden naar de 'socials'-bucket (_assets/music.<ext>). */
+export async function uploadVideoMusic(
+  formData: FormData,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  await requireUser();
+  const file = formData.get("music");
+  if (!(file instanceof File) || file.size === 0)
+    return { ok: false, error: "Geen bestand gekozen." };
+  if (file.size > 15_000_000) return { ok: false, error: "Bestand te groot (max 15 MB)." };
+
+  const type = file.type || "audio/mpeg";
+  const ext = type.includes("wav")
+    ? "wav"
+    : type.includes("ogg")
+      ? "ogg"
+      : type.includes("aac") || type.includes("m4a")
+        ? "m4a"
+        : "mp3";
+  const path = `_assets/music.${ext}`;
+
+  try {
+    const admin = createAdminClient();
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const { error } = await admin.storage.from("socials").upload(path, bytes, {
+      contentType: type,
+      upsert: true,
+      cacheControl: "0",
+    });
+    if (error) return { ok: false, error: error.message };
+
+    const { data: pub } = admin.storage.from("socials").getPublicUrl(path);
+    const url = `${pub.publicUrl}?v=${Date.now()}`;
+
+    const current = parseVideoSettings(await getSetting(VIDEO_SETTINGS_KEY));
+    await setSetting(
+      VIDEO_SETTINGS_KEY,
+      JSON.stringify({ ...current, musicPath: path, musicUrl: url }),
+    );
+    revalidatePath("/socials");
+    return { ok: true, url };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Upload mislukt" };
+  }
+}
+
+/** Achtergrondmuziek loskoppelen (bestand blijft in de bucket, wordt genegeerd). */
+export async function clearVideoMusic(): Promise<Result> {
+  await requireUser();
+  try {
+    const current = parseVideoSettings(await getSetting(VIDEO_SETTINGS_KEY));
+    await setSetting(
+      VIDEO_SETTINGS_KEY,
+      JSON.stringify({ ...current, musicPath: null, musicUrl: null }),
+    );
+    revalidatePath("/socials");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Onbekende fout" };
+  }
+}
+
 /** Logo verwijderen uit de settings (bestand blijft in de bucket, wordt genegeerd). */
 export async function clearVideoLogo(): Promise<Result> {
   await requireUser();

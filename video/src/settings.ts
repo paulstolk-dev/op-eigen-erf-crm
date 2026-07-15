@@ -20,6 +20,9 @@ export const settingsSchema = z.object({
   logoUrl: z.string().nullable().default(null),
   logoPath: z.string().nullable().default(null),
   logoOpOutro: z.boolean().default(false),
+  musicUrl: z.string().nullable().default(null),
+  musicPath: z.string().nullable().default(null),
+  musicVolume: z.number().default(0.5),
 });
 
 export type VideoSettings = z.infer<typeof settingsSchema>;

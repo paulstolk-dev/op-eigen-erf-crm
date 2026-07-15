@@ -11,6 +11,8 @@ import {
   saveVideoSettings,
   uploadVideoLogo,
   clearVideoLogo,
+  uploadVideoMusic,
+  clearVideoMusic,
 } from "./video-settings-actions";
 
 function Kleur({
@@ -83,7 +85,9 @@ export function VideoSettingsPanel({ initial }: { initial: VideoSettings }) {
   const [msg, setMsg] = useState("");
   const [isSave, startSave] = useTransition();
   const [isLogo, startLogo] = useTransition();
+  const [isMusic, startMusic] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const musicRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof VideoSettings>(k: K, v: VideoSettings[K]) =>
     setS((prev) => ({ ...prev, [k]: v }));
@@ -121,6 +125,35 @@ export function VideoSettingsPanel({ initial }: { initial: VideoSettings }) {
       const r = await clearVideoLogo();
       if (r.ok) {
         setS((prev) => ({ ...prev, logoUrl: null, logoPath: null }));
+        router.refresh();
+      }
+    });
+  }
+
+  function onMusic(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMsg("");
+    const fd = new FormData();
+    fd.set("music", file);
+    startMusic(async () => {
+      const r = await uploadVideoMusic(fd);
+      if (r.ok && r.url) {
+        setS((prev) => ({ ...prev, musicUrl: r.url! }));
+        setMsg("Muziek geüpload.");
+        router.refresh();
+      } else {
+        setMsg(`Muziek-upload mislukt: ${r.error}`);
+      }
+      if (musicRef.current) musicRef.current.value = "";
+    });
+  }
+
+  function onClearMusic() {
+    startMusic(async () => {
+      const r = await clearVideoMusic();
+      if (r.ok) {
+        setS((prev) => ({ ...prev, musicUrl: null, musicPath: null }));
         router.refresh();
       }
     });
@@ -242,6 +275,61 @@ export function VideoSettingsPanel({ initial }: { initial: VideoSettings }) {
           <p className="mt-1.5 text-xs text-slate-400">
             PNG met transparante achtergrond werkt het best. Max 3 MB. Wordt{" "}
             {s.logoPosition === "linksboven" ? "linksboven" : "rechtsonder"} in beeld gezet.
+          </p>
+        </div>
+
+        {/* Achtergrondmuziek */}
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-erf">
+            Achtergrondmuziek
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-slate-600">
+              {s.musicUrl ? "🎵 track ingesteld" : "geen muziek"}
+            </span>
+            <input
+              ref={musicRef}
+              type="file"
+              accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/aac,audio/mp4"
+              onChange={onMusic}
+              disabled={isMusic}
+              className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-navy file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-navy-700"
+            />
+            {s.musicUrl && (
+              <button
+                type="button"
+                onClick={onClearMusic}
+                disabled={isMusic}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Verwijderen
+              </button>
+            )}
+          </div>
+          {s.musicUrl && (
+            <div className="mt-3">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <audio src={s.musicUrl} controls className="h-9 w-full max-w-md" />
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-3">
+            <label className="w-28 text-xs font-medium text-slate-600">Volume</label>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={s.musicVolume}
+              onChange={(e) => set("musicVolume", Number(e.target.value))}
+              className="flex-1"
+            />
+            <span className="w-10 text-right text-sm text-slate-700">
+              {Math.round(s.musicVolume * 100)}%
+            </span>
+          </div>
+          <p className="mt-1.5 text-xs text-slate-400">
+            Rustige, royaltyvrije track. Max 15 MB (mp3/wav/ogg/m4a). Loopt onder de hele
+            video met een zachte fade-out. Vergeet niet op &quot;Opslaan&quot; te klikken.
           </p>
         </div>
 
