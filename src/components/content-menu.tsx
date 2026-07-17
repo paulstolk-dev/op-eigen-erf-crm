@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/socials", label: "Socials" },
   { href: "/website", label: "Website" },
+  { href: "/regelgeving", label: "Regelgeving" },
 ];
 
 export function ContentMenu() {
