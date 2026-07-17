@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { ReviewButtons } from "./review-buttons";
 
@@ -55,12 +54,13 @@ export default async function RegelgevingPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const admin = createAdminClient();
-  const { data: wRaw } = await (admin as any)
+  // Leest via de user-context (RLS: CRM-allowlist mag deze tabellen lezen) — geen
+  // service-role key nodig.
+  const { data: wRaw } = await (supabase as any)
     .from("gemeente_wijzigingen")
     .select("*")
     .order("created_at", { ascending: false });
-  const { data: gRaw } = await (admin as any)
+  const { data: gRaw } = await (supabase as any)
     .from("gemeenten")
     .select("*")
     .order("naam", { ascending: true });
