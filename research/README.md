@@ -105,9 +105,15 @@ via `on conflict (gemeente_slug, artikel, nieuwe_hash) do nothing` — herhaalde
 mailen niet opnieuw. De poller raakt de **redactionele** velden
 (`omgevingsplan_status`, `afwijking_*`, `gecontroleerd_op`) nooit aan.
 
-**Planning:** wekelijks is ruim voldoende (een ontwerp ligt zes weken ter inzage).
-Draai als Railway-cron op de research-service:
-`python omgevingsplan_poller.py --commit`.
+**Planning (automatisch):** de poller draait wekelijks via een **Supabase pg_cron**
+(`omgevingsplan-poller-weekly`, maandag 06:00 UTC) die `POST /poll` op de
+research-service aanroept (secret-guarded, achtergrondthread → `run(commit=True)`
+over alle onderzochte gemeenten). Handmatig triggeren kan met dezelfde POST, of
+lokaal met de CLI: `python omgevingsplan_poller.py --commit`.
+
+De research-service heeft daarvoor nodig: `SUPABASE_DB_URL`, en voor de mail
+`NOTIFY_ENDPOINT` + `NOTIFY_SECRET` (zonder die twee schrijft de run wél naar de
+DB maar mailt hij niet).
 
 **Env (extra t.o.v. de crawler):** `NOTIFY_ENDPOINT` + `NOTIFY_SECRET` (voor de
 mail-werkopdracht; leeg = wel signaleren, niet mailen).
