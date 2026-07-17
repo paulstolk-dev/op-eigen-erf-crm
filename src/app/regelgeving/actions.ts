@@ -93,6 +93,9 @@ export async function saveGemeenteVelden(
     afwijking_samenvatting: velden.afwijking_samenvatting || null,
     omgevingsplan_wijziging_datum: velden.omgevingsplan_wijziging_datum || null,
     gecontroleerd_op: new Date().toISOString().slice(0, 10),
+    // Opslaan = de mens heeft beoordeeld → publiceren (poller-status 'monitoren'
+    // wordt 'onderzocht', waardoor de publieke site de gemeente toont).
+    research_status: "onderzocht",
   };
   // Rijke regelset alleen overschrijven als 'ie meegestuurd wordt (leeg = ongemoeid laten).
   if (velden.vergunningvrij_parameters !== undefined)
