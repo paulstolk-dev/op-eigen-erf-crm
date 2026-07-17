@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { ReviewButtons } from "./review-buttons";
 import { AnalysePanel } from "./analyse-panel";
+import { BulkRejectIndicatie } from "./bulk-reject";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,15 @@ function datumNL(iso: string | null): string {
   });
 }
 
-export default async function RegelgevingPage() {
+export default async function RegelgevingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ zekerheid?: string; status?: string }>;
+}) {
+  const sp = await searchParams;
+  const fZek = sp.zekerheid ?? "hoog"; // standaard: begin met de zekere signalen
+  const fStatus = sp.status ?? "nieuw"; // standaard: alleen onbehandelde
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -83,15 +93,35 @@ export default async function RegelgevingPage() {
   for (const w of wijzigingen)
     wijzPerGemeente.set(w.gemeente_slug, (wijzPerGemeente.get(w.gemeente_slug) ?? 0) + 1);
 
-  // Nieuw eerst, dan op datum.
-  const rangschik = { nieuw: 0, verwerkt: 1, afgewezen: 2 } as Record<string, number>;
-  const signalen = [...wijzigingen].sort(
-    (a, b) =>
-      (rangschik[a.review_status] ?? 9) - (rangschik[b.review_status] ?? 9) ||
-      b.created_at.localeCompare(a.created_at),
-  );
-  const nieuwCount = wijzigingen.filter((w) => w.review_status === "nieuw").length;
+  // Tellingen over álle signalen (ongeacht filter).
+  const nieuw = wijzigingen.filter((w) => w.review_status === "nieuw");
+  const nieuwCount = nieuw.length;
+  const nieuwHoog = nieuw.filter((w) => w.delta?.zekerheid === "hoog").length;
+  const nieuwIndicatie = nieuw.filter((w) => w.delta?.zekerheid === "indicatie").length;
   const bewaakt = gemeenten.filter((g) => g.research_status !== "niet_onderzocht").length;
+
+  // Filter + prioriteitssortering: artikel_verdwenen eerst, hoog boven indicatie, nieuw eerst, datum.
+  const typeRang: Record<string, number> = {
+    artikel_verdwenen: 0, vastgesteld_gewijzigd: 1, ontwerp_nieuw: 2, ontwerp_gewijzigd: 2, onbekend: 3,
+  };
+  const statusRang: Record<string, number> = { nieuw: 0, verwerkt: 1, afgewezen: 2 };
+  const signalen = wijzigingen
+    .filter((w) => (fStatus === "alle" ? true : w.review_status === fStatus))
+    .filter((w) => (fZek === "alle" ? true : (w.delta?.zekerheid ?? "") === fZek))
+    .sort(
+      (a, b) =>
+        (statusRang[a.review_status] ?? 9) - (statusRang[b.review_status] ?? 9) ||
+        (a.delta?.zekerheid === "hoog" ? 0 : 1) - (b.delta?.zekerheid === "hoog" ? 0 : 1) ||
+        (typeRang[a.type] ?? 9) - (typeRang[b.type] ?? 9) ||
+        b.created_at.localeCompare(a.created_at),
+    );
+
+  const hrefZek = (v: string) => `/regelgeving?zekerheid=${v}&status=${fStatus}`;
+  const hrefStatus = (v: string) => `/regelgeving?zekerheid=${fZek}&status=${v}`;
+  const chipCls = (actief: boolean) =>
+    `rounded-md px-2.5 py-1 text-xs font-medium transition ${
+      actief ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100"
+    }`;
 
   return (
     <div className="min-h-screen">
@@ -106,13 +136,36 @@ export default async function RegelgevingPage() {
           </p>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
-            Nieuwe signalen <span className="font-bold">{nieuwCount}</span>
+            Nieuw <span className="font-bold">{nieuwCount}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-navy/10 px-3 py-1 text-xs font-medium text-navy ring-1 ring-inset ring-navy/20">
+            waarvan hoog <span className="font-bold">{nieuwHoog}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-400/20">
+            indicatie <span className="font-bold">{nieuwIndicatie}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-400/20">
             Gemeenten bewaakt <span className="font-bold">{bewaakt}</span>
           </span>
+        </div>
+
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+              <span className="px-1.5 text-xs text-slate-400">Zekerheid</span>
+              <Link href={hrefZek("hoog")} className={chipCls(fZek === "hoog")}>Hoog</Link>
+              <Link href={hrefZek("indicatie")} className={chipCls(fZek === "indicatie")}>Indicatie</Link>
+              <Link href={hrefZek("alle")} className={chipCls(fZek === "alle")}>Alle</Link>
+            </div>
+            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+              <span className="px-1.5 text-xs text-slate-400">Status</span>
+              <Link href={hrefStatus("nieuw")} className={chipCls(fStatus === "nieuw")}>Nieuw</Link>
+              <Link href={hrefStatus("alle")} className={chipCls(fStatus === "alle")}>Alle</Link>
+            </div>
+          </div>
+          <BulkRejectIndicatie aantal={nieuwIndicatie} />
         </div>
 
         {/* Signalen */}

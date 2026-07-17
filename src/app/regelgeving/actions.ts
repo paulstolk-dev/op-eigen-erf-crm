@@ -34,6 +34,21 @@ export async function setWijzigingStatus(id: string, status: string): Promise<Re
   return { ok: true };
 }
 
+/** Wijst in bulk alle nog-nieuwe signalen met lage zekerheid ('indicatie') af —
+ *  om de brede recall-ruis in één keer op te ruimen. */
+export async function bulkAfwijzenIndicatie(): Promise<Result & { aantal?: number }> {
+  const { supabase } = await requireUser();
+  const { data, error } = await (supabase as any)
+    .from("gemeente_wijzigingen")
+    .update({ review_status: "afgewezen" })
+    .eq("review_status", "nieuw")
+    .filter("delta->>zekerheid", "eq", "indicatie")
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/regelgeving");
+  return { ok: true, aantal: (data as unknown[])?.length ?? 0 };
+}
+
 type AnalyseResult = { ok: boolean; error?: string; analyse?: GemeenteAnalyse; bronUrl?: string };
 
 /**
