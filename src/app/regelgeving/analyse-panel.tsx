@@ -19,11 +19,13 @@ export function AnalysePanel({
   id,
   gemeenteSlug,
   artikel,
+  bronUrl,
   initial,
 }: {
   id: string;
   gemeenteSlug: string;
   artikel: string;
+  bronUrl: string | null;
   initial: Analyse | null;
 }) {
   const router = useRouter();
@@ -61,6 +63,9 @@ export function AnalysePanel({
         afwijking_richting: richting,
         afwijking_samenvatting: samenvatting,
         omgevingsplan_wijziging_datum: datum || undefined,
+        vergunningvrij_parameters: analyse?.kernparameters ?? [],
+        vergunningvrij_citaten: analyse?.citaten ?? [],
+        vergunningvrij_bron_url: bronUrl ?? undefined,
       });
       setMsg(r.ok ? "Opgeslagen naar de gemeente + publieke site gerevalideerd." : `Opslaan mislukt: ${r.error}`);
       if (r.ok) router.refresh();

@@ -81,6 +81,9 @@ export async function saveGemeenteVelden(
     afwijking_richting?: string;
     afwijking_samenvatting?: string;
     omgevingsplan_wijziging_datum?: string;
+    vergunningvrij_parameters?: { label: string; waarde: string }[];
+    vergunningvrij_citaten?: string[];
+    vergunningvrij_bron_url?: string;
   },
 ): Promise<Result> {
   const { supabase } = await requireUser();
@@ -91,6 +94,13 @@ export async function saveGemeenteVelden(
     omgevingsplan_wijziging_datum: velden.omgevingsplan_wijziging_datum || null,
     gecontroleerd_op: new Date().toISOString().slice(0, 10),
   };
+  // Rijke regelset alleen overschrijven als 'ie meegestuurd wordt (leeg = ongemoeid laten).
+  if (velden.vergunningvrij_parameters !== undefined)
+    patch.vergunningvrij_parameters = velden.vergunningvrij_parameters;
+  if (velden.vergunningvrij_citaten !== undefined)
+    patch.vergunningvrij_citaten = velden.vergunningvrij_citaten;
+  if (velden.vergunningvrij_bron_url !== undefined)
+    patch.vergunningvrij_bron_url = velden.vergunningvrij_bron_url || null;
   const { error } = await (supabase as any).from("gemeenten").update(patch).eq("slug", slug);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/regelgeving");

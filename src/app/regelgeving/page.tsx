@@ -172,6 +172,7 @@ export default async function RegelgevingPage() {
                   id={w.id}
                   gemeenteSlug={w.gemeente_slug}
                   artikel={w.artikel}
+                  bronUrl={w.bron_url}
                   initial={w.delta?.analyse ?? null}
                 />
               </div>
