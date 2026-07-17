@@ -46,6 +46,9 @@ USER_AGENT = (
 )
 TIMEOUT = 30.0
 CURSOR_FALLBACK_DAGEN = 90
+# Alleen mailen bij hoge zekerheid; 'indicatie'-signalen wél wegschrijven (zichtbaar
+# in /regelgeving), niet mailen. Zet NOTIFY_ALLEEN_HOOG=0 om over alles te mailen.
+NOTIFY_ALLEEN_HOOG = os.environ.get("NOTIFY_ALLEEN_HOOG", "1") not in ("0", "false", "False")
 
 # Signaalwoorden voor de vergunningvrij-regels. 22.27/22.36 met woordgrens + punt,
 # zodat gemeentelijke plannaamgeving als "TAM-Omgevingsplan 22h" GEEN valse hit geeft.
@@ -527,11 +530,14 @@ def poll_gemeente(db: DB | None, http: httpx.Client, gem: dict, sinds: str,
         if commit and db is not None:
             new_id = db.insert_wijziging(payload)
             if new_id:
-                notify(http, {
-                    "gemeente": naam, "type": wtype, "artikel": artikel,
-                    "bron_url": payload["bron_url"], "id": new_id, "signalen": signalen,
-                })
-                log(f"      ↑ nieuw ({new_id}) + genotificeerd")
+                if not NOTIFY_ALLEEN_HOOG or zekerheid == "hoog":
+                    notify(http, {
+                        "gemeente": naam, "type": wtype, "artikel": artikel,
+                        "bron_url": payload["bron_url"], "id": new_id, "signalen": signalen,
+                    })
+                    log(f"      ↑ nieuw ({new_id}) + genotificeerd")
+                else:
+                    log(f"      ↑ nieuw ({new_id}) — opgeslagen, geen mail (zekerheid={zekerheid})")
             else:
                 log("      = bestond al (on conflict do nothing)")
 
