@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { ReviewButtons } from "./review-buttons";
+import { AnalysePanel } from "./analyse-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,17 @@ type Wijziging = {
   bron_url: string | null;
   review_status: string;
   created_at: string;
-  delta: { zekerheid?: string; signalen?: string[] } | null;
+  delta: {
+    zekerheid?: string;
+    signalen?: string[];
+    analyse?: {
+      omgevingsplan_status: string;
+      afwijking_richting: string;
+      afwijking_samenvatting: string;
+      kernparameters?: { label: string; waarde: string }[];
+      citaten?: string[];
+    };
+  } | null;
 };
 
 type Gemeente = {
@@ -106,82 +117,66 @@ export default async function RegelgevingPage() {
 
         {/* Signalen */}
         <h2 className="mb-2 text-sm font-semibold text-slate-900">Gesignaleerde wijzigingen</h2>
-        <div className="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Gemeente</th>
-                <th className="px-4 py-3 font-medium">Vindplaats</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">Signaalwoorden</th>
-                <th className="px-4 py-3 font-medium">Datum</th>
-                <th className="px-4 py-3 font-medium">Review</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {signalen.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                    Nog geen gesignaleerde wijzigingen.
-                  </td>
-                </tr>
-              )}
-              {signalen.map((w) => {
-                const zekerheid = w.delta?.zekerheid;
-                const sig = w.delta?.signalen ?? [];
-                return (
-                  <tr key={w.id} className="align-top hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {naamVan.get(w.gemeente_slug) ?? w.gemeente_slug}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <span className="font-medium text-slate-800">{w.artikel}</span>
-                      {zekerheid && (
-                        <span
-                          className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                            zekerheid === "hoog"
-                              ? "bg-navy/10 text-navy"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {zekerheid}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
+        <div className="mb-8 space-y-3">
+          {signalen.length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-400">
+              Nog geen gesignaleerde wijzigingen.
+            </div>
+          )}
+          {signalen.map((w) => {
+            const zekerheid = w.delta?.zekerheid;
+            const sig = w.delta?.signalen ?? [];
+            return (
+              <div key={w.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-slate-900">
+                        {naamVan.get(w.gemeente_slug) ?? w.gemeente_slug}
+                      </span>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TYPE_STYLE[w.type] ?? TYPE_STYLE.onbekend}`}
                       >
                         {TYPE_LABEL[w.type] ?? w.type}
                       </span>
-                    </td>
-                    <td className="hidden max-w-xs px-4 py-3 text-xs text-slate-500 lg:table-cell">
-                      {sig.join(", ") || "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                    </div>
+                    <div className="mt-0.5 text-sm text-slate-600">
+                      Vindplaats <span className="font-medium text-slate-800">{w.artikel}</span>
+                      {zekerheid && (
+                        <span
+                          className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            zekerheid === "hoog" ? "bg-navy/10 text-navy" : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {zekerheid}
+                        </span>
+                      )}
+                      {" · "}
                       {datumNL(w.created_at)}
                       {w.bron_url && (
                         <>
                           {" · "}
-                          <a
-                            href={w.bron_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-navy hover:underline"
-                          >
+                          <a href={w.bron_url} target="_blank" rel="noreferrer" className="text-navy hover:underline">
                             bron ↗
                           </a>
                         </>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <ReviewButtons id={w.id} status={w.review_status} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                    {sig.length > 0 && (
+                      <div className="mt-1 text-xs text-slate-400">{sig.join(", ")}</div>
+                    )}
+                  </div>
+                  <ReviewButtons id={w.id} status={w.review_status} />
+                </div>
+                <AnalysePanel
+                  id={w.id}
+                  gemeenteSlug={w.gemeente_slug}
+                  artikel={w.artikel}
+                  initial={w.delta?.analyse ?? null}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* Gemeenten */}
