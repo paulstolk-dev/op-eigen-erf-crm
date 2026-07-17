@@ -27,6 +27,7 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 import aanbieder_research as ar
+import omgevingsplan_poller as poller
 
 app = FastAPI(title="opeigenerf aanbieder-research")
 
@@ -207,3 +208,54 @@ def run(
     # zodat de HTTP-request nooit blokkeert. Volg voortgang via GET /status.
     threading.Thread(target=_background, args=(body,), daemon=True).start()
     return {"ok": True, "started": True, "mode": body.mode}
+
+
+# --------------------------------------------------------------------------- #
+# Omgevingsplan-poller — wekelijkse SRU-monitoring (getriggerd door Supabase cron)
+# --------------------------------------------------------------------------- #
+_poll_running = threading.Lock()
+_poll_last: dict = {"state": "idle"}
+
+
+class PollBody(BaseModel):
+    gemeente: str | None = None
+    sinds: str | None = None
+
+
+def _poll_background(gemeente: str | None, sinds: str | None) -> None:
+    global _poll_last
+    try:
+        _poll_last = {"state": "running"}
+        _poll_last = {"state": "done", **poller.run(commit=True, gemeente=gemeente, sinds=sinds)}
+    except Exception as e:  # noqa: BLE001
+        _poll_last = {"state": "error", "error": f"{type(e).__name__}: {e}"}
+    finally:
+        _poll_running.release()
+
+
+@app.post("/poll", status_code=202)
+def poll(
+    body: PollBody | None = None,
+    x_research_secret: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Start de omgevingsplan-poller (achtergrondthread, antwoordt direct 202).
+    Zonder body: alle onderzochte gemeenten. Beveiligd met RESEARCH_TRIGGER_SECRET."""
+    _check_secret(x_research_secret or authorization)
+    if not _poll_running.acquire(blocking=False):
+        raise HTTPException(409, "Er draait al een poll.")
+    threading.Thread(
+        target=_poll_background,
+        args=(body.gemeente if body else None, body.sinds if body else None),
+        daemon=True,
+    ).start()
+    return {"ok": True, "started": True}
+
+
+@app.get("/poll/status")
+def poll_status(
+    x_research_secret: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    _check_secret(x_research_secret or authorization)
+    return {"busy": _poll_running.locked(), "last": _poll_last}

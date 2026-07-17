@@ -560,50 +560,41 @@ def cursor_sinds(gem: dict, override: str | None) -> str:
     return default_sinds()
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description="OpEigenErf omgevingsplan-poller (SRU)")
-    ap.add_argument("--commit", action="store_true", help="schrijf naar Supabase (anders dry-run)")
-    ap.add_argument("--gemeente", metavar="SLUG", help="alleen deze gemeente")
-    ap.add_argument("--limit", type=int, default=50, help="max. treffers per gemeente (default 50)")
-    ap.add_argument("--sinds", metavar="YYYY-MM-DD", help="cursor overschrijven (backfill)")
-    args = ap.parse_args()
-
-    commit = args.commit
+def run(commit: bool = False, gemeente: str | None = None,
+        sinds: str | None = None, limit: int = 50) -> dict:
+    """Draai de poller (herbruikbaar vanuit CLI én de HTTP-trigger). Geeft een
+    samenvatting terug. Gooit RuntimeError alleen bij een structurele fout."""
     if not commit:
-        log("== DRY-RUN (schrijft niets; gebruik --commit om weg te schrijven) ==")
+        log("== DRY-RUN (schrijft niets; gebruik commit=True om weg te schrijven) ==")
 
     db: DB | None = None
-    if commit or not args.gemeente:
+    if commit or not gemeente:
         dsn = os.environ.get("SUPABASE_DB_URL")
         if not dsn:
-            log("! SUPABASE_DB_URL ontbreekt.")
-            return 2
+            raise RuntimeError("SUPABASE_DB_URL ontbreekt.")
         db = DB(dsn)
     elif os.environ.get("SUPABASE_DB_URL"):
         db = DB(os.environ["SUPABASE_DB_URL"])
 
-    try:
-        gemeenten = db.gemeenten_te_pollen(args.gemeente) if db else [{
-            "slug": args.gemeente, "naam": args.gemeente.replace("-", " ").title(),
-            "dso_laatst_gepolld": None, "dso_ontwerp_aanwezig": False, "_adhoc": True,
-        }]
-    except Exception as e:  # noqa: BLE001
-        log(f"! kon gemeenten niet ophalen: {e}")
-        return 2
-
+    gemeenten = db.gemeenten_te_pollen(gemeente) if db else [{
+        "slug": gemeente, "naam": (gemeente or "").replace("-", " ").title(),
+        "dso_laatst_gepolld": None, "dso_ontwerp_aanwezig": False, "_adhoc": True,
+    }]
     if not gemeenten:
         log("Geen gemeenten met research_status <> 'niet_onderzocht'. Niets te doen.")
-        return 0
+        return {"gemeenten": 0, "relevant": 0, "resultaten": []}
 
     headers = {"User-Agent": USER_AGENT, "Accept": "application/xml"}
-    fout_struct = 0
+    resultaten: list[dict] = []
     with httpx.Client(headers=headers, timeout=TIMEOUT, follow_redirects=True) as http:
         for gem in gemeenten:
             try:
-                res = poll_gemeente(db, http, gem, cursor_sinds(gem, args.sinds), args.limit, commit)
+                res = poll_gemeente(db, http, gem, cursor_sinds(gem, sinds), limit, commit)
                 log(f"  → {res['resultaat']}: {res['relevant']} relevant van {res['treffers']}")
+                resultaten.append(res)
             except Exception as e:  # noqa: BLE001 — één gemeente mag de run niet stoppen
                 log(f"  ! FOUT bij {gem['slug']}: {e}")
+                resultaten.append({"slug": gem.get("slug"), "resultaat": "fout", "error": str(e)[:200]})
                 if commit and db is not None and not gem.get("_adhoc"):
                     try:
                         db.insert_check(gem["slug"], "fout", 0, 0, None, str(e)[:500])
@@ -613,7 +604,26 @@ def main() -> int:
             time.sleep(0.5)  # beleefd: lage frequentie
 
     log("Klaar.")
-    return 0
+    return {
+        "gemeenten": len(gemeenten),
+        "relevant": sum(r.get("relevant", 0) for r in resultaten),
+        "resultaten": resultaten,
+    }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="OpEigenErf omgevingsplan-poller (SRU)")
+    ap.add_argument("--commit", action="store_true", help="schrijf naar Supabase (anders dry-run)")
+    ap.add_argument("--gemeente", metavar="SLUG", help="alleen deze gemeente")
+    ap.add_argument("--limit", type=int, default=50, help="max. treffers per gemeente (default 50)")
+    ap.add_argument("--sinds", metavar="YYYY-MM-DD", help="cursor overschrijven (backfill)")
+    args = ap.parse_args()
+    try:
+        run(commit=args.commit, gemeente=args.gemeente, sinds=args.sinds, limit=args.limit)
+        return 0
+    except Exception as e:  # noqa: BLE001
+        log(f"! {e}")
+        return 2
 
 
 if __name__ == "__main__":
