@@ -70,11 +70,19 @@ Overheid.nl over de officiële publicaties (Gemeenteblad). **Gratis, geen API-ke
 
 **Relevantiefilter = semantisch, niet op artikelnummer.** Gemeenten verplaatsen de
 regels vaak: Utrecht → 4.27/4.28, Groningen → 32.36 (hfst 32 'Voorlopige Regels'),
-Haarlemmermeer → hfst 5. Een 22.36-filter mist die allemaal. De poller herkent een
-Artikel waarvan het **opschrift 'vergunningvrij'** bevat, ongeacht het nummer, en
-legt dat nummer vast. Precisie komt gratis mee: een STOP-wijziging bevat alleen de
-gewijzigde artikelen, dus een locatieplan dat de bruidsschat slechts aanhaalt (of dat
-over vergunning*plicht* gaat) bevat zo'n artikel niet en wordt afgewezen. De poller publiceert nooit — hij schrijft een rij naar
+Haarlemmermeer → hfst 5, Rotterdam → 6.19/6.24. Een 22.36-filter mist die allemaal.
+Hybride, met een `zekerheid`-veld:
+- **hoog** — een Artikel met **'vergunningvrij'** in het opschrift, of 'bruidsschat'
+  in de titel: de regel zélf wordt (ver)plaatst/gewijzigd.
+- **indicatie** — een gewijzigd Artikel over bijbehorende bouwwerken/achtererf/
+  mantelzorg (géén vergunning*plicht*-artikel), of literal 22.27/22.36 in de tekst.
+  Recall-vangnet.
+
+Precisie komt van het feit dat een STOP-wijziging alleen de gewijzigde artikelen
+bevat: een locatieplan dat de bruidsschat slechts aanhaalt (of dat over
+vergunningplicht gaat) bevat zo'n gewijzigd regel-artikel niet en wordt afgewezen.
+`artikel` = de feitelijk geraakte vindplaats(en), komma-gescheiden (bv. `6.19, 6.24`);
+de gematchte signaalwoorden staan in `delta` en in de notificatiemail. De poller publiceert nooit — hij schrijft een rij naar
 `gemeente_wijzigingen` en pingt het CRM-notificatie-endpoint (werkopdracht per mail);
 een mens verwerkt de inhoud. Tabellen: `gemeenten`, `gemeente_wijzigingen`,
 `gemeente_checks` (migratie `0023`).

@@ -199,32 +199,43 @@ def strip_tags(xml_bytes: bytes) -> str:
 RE_VERGVRIJ = re.compile(r"vergunningvrij", re.I)
 RE_ARTNUM = re.compile(r"\b\d{1,3}\.\d{1,3}\b")
 
+# Brede signaalwoorden (recall). Voor de matchlijst in delta/mail én voor de
+# 'indicatie'-trigger op artikel-opschriften.
+SIGNAAL = {
+    "bijbehorend bouwwerk": re.compile(r"bijbehorend(?:e)?\s+bouwwerk", re.I),
+    "achtererf": re.compile(r"achtererf", re.I),
+    "vergunningvrij": re.compile(r"vergunningvrij", re.I),
+    "bruidsschat": re.compile(r"bruidsschat", re.I),
+    "mantelzorg": re.compile(r"mantelzorg", re.I),
+    "erf-/perceelafscheiding": re.compile(r"erf-?\s*of\s*perceelafscheiding|erfafscheiding", re.I),
+}
+# Rule-onderwerp in een artikel-opschrift (recall-trigger, nummer-onafhankelijk).
+RE_BREED_OPSCHRIFT = re.compile(
+    r"bijbehorend(?:e)?\s+bouwwerk|achtererf|mantelzorg|erf-?\s*of\s*perceelafscheiding", re.I
+)
+# Sluit locatie-vergunningplicht-artikelen uit (dat zijn geen vergunningvrij-regels).
+RE_UITSLUIT_OPSCHRIFT = re.compile(r"vergunningplicht|beoordelingsregel", re.I)
+
 
 def _to_bytes(doc) -> bytes:
     return doc if isinstance(doc, (bytes, bytearray)) else str(doc).encode("utf-8")
 
 
-def vergunningvrij_artikel(doc) -> str | None:
-    """Nummer (of label) van een Artikel waarvan het OPSCHRIFT 'vergunningvrij' bevat
-    — d.w.z. de bruidsschat-regel voor vergunningvrije bijbehorende bouwwerken zélf,
-    ongeacht het nummer of hoofdstuk (22.36, 32.36, 4.27, hfst 5, …).
+def _join_art(nums) -> str | None:
+    seen: list[str] = []
+    for n in nums:
+        if n and n not in seen:
+            seen.append(n)
+    return ", ".join(seen[:4]) if seen else None
 
-    Kerninzicht: in een STOP-wijzigingsbesluit staat een artikel er alléén in als het
-    wordt gewijzigd. Een 'vergunningvrij'-artikel in de publicatie ≈ de vergunningvrij-
-    regel wordt geraakt. Een locatieplan dat de bruidsschat alleen aanhaalt of dat over
-    de vergunning*plicht* gaat, bevat zo'n artikel niet → None."""
+
+def _artikelen(doc) -> list[tuple[str | None, str]]:
+    """(nummer, opschrift) per Artikel-element in de STOP-XML."""
     try:
         root = ET.fromstring(_to_bytes(doc))
     except ET.ParseError:
-        return None
-
-    def _num(el, nummer) -> str:
-        if nummer and RE_ARTNUM.search(nummer):
-            return RE_ARTNUM.search(nummer).group(0)
-        m = RE_ARTNUM.search(" ".join(t for t in el.itertext() if t))
-        return m.group(0) if m else "vergunningvrij-artikel"
-
-    eerste: str | None = None  # eerste vergunningvrij-artikel (fallback)
+        return []
+    out: list[tuple[str | None, str]] = []
     for el in root.iter():
         if _local(el.tag) != "Artikel":
             continue
@@ -235,42 +246,63 @@ def vergunningvrij_artikel(doc) -> str | None:
                 nummer = c.text.strip()
             if ln in ("Opschrift", "Kop") and opschrift is None and (c.text or "").strip():
                 opschrift = c.text.strip()
-        if opschrift and RE_VERGVRIJ.search(opschrift):
-            # Voorkeur: het artikel over vergunningvrije *bijbehorende bouwwerken*
-            # (onze mantelzorg/tuinhuis-case) boven bv. 'dakopbouwen'.
-            if re.search(r"bijbehorend", opschrift, re.I):
-                return _num(el, nummer)
-            if eerste is None:
-                eerste = _num(el, nummer)
-    return eerste
+        num = None
+        if nummer and RE_ARTNUM.search(nummer):
+            num = RE_ARTNUM.search(nummer).group(0)
+        else:
+            m = RE_ARTNUM.search(" ".join(t for t in el.itertext() if t))
+            num = m.group(0) if m else None
+        out.append((num, opschrift or ""))
+    return out
 
 
-def relevance(doc, titel: str = "") -> tuple[bool, str | None]:
+def vergunningvrij_artikel(doc) -> str | None:
+    """Nummer van het (voorkeurs)artikel met 'vergunningvrij' in het opschrift, of None.
+    Voorkeur voor het artikel over *bijbehorende bouwwerken* (onze mantelzorg-case)."""
+    arts = _artikelen(doc)
+    vv_bij = [n for (n, op) in arts if n and RE_VERGVRIJ.search(op) and re.search(r"bijbehorend", op, re.I)]
+    vv_all = [n for (n, op) in arts if n and RE_VERGVRIJ.search(op)]
+    picked = vv_bij or vv_all
+    return picked[0] if picked else None
+
+
+def relevance(doc, titel: str = "") -> tuple[bool, str | None, str | None, list[str]]:
     """Raakt de publicatie de vergunningvrij-regels voor bijbehorende bouwwerken?
-    Geeft (relevant, artikel).
+    Geeft (relevant, artikel, zekerheid, signalen) — hybride precisie + recall.
 
-    SEMANTISCH, niet op artikelnummer — zo vangen we ook VERPLAATSTE regels die een
-    naïef 22.36-filter mist: Utrecht (→ 4.27/4.28), Groningen (→ 32.36, hfst 32
-    'Voorlopige Regels'), Haarlemmermeer (→ hfst 5). Precisie komt van het feit dat
-    een STOP-wijziging alleen de gewijzigde artikelen bevat: een locatieplan dat de
-    bruidsschat slechts aanhaalt (bv. Arnhem 'Zijpendaalseweg') bevat géén
-    vergunningvrij-artikel en wordt afgewezen.
+    SEMANTISCH, niet op artikelnummer, zodat verplaatste regels wél worden gevangen:
+    Utrecht (→ 4.27/4.28), Groningen (→ 32.36), Haarlemmermeer (→ hfst 5), Rotterdam.
 
-    Volgorde:
-    1) een Artikel met 'vergunningvrij' in het opschrift → relevant (+ dat nummer);
-    2) 'bruidsschat' in de titel → bruidsschat-primaire wijziging;
-    3) fallback: literal 22.27/22.36 in de tekst (belt-and-suspenders)."""
-    art = vergunningvrij_artikel(doc)
-    if art:
-        return True, art
-    if re.search(r"bruidsschat", titel or "", re.I):
-        return True, "hoofdstuk 22 (bruidsschat)"
+    Zekerheid:
+    - 'hoog'      : een Artikel met 'vergunningvrij' in het opschrift, of 'bruidsschat'
+                    in de titel — de regel zélf wordt (ver)plaatst/gewijzigd.
+    - 'indicatie' : een gewijzigd Artikel over bijbehorende bouwwerken/achtererf/
+                    mantelzorg (géén vergunning*plicht*-artikel), of literal 22.27/22.36
+                    in de tekst. Recall-vangnet; een mens weegt het.
+    Locatieplannen die de bruidsschat alleen aanhalen of over vergunningplicht gaan,
+    bevatten zo'n gewijzigd regel-artikel niet → afgewezen."""
     plate = doc if isinstance(doc, str) else strip_tags(_to_bytes(doc))
+    signalen = sorted(n for n, rx in SIGNAAL.items() if rx.search(plate) or rx.search(titel or ""))
+    arts = _artikelen(doc)
+
+    vv_bij = [n for (n, op) in arts if n and RE_VERGVRIJ.search(op) and re.search(r"bijbehorend", op, re.I)]
+    vv_all = [n for (n, op) in arts if n and RE_VERGVRIJ.search(op)]
+    if vv_all:
+        return True, _join_art(vv_bij or vv_all), "hoog", signalen
+    if re.search(r"bruidsschat", titel or "", re.I):
+        return True, "hoofdstuk 22 (bruidsschat)", "hoog", signalen
+
+    breed = [
+        n for (n, op) in arts
+        if RE_BREED_OPSCHRIFT.search(op) and not RE_UITSLUIT_OPSCHRIFT.search(op)
+    ]
+    if breed:
+        return True, _join_art([n for n in breed if n]) or "bijbehorende bouwwerken", "indicatie", signalen
     if RE_2236.search(plate):
-        return True, "22.36"
+        return True, "22.36", "indicatie", signalen
     if RE_2227.search(plate):
-        return True, "22.27"
-    return False, None
+        return True, "22.27", "indicatie", signalen
+    return False, None, None, signalen
 
 
 def _near(text: str, a_patterns: tuple[re.Pattern, ...], b_pattern: re.Pattern, window: int = 300) -> bool:
@@ -285,14 +317,18 @@ def _near(text: str, a_patterns: tuple[re.Pattern, ...], b_pattern: re.Pattern, 
     return False
 
 
-def classify_type(titel: str, text: str, ontwerp_al_bekend: bool) -> str:
-    """Map op de gemeente_wijziging_type-enum."""
+def classify_type(titel: str, text: str, ontwerp_al_bekend: bool = False, artikel: str = "") -> str:
+    """Map op de gemeente_wijziging-type-enum.
+
+    `artikel_verdwenen` (sterkste signaal) als de vergunningvrij-regel niet meer op
+    zijn oorspronkelijke plek (hfst 22) staat — d.w.z. verplaatst/vervangen (Utrecht
+    → 4.27, Groningen → 32.36, …) — of als 22.27/22.36 expliciet wordt ingetrokken."""
     t = (titel or "").lower()
     is_ontwerp = "ontwerp" in t or "terinzage" in t or "ter inzage" in t
-    # Sterkste signaal: een bruidsschat-vergunningvrij-artikel (22.27/22.36) wordt
-    # ingetrokken/vervangen — mits het intrekwoord dicht bij het artikelnummer staat
-    # (anders is 'vervalt' elders in een groot document geen bewijs).
-    if _near(text, (RE_2227, RE_2236), RE_INTREKKEN, window=300):
+    # Vergunningvrij-regel buiten hfst 22 → oorspronkelijk artikel is verdwenen/verplaatst.
+    nums = re.findall(r"\b(\d{1,3})\.\d{1,3}\b", artikel or "")
+    buiten_hfst22 = bool(nums) and all(n != "22" for n in nums)
+    if buiten_hfst22 or _near(text, (RE_2227, RE_2236), RE_INTREKKEN, window=300):
         return "artikel_verdwenen"
     if is_ontwerp:
         return "ontwerp_gewijzigd" if ontwerp_al_bekend else "ontwerp_nieuw"
@@ -456,11 +492,11 @@ def poll_gemeente(db: DB | None, http: httpx.Client, gem: dict, sinds: str,
             continue
         text = strip_tags(doc.content)
         # Relevantie op de XML zelf (artikel-opschriften), niet alleen platte tekst.
-        is_rel, artikel = relevance(doc.content, rec.get("titel", ""))
+        is_rel, artikel, zekerheid, signalen = relevance(doc.content, rec.get("titel", ""))
         if not is_rel:
             continue
         relevant_count += 1
-        wtype = classify_type(rec["titel"], text, ontwerp_gezien)
+        wtype = classify_type(rec["titel"], text, ontwerp_gezien, artikel)
         # Ontwerp-vlag onafhankelijk van het type (artikel_verdwenen kan een ontwerp zijn).
         if re.search(r"ontwerp|ter\s*inzage", rec.get("titel", ""), re.I):
             ontwerp_gezien = True
@@ -475,7 +511,9 @@ def poll_gemeente(db: DB | None, http: httpx.Client, gem: dict, sinds: str,
                 pass
         laatste_akn = akn or laatste_akn
         delta = extract_delta(doc.content, artikel)
-        fragment_log.append(f"{bid} [{wtype}] art {artikel}: {rec['titel'][:80]}")
+        delta["zekerheid"] = zekerheid
+        delta["signalen"] = signalen
+        fragment_log.append(f"{bid} [{wtype}/{zekerheid}] art {artikel} ({', '.join(signalen)}): {rec['titel'][:70]}")
 
         payload = {
             "gemeente_slug": slug,
@@ -485,13 +523,13 @@ def poll_gemeente(db: DB | None, http: httpx.Client, gem: dict, sinds: str,
             "delta": Jsonb(delta) if (commit and psycopg) else delta,
             "bron_url": rec.get("bron_url") or f"https://zoek.officielebekendmakingen.nl/{bid}.html",
         }
-        log(f"    ✓ RELEVANT {bid} → art {artikel} · {wtype}")
+        log(f"    ✓ RELEVANT {bid} → art {artikel} · {wtype} · {zekerheid} · {', '.join(signalen)}")
         if commit and db is not None:
             new_id = db.insert_wijziging(payload)
             if new_id:
                 notify(http, {
                     "gemeente": naam, "type": wtype, "artikel": artikel,
-                    "bron_url": payload["bron_url"], "id": new_id,
+                    "bron_url": payload["bron_url"], "id": new_id, "signalen": signalen,
                 })
                 log(f"      ↑ nieuw ({new_id}) + genotificeerd")
             else:

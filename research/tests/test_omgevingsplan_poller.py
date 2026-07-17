@@ -21,52 +21,69 @@ def _fix(name: str) -> str:
         return f.read()
 
 
-# --- Relevantiefilter (semantisch: vergunningvrij-artikel, nummer-onafhankelijk) --- #
+# --- Relevantiefilter (hybride: opschrift 'hoog' + brede recall 'indicatie') --- #
 def test_relevantie_groningen_verplaatst_naar_32_36():
-    # Regels inhoudelijk gelijk, alleen verplaatst naar art 32.36 (hfst 32). Een
-    # 22.36-filter mist dit; de opschrift-filter moet het vangen.
+    # Regels inhoudelijk gelijk, alleen verplaatst naar art 32.36 (hfst 32).
     xml = _fix("groningen_32_36_vergunningvrij_pos.xml")
-    rel, art = relevance(xml, "Technische wijziging omgevingsplan gemeente Groningen")
-    assert rel is True and art == "32.36", (rel, art)
+    rel, art, zek, sig = relevance(xml, "Technische wijziging omgevingsplan gemeente Groningen")
+    assert rel is True and art == "32.36" and zek == "hoog", (rel, art, zek)
 
 
 def test_relevantie_utrecht_verplaatst_naar_4_27():
     # Utrecht: uit 22.27/22.36 verplaatst naar 4.27/4.28.
     xml = _fix("utrecht_4_27_vergunningvrij_pos.xml")
-    rel, art = relevance(xml, "Ontwerp besluit omzetting buurten Utrecht")
-    assert rel is True and art is not None and art != "22.36", (rel, art)
+    rel, art, zek, sig = relevance(xml, "Ontwerp besluit omzetting buurten Utrecht")
+    assert rel is True and art and art.startswith("4.") and zek == "hoog", (rel, art, zek)
+
+
+def test_relevantie_meerdere_vindplaatsen_komma():
+    # Twee vergunningvrije-bijbehorende-bouwwerken-artikelen → komma-gescheiden.
+    xml = ('<R xmlns="x"><Artikel><Nummer>4.27</Nummer>'
+           '<Opschrift>Vergunningvrije bijbehorende bouwwerken</Opschrift></Artikel>'
+           '<Artikel><Nummer>4.28</Nummer>'
+           '<Opschrift>Vergunningvrije bijbehorende bouwwerken (vervolg)</Opschrift></Artikel></R>')
+    rel, art, zek, sig = relevance(xml, "Wijziging omgevingsplan")
+    assert rel is True and art == "4.27, 4.28", (rel, art)
+
+
+def test_relevantie_indicatie_breed_opschrift_zonder_vergunningvrij():
+    # Recall: een gewijzigd artikel over bijbehorende bouwwerken/achtererf zónder het
+    # woord 'vergunningvrij' in het opschrift → relevant met zekerheid 'indicatie'.
+    xml = ('<R xmlns="x"><Artikel><Nummer>5.7</Nummer>'
+           '<Opschrift>Bijbehorende bouwwerken in het achtererfgebied</Opschrift></Artikel></R>')
+    rel, art, zek, sig = relevance(xml, "Wijziging omgevingsplan")
+    assert rel is True and art == "5.7" and zek == "indicatie", (rel, art, zek)
 
 
 def test_relevantie_negatief_vergunningplicht_artikel():
-    # Locatieplan-artikel over vergunning*plicht* (geen vergunningvrij) → geen hit.
+    # Locatieplan-artikel over vergunning*plicht* → geen vergunningvrij-regel → geen hit.
     xml = _fix("arnhem_vergunningplicht_neg.xml")
-    rel, art = relevance(xml, "Ontwerp Wijziging Omgevingsplan Arnhem - Zijpendaalseweg 167")
+    rel, art, zek, sig = relevance(xml, "Ontwerp Wijziging Omgevingsplan Arnhem - Zijpendaalseweg 167")
     assert rel is False and art is None, (rel, art)
 
 
 def test_relevantie_negatief_locatieplan_crossreference():
-    # Alleen bruidsschat-cross-reference in de body, geen vergunningvrij-artikel,
+    # Alleen bruidsschat-cross-reference in de body, geen gewijzigd regel-artikel,
     # geen 22.27/22.36, geen bruidsschat in de titel → afgewezen.
     txt = _fix("arnhem_zijpendaalseweg_neg.txt")
-    rel, art = relevance(txt, "Ontwerp Wijziging Omgevingsplan gemeente Arnhem - Zijpendaalseweg 167")
+    rel, art, zek, sig = relevance(txt, "Ontwerp Wijziging Omgevingsplan gemeente Arnhem - Zijpendaalseweg 167")
     assert rel is False and art is None, (rel, art)
 
 
 def test_relevantie_fallback_literal_2236():
-    # Zonder XML-artikel maar mét literal 22.36 in de tekst → fallback vangt het.
     txt = _fix("roermond_bruidsschat_2236_pos.txt")
-    rel, art = relevance(txt, "Wijzigingsbesluit omgevingsplan Roermond")
-    assert rel is True and art == "22.36", (rel, art)
+    rel, art, zek, sig = relevance(txt, "Wijzigingsbesluit omgevingsplan Roermond")
+    assert rel is True and art == "22.36" and zek == "indicatie", (rel, art, zek)
 
 
 def test_relevantie_bruidsschat_in_titel():
-    rel, art = relevance("losse tekst zonder artikel", "Technisch in beheer nemen Bruidsschat gemeente X")
-    assert rel is True and art == "hoofdstuk 22 (bruidsschat)", (rel, art)
+    rel, art, zek, sig = relevance("losse tekst", "Technisch in beheer nemen Bruidsschat gemeente X")
+    assert rel is True and art == "hoofdstuk 22 (bruidsschat)" and zek == "hoog", (rel, art, zek)
+    assert "bruidsschat" in sig
 
 
 def test_relevantie_geen_valse_hit_op_plannaam_22h():
-    # Zaanstad noemt plannen 'TAM-Omgevingsplan 22h' — mag GEEN hit zijn.
-    rel, art = relevance("TAM-Omgevingsplan 22h Datacenters gewijzigd", "TAM-Omgevingsplan 22h Datacenters")
+    rel, art, zek, sig = relevance("TAM-Omgevingsplan 22h Datacenters gewijzigd", "TAM-Omgevingsplan 22h Datacenters")
     assert rel is False, (rel, art)
 
 
@@ -106,6 +123,17 @@ def test_type_geen_artikel_verdwenen_bij_ver_verwijderde_intrekking():
 
 def test_type_onbekend():
     assert classify_type("Een of andere bekendmaking", "geen signaal", False) == "onbekend"
+
+
+def test_type_artikel_verdwenen_bij_verplaatsing_buiten_hfst22():
+    # Vergunningvrij-regel staat nu op 4.27 (Utrecht) → verplaatst uit hfst 22.
+    assert classify_type("Ontwerp besluit omzetting Utrecht", "tekst", False, "4.27") == "artikel_verdwenen"
+    assert classify_type("Technische wijziging Groningen", "tekst", False, "32.36") == "artikel_verdwenen"
+
+
+def test_type_geen_verdwenen_als_regel_op_2236_blijft():
+    # Regel staat nog op 22.36 → niet verplaatst → vastgesteld_gewijzigd.
+    assert classify_type("Wijziging omgevingsplan", "tekst", False, "22.36") == "vastgesteld_gewijzigd"
 
 
 # --- Dedupe: kennisgeving → besluit ----------------------------------------- #

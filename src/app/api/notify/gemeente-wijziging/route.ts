@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     artikel?: string;
     bron_url?: string;
     id?: string;
+    signalen?: string[];
   };
   try {
     body = await request.json();
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
   const gemeente = (body.gemeente || "onbekende gemeente").trim();
   const artikel = (body.artikel || "?").trim();
   const type = (body.type || "onbekend").trim();
+  const signalen = Array.isArray(body.signalen) ? body.signalen.filter((s) => typeof s === "string") : [];
 
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -45,11 +47,12 @@ export async function POST(request: NextRequest) {
   const to = process.env.NOTIFY_TO || process.env.LEAD_NOTIFY_EMAIL || "info@opeigenerf.nl";
   const html = `
 <div style="font-family:system-ui,Arial,sans-serif;color:#0a1b2b;max-width:600px">
-  <h2 style="margin:0 0 8px">Omgevingsplan-wijziging gesignaleerd</h2>
+  <h2 style="margin:0 0 8px">Mogelijke wijziging vergunningvrij bouwen</h2>
   <table style="border-collapse:collapse;font-size:14px;margin-bottom:12px">
     <tr><td style="padding:2px 16px 2px 0;color:#64748b">Gemeente</td><td><strong>${esc(gemeente)}</strong></td></tr>
-    <tr><td style="padding:2px 16px 2px 0;color:#64748b">Artikel</td><td><strong>${esc(artikel)}</strong></td></tr>
+    <tr><td style="padding:2px 16px 2px 0;color:#64748b">Vindplaats</td><td><strong>${esc(artikel)}</strong></td></tr>
     <tr><td style="padding:2px 16px 2px 0;color:#64748b">Type</td><td>${esc(type)}</td></tr>
+    ${signalen.length ? `<tr><td style="padding:2px 16px 2px 0;color:#64748b">Signaalwoorden</td><td>${signalen.map(esc).join(", ")}</td></tr>` : ""}
   </table>
   ${bron ? `<p><a href="${bron}" style="color:#0a1b2b">Bekijk de publicatie »</a></p>` : ""}
   <p style="margin:12px 0 0;font-size:13px;color:#64748b">
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
 
   await sendEmail({
     to,
-    subject: `[OpEigenErf] ${gemeente} — wijziging in art. ${artikel} gedetecteerd`,
+    subject: `[OpEigenErf] ${gemeente} — mogelijke wijziging vergunningvrij bouwen (${artikel})`,
     html,
   });
 
