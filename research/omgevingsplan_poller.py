@@ -269,34 +269,83 @@ def vergunningvrij_artikel(doc) -> str | None:
     return picked[0] if picked else None
 
 
+# STOP per-artikel-mutatie-elementen. Staat een artikel hieronder, dan wordt het
+# écht gewijzigd (renvooi). NIET 'VervangRegeling' (dat vervangt de hele regeling =
+# herpublicatie; individuele artikelen zijn dan niet als gewijzigd gemarkeerd).
+PER_ARTIKEL_MUTATIE = {"Vervang", "VoegToe", "VoegToeArtikel", "Verwijder", "VervangKop",
+                       "WijzigArtikel", "WijzigArtikelen"}
+_STOP_STOP = {"BesluitCompact", "OfficielePublicatie", "VervangRegeling"}
+
+
+def _artikelen_met_scope(doc) -> list[tuple[str | None, str, bool]]:
+    """(nummer, opschrift, gewijzigd) per Artikel. gewijzigd=True als het artikel
+    onder een per-artikel-mutatie (Vervang/WijzigArtikel/…) staat — dus écht wordt
+    gewijzigd, niet slechts aanwezig is in een geconsolideerde/herpublicatie-tekst."""
+    try:
+        root = ET.fromstring(_to_bytes(doc))
+    except ET.ParseError:
+        return []
+    parent = {c: p for p in root.iter() for c in p}
+    out: list[tuple[str | None, str, bool]] = []
+    for el in root.iter():
+        if _local(el.tag) != "Artikel":
+            continue
+        opschrift = nummer = None
+        for c in el.iter():
+            ln = _local(c.tag)
+            if ln == "Nummer" and nummer is None and (c.text or "").strip():
+                nummer = c.text.strip()
+            if ln in ("Opschrift", "Kop") and opschrift is None and (c.text or "").strip():
+                opschrift = c.text.strip()
+        num = None
+        if nummer and RE_ARTNUM.search(nummer):
+            num = RE_ARTNUM.search(nummer).group(0)
+        else:
+            m = RE_ARTNUM.search(" ".join(t for t in el.itertext() if t))
+            num = m.group(0) if m else None
+        gewijzigd = False
+        cur = el
+        while cur in parent:
+            cur = parent[cur]
+            lp = _local(cur.tag)
+            if lp in PER_ARTIKEL_MUTATIE:
+                gewijzigd = True
+                break
+            if lp in _STOP_STOP:
+                break
+        out.append((num, opschrift or "", gewijzigd))
+    return out
+
+
 def relevance(doc, titel: str = "") -> tuple[bool, str | None, str | None, list[str]]:
     """Raakt de publicatie de vergunningvrij-regels voor bijbehorende bouwwerken?
     Geeft (relevant, artikel, zekerheid, signalen) — hybride precisie + recall.
 
-    SEMANTISCH, niet op artikelnummer, zodat verplaatste regels wél worden gevangen:
-    Utrecht (→ 4.27/4.28), Groningen (→ 32.36), Haarlemmermeer (→ hfst 5), Rotterdam.
-
     Zekerheid:
-    - 'hoog'      : een Artikel met 'vergunningvrij' in het opschrift, of 'bruidsschat'
-                    in de titel — de regel zélf wordt (ver)plaatst/gewijzigd.
-    - 'indicatie' : een gewijzigd Artikel over bijbehorende bouwwerken/achtererf/
-                    mantelzorg (géén vergunning*plicht*-artikel), of literal 22.27/22.36
-                    in de tekst. Recall-vangnet; een mens weegt het.
-    Locatieplannen die de bruidsschat alleen aanhalen of over vergunningplicht gaan,
-    bevatten zo'n gewijzigd regel-artikel niet → afgewezen."""
+    - 'hoog'      : een vergunningvrij-artikel wordt écht GEWIJZIGD (staat onder een
+                    per-artikel-mutatie/renvooi), of 'bruidsschat' in de titel.
+    - 'indicatie' : een vergunningvrij-artikel is wél aanwezig maar niet als gewijzigd
+                    gemarkeerd (herpublicatie/VervangRegeling — bv. Groningen), een
+                    gewijzigd artikel over bijbehorende bouwwerken/achtererf, of literal
+                    22.27/22.36 in de tekst. Recall-vangnet; een mens weegt het.
+    Locatieplannen die over vergunning*plicht* gaan of de bruidsschat alleen aanhalen
+    bevatten zo'n regel-artikel niet → afgewezen."""
     plate = doc if isinstance(doc, str) else strip_tags(_to_bytes(doc))
     signalen = sorted(n for n, rx in SIGNAAL.items() if rx.search(plate) or rx.search(titel or ""))
-    arts = _artikelen(doc)
+    arts = _artikelen_met_scope(doc)
 
-    vv_bij = [n for (n, op) in arts if n and RE_VERGVRIJ.search(op) and re.search(r"bijbehorend", op, re.I)]
-    vv_all = [n for (n, op) in arts if n and RE_VERGVRIJ.search(op)]
-    if vv_all:
-        return True, _join_art(vv_bij or vv_all), "hoog", signalen
+    vv = [(n, op, g) for (n, op, g) in arts if n and RE_VERGVRIJ.search(op)]
+    if vv:
+        vv_bij = [t for t in vv if re.search(r"bijbehorend", t[1], re.I)]
+        gekozen = vv_bij or vv
+        nums = _join_art([n for (n, _, _) in gekozen])
+        zek = "hoog" if any(g for (_, _, g) in gekozen) else "indicatie"
+        return True, nums, zek, signalen
     if re.search(r"bruidsschat", titel or "", re.I):
         return True, "hoofdstuk 22 (bruidsschat)", "hoog", signalen
 
     breed = [
-        n for (n, op) in arts
+        n for (n, op, _) in arts
         if RE_BREED_OPSCHRIFT.search(op) and not RE_UITSLUIT_OPSCHRIFT.search(op)
     ]
     if breed:

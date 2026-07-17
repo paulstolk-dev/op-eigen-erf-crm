@@ -9,7 +9,7 @@ HERE = os.path.dirname(__file__)
 sys.path.insert(0, os.path.dirname(HERE))  # research/ op het pad
 
 from omgevingsplan_poller import (  # noqa: E402
-    relevance, vergunningvrij_artikel, classify_type, besluit_id, _near,
+    relevance, vergunningvrij_artikel, _artikelen_met_scope, classify_type, besluit_id, _near,
     RE_2227, RE_2236, RE_INTREKKEN,
 )
 
@@ -21,19 +21,30 @@ def _fix(name: str) -> str:
         return f.read()
 
 
-# --- Relevantiefilter (hybride: opschrift 'hoog' + brede recall 'indicatie') --- #
-def test_relevantie_groningen_verplaatst_naar_32_36():
-    # Regels inhoudelijk gelijk, alleen verplaatst naar art 32.36 (hfst 32).
-    xml = _fix("groningen_32_36_vergunningvrij_pos.xml")
-    rel, art, zek, sig = relevance(xml, "Technische wijziging omgevingsplan gemeente Groningen")
-    assert rel is True and art == "32.36" and zek == "hoog", (rel, art, zek)
-
-
-def test_relevantie_utrecht_verplaatst_naar_4_27():
-    # Utrecht: uit 22.27/22.36 verplaatst naar 4.27/4.28.
-    xml = _fix("utrecht_4_27_vergunningvrij_pos.xml")
+# --- Relevantiefilter (hybride: écht-gewijzigd 'hoog' vs aanwezig/herpublicatie 'indicatie') --- #
+def test_relevantie_utrecht_gewijzigd_hoog():
+    # Utrecht: het vergunningvrij-artikel staat onder een per-artikel-mutatie (Vervang)
+    # → écht gewijzigd → hoog.
+    xml = _fix("utrecht_vervang_gewijzigd_hoog.xml")
     rel, art, zek, sig = relevance(xml, "Ontwerp besluit omzetting buurten Utrecht")
     assert rel is True and art and art.startswith("4.") and zek == "hoog", (rel, art, zek)
+
+
+def test_relevantie_groningen_herpublicatie_indicatie():
+    # Groningen: het vergunningvrij-artikel (32.36) staat NIET onder een per-artikel-
+    # mutatie (VervangRegeling/herpublicatie) → aanwezig maar niet aantoonbaar gewijzigd
+    # → indicatie (wel zichtbaar, geen mail).
+    xml = _fix("groningen_32_36_vergunningvrij_pos.xml")
+    rel, art, zek, sig = relevance(xml, "Technische wijziging omgevingsplan gemeente Groningen")
+    assert rel is True and art == "32.36" and zek == "indicatie", (rel, art, zek)
+
+
+def test_wijzigscope_helper():
+    # De mutatie-scope-detectie: Utrecht-Vervang = gewijzigd; Groningen-isolatie = niet.
+    utr = _artikelen_met_scope(_fix("utrecht_vervang_gewijzigd_hoog.xml"))
+    assert any(g for (_, op, g) in utr if "vergunningvrij" in op.lower()), utr
+    gron = _artikelen_met_scope(_fix("groningen_32_36_vergunningvrij_pos.xml"))
+    assert not any(g for (_, _, g) in gron), gron
 
 
 def test_relevantie_meerdere_vindplaatsen_komma():

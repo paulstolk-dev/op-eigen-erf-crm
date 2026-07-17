@@ -72,11 +72,13 @@ Overheid.nl over de officiële publicaties (Gemeenteblad). **Gratis, geen API-ke
 regels vaak: Utrecht → 4.27/4.28, Groningen → 32.36 (hfst 32 'Voorlopige Regels'),
 Haarlemmermeer → hfst 5, Rotterdam → 6.19/6.24. Een 22.36-filter mist die allemaal.
 Hybride, met een `zekerheid`-veld:
-- **hoog** — een Artikel met **'vergunningvrij'** in het opschrift, of 'bruidsschat'
-  in de titel: de regel zélf wordt (ver)plaatst/gewijzigd.
-- **indicatie** — een gewijzigd Artikel over bijbehorende bouwwerken/achtererf/
-  mantelzorg (géén vergunning*plicht*-artikel), of literal 22.27/22.36 in de tekst.
-  Recall-vangnet.
+- **hoog** — een vergunningvrij-artikel wordt **écht gewijzigd**: het staat onder een
+  per-artikel-mutatie/renvooi (STOP `Vervang`/`WijzigArtikel`/…), of 'bruidsschat' in
+  de titel. Alleen deze mailen (`NOTIFY_ALLEEN_HOOG`, standaard aan).
+- **indicatie** — een vergunningvrij-artikel is wél aanwezig maar niet aantoonbaar
+  gewijzigd (herpublicatie / `VervangRegeling`, bv. Groningen), of een gewijzigd artikel
+  over bijbehorende bouwwerken/achtererf, of literal 22.27/22.36. Recall-vangnet:
+  zichtbaar in /regelgeving, geen mail.
 
 Precisie komt van het feit dat een STOP-wijziging alleen de gewijzigde artikelen
 bevat: een locatieplan dat de bruidsschat slechts aanhaalt (of dat over
