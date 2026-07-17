@@ -1,0 +1,23 @@
+<ns0:Artikel xmlns:ns0="https://standaarden.overheid.nl/stop/imop/tekst/" xmlns:ns1="https://standaarden.overheid.nl/renvooi/" wId="gm0202_6180779c6bb340aead0dad1606e0b1ee__chp_12__subchp_10.3__subsec_10.3.2__subsec_10.3.2.2__art_10.19" eId="chp_10__subchp_10.2__subsec_10.2.2__subsec_10.2.2.6__art_10.41" ns1:alleenKopKentJuridischeWijziging="true">
+		<ns0:Kop>
+		  <ns0:Label>Artikel</ns0:Label>
+		  <ns0:Nummer>
+                  <ns0:VerwijderdeTekst>10.40</ns0:VerwijderdeTekst>
+                  <ns0:NieuweTekst>10.41</ns0:NieuweTekst>
+                </ns0:Nummer>
+		  <ns0:Opschrift>Woning verkameren - vergunningplicht</ns0:Opschrift>
+		</ns0:Kop>
+		<ns0:Lid wId="gm0202_f295163d793a40348b42fda185d51230__chp_12__subchp_10.3__subsec_10.3.2__subsec_10.3.2.2__art_10.19__para_1" eId="chp_10__subchp_10.2__subsec_10.2.2__subsec_10.2.2.6__art_10.41__para_1">
+		  <ns0:LidNummer>1.</ns0:LidNummer>
+		  <ns0:Inhoud>
+		    <ns0:Al>Het is verboden om zonder omgevingsvergunning een (gedeelte) van een gebouw te verkameren (vanaf drie onzelfstandige wooneenheden).</ns0:Al>
+		  </ns0:Inhoud>
+		</ns0:Lid>
+		<ns0:Lid wId="gm0202_7ef6ecba9a0040af872ffd66a5d02bfb__chp_12__subchp_10.3__subsec_10.3.2__subsec_10.3.2.2__art_10.19__para_2" eId="chp_10__subchp_10.2__subsec_10.2.2__subsec_10.2.2.6__art_10.41__para_2">
+		  <ns0:LidNummer>2.</ns0:LidNummer>
+		  <ns0:Inhoud>
+		    <ns0:Al>Het verbod, als bedoeld het <ns0:IntRef ref="chp_10__subchp_10.2__subsec_10.2.2__subsec_10.2.2.6__art_10.41__para_1">eerste</ns0:IntRef> lid geldt niet indien sprake is van verkameren door een hospita.</ns0:Al>
+		  </ns0:Inhoud>
+		</ns0:Lid>
+	      </ns0:Artikel>
+	    

@@ -1,0 +1,188 @@
+<ns0:Artikel xmlns:ns0="https://standaarden.overheid.nl/stop/imop/tekst/" wId="gm0344_306d061d79154165911586dddfe6ace8__art_4.27" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32">
+		  <ns0:Kop>
+		    <ns0:Label>Artikel</ns0:Label>
+		    <ns0:Nummer>
+                    <ns0:VerwijderdeTekst>4.27</ns0:VerwijderdeTekst>
+                    <ns0:NieuweTekst>4.32</ns0:NieuweTekst>
+                  </ns0:Nummer>
+		    <ns0:Opschrift>Vergunningvrije bijbehorende bouwwerken</ns0:Opschrift>
+		  </ns0:Kop>
+		  <ns0:Lid wId="gm0344_e22790d32f454f42831fda2c0ff425d4__para_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1">
+		    <ns0:LidNummer>1.</ns0:LidNummer>
+		    <ns0:Inhoud>
+		      <ns0:Al>In afwijking van artikel <ns0:IntRef ref="chp_4__subchp_4.1__subsec_4.1.3__art_4.5">4.5</ns0:IntRef> mag een bijbehorend bouwwerk onder de volgende voorwaarden zonder omgevingsvergunning gebouwd of uitgebreid worden:</ns0:Al>
+		      <ns0:Lijst wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1" type="expliciet">
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_a" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_a">
+			  <ns0:LiNummer>a.</ns0:LiNummer>
+			  <ns0:Al>het aantal woningen op een perceel blijft gelijk;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_b" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_b">
+			  <ns0:LiNummer>b.</ns0:LiNummer>
+			  <ns0:Al>het bijbehorende bouwwerk staat op de grond;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_c" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_c">
+			  <ns0:LiNummer>c.</ns0:LiNummer>
+			  <ns0:Al>het bijbehorende bouwwerk staat op het achtererfgebied;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_d" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_d">
+			  <ns0:LiNummer>d.</ns0:LiNummer>
+			  <ns0:Al>het bijbehorende bouwwerk staat op een afstand van meer dan 1 meter van openbaar toegankelijk gebied, behalve als het openbaar toegankelijke gebied een deel van een binnenterrein is dat aan alle zijden omgeven is door hoofdgebouwen;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_e" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_e">
+			  <ns0:LiNummer>e.</ns0:LiNummer>
+			  <ns0:Al>als het bijbehorende bouwwerk meer dan een bouwlaag heeft, mag alleen de eerste bouwlaag een verblijfsgebied hebben;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_f" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_f">
+			  <ns0:LiNummer>f.</ns0:LiNummer>
+			  <ns0:Al>het bijbehorende bouwwerk heeft geen dakterras, balkon of andere niet op de grond gelegen buitenruimte;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g">
+			  <ns0:LiNummer>g.</ns0:LiNummer>
+			  <ns0:Al>binnen 4 meter van het oorspronkelijke hoofdgebouw mag het bijbehorende bouwwerk niet hoger zijn dan:</ns0:Al>
+			  <ns0:Lijst wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1" type="expliciet">
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1__item_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1__item_1">
+			      <ns0:LiNummer>1.</ns0:LiNummer>
+			      <ns0:Al>het hoofdgebouw;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1__item_2" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1__item_2">
+			      <ns0:LiNummer>2.</ns0:LiNummer>
+			      <ns0:Al>0,3 meter boven de bovenkant van de scheidingsconstructie met de tweede bouwlaag van het hoofdgebouw; en</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1__item_3" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_g__list_o_1__item_3">
+			      <ns0:LiNummer>3.</ns0:LiNummer>
+			      <ns0:Al>5 meter.</ns0:Al>
+			    </ns0:Li>
+			  </ns0:Lijst>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h">
+			  <ns0:LiNummer>h.</ns0:LiNummer>
+			  <ns0:Al>voor zover een bijbehorend bouwwerk meer dan 4 meter van het oorspronkelijk hoofdgebouw staat:</ns0:Al>
+			  <ns0:Lijst wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h__list_o_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h__list_o_1" type="expliciet">
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h__list_o_1__item_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h__list_o_1__item_1">
+			      <ns0:LiNummer>1.</ns0:LiNummer>
+			      <ns0:Al>als het bijbehorende bouwwerk of de uitbreiding daarvan hoger is dan 3 meter: voorzien van een schuin dak, de dakvoet niet hoger dan 3 meter, de daknok gevormd door twee of meer schuine dakvlakken, met een hellingshoek van niet meer dan 55°, en waarbij de hoogte van de daknok niet meer is dan 5 meter en verder wordt begrensd door de volgende formule: maximale daknokhoogte [in meters] = (afstand daknok tot de perceelsgrens [aantal meter] x 0,47) + 3; en</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h__list_o_1__item_2" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_h__list_o_1__item_2">
+			      <ns0:LiNummer>2.</ns0:LiNummer>
+			      <ns0:Al>het bijbehorende bouwwerk is functioneel ondergeschikt aan het hoofdgebouw, maar als een bijbehorend bouwwerk, bestaat uit een deel dat op meer, en een deel dat op minder dan 4 meter van het oorspronkelijk hoofdgebouw staat, zonder een inwendige scheidingsconstructie tussen beide delen, dan is het deel dat op minder dan 4 meter van het oorspronkelijk hoofdgebouw is gelegen functioneel ondergeschikt aan het hoofdgebouw;</ns0:Al>
+			    </ns0:Li>
+			  </ns0:Lijst>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i">
+			  <ns0:LiNummer>i.</ns0:LiNummer>
+			  <ns0:Al>de oppervlakte van bijbehorende bouwwerken in het bebouwingsgebied bedragen niet meer dan:</ns0:Al>
+			  <ns0:Lijst wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1" type="expliciet">
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1__item_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1__item_1">
+			      <ns0:LiNummer>1.</ns0:LiNummer>
+			      <ns0:Al>bij een bebouwingsgebied kleiner dan of gelijk aan 100 m<ns0:sup>2</ns0:sup>: 50% van dat bebouwingsgebied;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1__item_2" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1__item_2">
+			      <ns0:LiNummer>2.</ns0:LiNummer>
+			      <ns0:Al>bij een bebouwingsgebied groter dan 100 m<ns0:sup>2</ns0:sup> en kleiner dan of gelijk aan 300 m<ns0:sup>2</ns0:sup>: 50 m<ns0:sup>2</ns0:sup>, vermeerderd met 20% van het deel van het bebouwingsgebied dat groter is dan 100 m<ns0:sup>2</ns0:sup>; en</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_e22790d32f454f42831fda2c0ff425d4__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1__item_3" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1__list_o_1__item_i__list_o_1__item_3">
+			      <ns0:LiNummer>3.</ns0:LiNummer>
+			      <ns0:Al>bij een bebouwingsgebied groter dan 300 m<ns0:sup>2</ns0:sup>: 90 m<ns0:sup>2</ns0:sup>, vermeerderd met 10% van het deel van het bebouwingsgebied dat groter is dan 300 m<ns0:sup>2</ns0:sup>, tot een maximum van in totaal 150 m<ns0:sup>2</ns0:sup>.</ns0:Al>
+			    </ns0:Li>
+			  </ns0:Lijst>
+			</ns0:Li>
+		      </ns0:Lijst>
+		    </ns0:Inhoud>
+		  </ns0:Lid>
+		  <ns0:Lid wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__para_2" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2">
+		    <ns0:LidNummer>2.</ns0:LidNummer>
+		    <ns0:Inhoud>
+		      <ns0:Al>De regels in het <ns0:IntRef ref="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_1">eerste</ns0:IntRef> lid zijn niet van toepassing in de volgende gevallen:</ns0:Al>
+		      <ns0:Lijst wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1" type="expliciet">
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_a" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_a">
+			  <ns0:LiNummer>a.</ns0:LiNummer>
+			  <ns0:Al>een bijbehorend bouwwerk bij een woonwagen;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_b" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_b">
+			  <ns0:LiNummer>b.</ns0:LiNummer>
+			  <ns0:Al>een bijbehorend bouwwerk bij een hoofdgebouw waarvoor in de omgevingsvergunning voor de bouwactiviteit of de omgevingsplanactiviteit bestaande uit een bouwactiviteit is bepaald dat de vergunninghouder na het verstrijken van een bij die omgevingsvergunning gestelde termijn verplicht is de voor de verlening van de omgevingsvergunning bestaande toestand te hebben hersteld;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_c" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_c">
+			  <ns0:LiNummer>c.</ns0:LiNummer>
+			  <ns0:Al>een gebouw dat bedoeld is voor recreatief nachtverblijf door één huishouden;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_d" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_d">
+			  <ns0:LiNummer>d.</ns0:LiNummer>
+			  <ns0:Al>een bijbehorend bouwwerk aan, op of bij een gebouw dat is aangewezen of voorbeschermd als gemeentelijk monument, provinciaal monument of rijksmonument;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_e" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_e">
+			  <ns0:LiNummer>e.</ns0:LiNummer>
+			  <ns0:Al wijzigactie="verwijder">een bijbehorend bouwwerk op een locatie waaraan in dit omgevingsplan de functie 'Waarde - Beschermd stadsgezicht' of 'Waarde - Cultuurhistorie' is gegeven;</ns0:Al>
+			  <ns0:Al wijzigactie="voegtoe">een bijbehorend bouwwerk op een locatie die als rijksbeschermd stads- of dorpsgezicht is aangewezen of als op grond van het tijdelijke deel van het omgevingsplan de ‘Waarde – Cultuurhistorie’ geldt;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_f" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_f">
+			  <ns0:LiNummer>f.</ns0:LiNummer>
+			  <ns0:Al>een bijbehorend bouwwerk op een locatie in een in het tijdelijke deel van dit omgevingsplan, bedoeld in artikel 22.1, onder a, van de Omgevingswet, opgenomen veiligheidszone, getypeerd als A-zone of B-zone, rondom een munitieopslag of een locatie voor activiteiten met ontplofbare stoffen;</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_g" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_g">
+			  <ns0:LiNummer>g.</ns0:LiNummer>
+			  <ns0:Al>een bijbehorend bouwwerk op een locatie waarop de activiteit op grond van het tijdelijke deel van dit omgevingsplan, bedoeld in artikel 22.1, onder a, van de Omgevingswet, niet is toegestaan vanwege het overschrijden van het plaatsgebonden risico van 10<ns0:sup>-6</ns0:sup> per jaar als gevolg van de aanwezigheid van een locatie voor een vergunningplichtige milieubelastende activiteit, transportroute of buisleiding of vanwege de ligging in een belemmeringenstrook voor het onderhoud van een buisleiding; of</ns0:Al>
+			</ns0:Li>
+			<ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h">
+			  <ns0:LiNummer>h.</ns0:LiNummer>
+			  <ns0:Al>een bijbehorend bouwwerk op een afstand die vanwege de locatie niet in overeenstemming is met:</ns0:Al>
+			  <ns0:Lijst wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1" type="expliciet">
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_1" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_1">
+			      <ns0:LiNummer>1.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.421, eerste lid, onder b, of tweede lid, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_2" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_2">
+			      <ns0:LiNummer>2.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.472c, eerste lid, van het Besluit activiteiten leefomgeving, voor zover het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_3" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_3">
+			      <ns0:LiNummer>3.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.484, eerste lid, van het Besluit activiteiten leefomgeving, voor zover het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_4" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_4">
+			      <ns0:LiNummer>4.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.524, eerste of tweede lid, van het Besluit activiteiten leefomgeving, voor zover het derde lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_5" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_5">
+			      <ns0:LiNummer>5.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.532, eerste lid, van het Besluit activiteiten leefomgeving, voor zover het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_6" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_6">
+			      <ns0:LiNummer>6.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.542, eerste lid, van het Besluit activiteiten leefomgeving, voor zover het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_7" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_7">
+			      <ns0:LiNummer>7.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.866, eerste of tweede lid, van het Besluit activiteiten leefomgeving, voor zover het derde lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_8" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_8">
+			      <ns0:LiNummer>8.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.899, eerste lid, onder b, of derde lid, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, of het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_9" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_9">
+			      <ns0:LiNummer>9.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.905, eerste lid, onder b, of tweede lid, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, of het derde lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_10" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_10">
+			      <ns0:LiNummer>10.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.914, eerste lid, onder b, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, of het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_11" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_11">
+			      <ns0:LiNummer>11.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.962, eerste lid, onder b, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, of het tweede lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_12" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_12">
+			      <ns0:LiNummer>12.</ns0:LiNummer>
+			      <ns0:Al>artikel 4.1008, eerste lid, onder b, of tweede lid, onder b, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, het tweede lid, aanhef en onder b, of het derde lid van dat artikel van toepassing is;</ns0:Al>
+			    </ns0:Li>
+			    <ns0:Li wId="gm0344_950f5392d8d44ec4bc5c105e5d886456__chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_13" eId="chp_4__subchp_4.2__subsec_4.2.2__subsec_4.2.2.2__art_4.32__para_2__list_o_1__item_h__list_o_1__item_13">
+			      <ns0:LiNummer>13.</ns0:LiNummer>
+			      <ns0:Al>of artikel 4.1101, eerste lid, onder b, van het Besluit activiteiten leefomgeving, voor zover het eerste lid, aanhef en onder b, of het tweede lid van dat artikel van toepassing is.</ns0:Al>
+			    </ns0:Li>
+			  </ns0:Lijst>
+			</ns0:Li>
+		      </ns0:Lijst>
+		    </ns0:Inhoud>
+		  </ns0:Lid>
+		</ns0:Artikel>
+		

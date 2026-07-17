@@ -59,3 +59,52 @@ Storage-upload). `CLAUDE_MODEL` moet web_search ondersteunen (Sonnet 5 / Opus 4.
 De concepten verschijnen onder **Aanbieders → Research** (`/aanbieders/research`):
 per aanbieder de modellen + kandidaatfoto's, met **Publiceren** (kopieert gekozen
 foto's naar de publieke bucket en zet het model live) of **Afwijzen**.
+
+---
+
+# Omgevingsplan-poller (`omgevingsplan_poller.py`)
+
+Signaleert wijzigingen in de **vergunningvrij-regels voor bijbehorende bouwwerken**
+(bruidsschat) van gemeentelijke omgevingsplannen, via de **SRU 2.0-service** van
+Overheid.nl over de officiële publicaties (Gemeenteblad). **Gratis, geen API-key.**
+
+**Relevantiefilter = semantisch, niet op artikelnummer.** Gemeenten verplaatsen de
+regels vaak: Utrecht → 4.27/4.28, Groningen → 32.36 (hfst 32 'Voorlopige Regels'),
+Haarlemmermeer → hfst 5. Een 22.36-filter mist die allemaal. De poller herkent een
+Artikel waarvan het **opschrift 'vergunningvrij'** bevat, ongeacht het nummer, en
+legt dat nummer vast. Precisie komt gratis mee: een STOP-wijziging bevat alleen de
+gewijzigde artikelen, dus een locatieplan dat de bruidsschat slechts aanhaalt (of dat
+over vergunning*plicht* gaat) bevat zo'n artikel niet en wordt afgewezen. De poller publiceert nooit — hij schrijft een rij naar
+`gemeente_wijzigingen` en pingt het CRM-notificatie-endpoint (werkopdracht per mail);
+een mens verwerkt de inhoud. Tabellen: `gemeenten`, `gemeente_wijzigingen`,
+`gemeente_checks` (migratie `0023`).
+
+```bash
+# Dry-run (default — schrijft niets), verkennen per gemeente:
+python omgevingsplan_poller.py --gemeente arnhem --sinds 2026-01-01
+
+# Echt wegschrijven over alle gemeenten met research_status <> 'niet_onderzocht':
+python omgevingsplan_poller.py --commit
+# Backfill één gemeente:
+python omgevingsplan_poller.py --gemeente roermond --commit --sinds 2026-01-01 --limit 20
+
+# Tests (relevantiefilter + type-mapping, met echte fixtures):
+python tests/test_omgevingsplan_poller.py
+```
+
+**Cursor:** per gemeente `dso_laatst_gepolld` (valt terug op 90 dagen). **Idempotent**
+via `on conflict (gemeente_slug, artikel, nieuwe_hash) do nothing` — herhaalde runs
+mailen niet opnieuw. De poller raakt de **redactionele** velden
+(`omgevingsplan_status`, `afwijking_*`, `gecontroleerd_op`) nooit aan.
+
+**Planning:** wekelijks is ruim voldoende (een ontwerp ligt zes weken ter inzage).
+Draai als Railway-cron op de research-service:
+`python omgevingsplan_poller.py --commit`.
+
+**Env (extra t.o.v. de crawler):** `NOTIFY_ENDPOINT` + `NOTIFY_SECRET` (voor de
+mail-werkopdracht; leeg = wel signaleren, niet mailen).
+
+**Notitie:** v1 leest de openbare bekendmakingen (renvooi/verschilmarkering zit in de
+STOP-XML). De DSO Omgevingsdocumenten-API (gratis key) is later een tweede bron voor
+gestructureerd diffen op objectniveau — de kolommen `dso_regeling_identificatie` /
+`dso_inhoud_hash` zijn daarop voorbereid.
