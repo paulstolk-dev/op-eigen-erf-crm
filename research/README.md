@@ -62,7 +62,62 @@ foto's naar de publieke bucket en zet het model live) of **Afwijzen**.
 
 ---
 
-# Omgevingsplan-poller (`omgevingsplan_poller.py`)
+# VHP-readiness-poller (`vhp_poller.py`) — actief
+
+Signaleert per gemeente de **vaststelling van het volkshuisvestingsprogramma (VHP)**,
+via de **SRU 2.0-service** van Overheid.nl (Gemeenteblad). **Gratis, geen API-key.**
+
+**Waarom deze i.p.v. de omgevingsplan-poller (hieronder):** met de Wet/Besluit
+versterking regie volkshuisvesting verhuizen de vergunningvrije mantelzorg-/
+familiewoning-regels **terug naar het Rijk** (art. 22.36 omgevingsplan → Bbl art.
+2.30b, landelijk uniform). Inhoudelijk valt er per gemeente vrijwel niets meer te
+monitoren; wat wél verschilt, is het **moment** waarop het ingaat. Het beste
+waarneembare signaal daarvoor is de VHP-vaststelling.
+
+> **Nog niet definitief:** of het toepasbare moment per gemeente écht aan de
+> VHP-vaststelling hangt, of dat de landelijke Bbl-regel al bij inwerkingtreding van
+> het Besluit (~jan 2027) rechtstreeks geldt, is niet eenduidig. De poller
+> **registreert alleen het signaal**; de interpretatie is aan de mens.
+
+**Relevantiefilter = semantisch** (titel bevat *volkshuisvestingsprogramma*), met
+`status` + `zekerheid`:
+- **vastgesteld / hoog** — raadsbesluit of OWMS-doctype "besluit van algemene
+  strekking". Alleen deze mailen (`NOTIFY_ALLEEN_HOOG`, standaard aan).
+- **ontwerp / indicatie** — "ontwerp"/"ter inzage"/"voornemen" in de titel.
+- **onbekend / indicatie** — VHP-term aanwezig, geen duidelijk signaal (recall-vangnet).
+
+De poller **publiceert nooit** en vult **geen** redactionele velden (`vhp_status`,
+`gecontroleerd_op`). Bij een treffer schrijft hij een rij naar `gemeente_wijzigingen`
+(`type = vhp_vastgesteld|vhp_ontwerp`, `artikel = 'volkshuisvestingsprogramma'`) en
+pingt het CRM-notificatie-endpoint. Vereist **migratie `0028`** (vhp_*-enumwaarden).
+
+```bash
+# Dry-run (default — schrijft niets), verkennen per gemeente (backfill bij onboarding):
+python vhp_poller.py --gemeente woensdrecht --sinds 2024-01-01
+
+# Echt wegschrijven over alle onderzochte gemeenten:
+python vhp_poller.py --commit
+python vhp_poller.py --gemeente aalten --commit --sinds 2024-01-01
+
+# Tests (relevantiefilter + backfill-cursor, met echte titels/doctypes):
+python -m unittest discover -s tests
+```
+
+**Cursor:** per gemeente `dso_laatst_gepolld` (nu generieke poll-cursor; valt terug op
+90 dagen — gebruik `--sinds` voor de eerste backfill). **Idempotent** via
+`on conflict (gemeente_slug, artikel, nieuwe_hash) do nothing`. **Planning:** wekelijks
+via `POST /poll` op de research-service (zelfde secret + Supabase pg_cron als voorheen;
+de `/poll`-handler roept nu de VHP-poller aan). **Env:** `SUPABASE_DB_URL` +
+(voor de mail) `NOTIFY_ENDPOINT` + `NOTIFY_SECRET`.
+
+---
+
+# Omgevingsplan-poller (`omgevingsplan_poller.py`) — GEDEPRECIEERD
+
+> Vervangen door de VHP-readiness-poller (zie boven). De premisse (per-gemeente
+> inhoudelijke divergentie van mantelzorg/familie-regels) is achterhaald. De module
+> blijft bestaan als bron van de gedeelde SRU-helpers die `vhp_poller.py` hergebruikt;
+> draai hem niet meer als poller.
 
 Signaleert wijzigingen in de **vergunningvrij-regels voor bijbehorende bouwwerken**
 (bruidsschat) van gemeentelijke omgevingsplannen, via de **SRU 2.0-service** van

@@ -27,7 +27,9 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 import aanbieder_research as ar
-import omgevingsplan_poller as poller
+# VHP-readiness-poller (vervangt de inhoudelijke omgevingsplan-poller — zie
+# vhp_poller.py / migratie 0028). Zelfde run()-signatuur, dus drop-in.
+import vhp_poller as poller
 
 app = FastAPI(title="opeigenerf aanbieder-research")
 
@@ -211,7 +213,7 @@ def run(
 
 
 # --------------------------------------------------------------------------- #
-# Omgevingsplan-poller — wekelijkse SRU-monitoring (getriggerd door Supabase cron)
+# VHP-readiness-poller — wekelijkse SRU-monitoring (getriggerd door Supabase cron)
 # --------------------------------------------------------------------------- #
 _poll_running = threading.Lock()
 _poll_last: dict = {"state": "idle"}

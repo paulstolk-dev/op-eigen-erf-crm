@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """
+omgevingsplan_poller.py — [GEDEPRECIEERD sinds de VHP-kanteling; zie vhp_poller.py]
+
+De premisse (per-gemeente inhoudelijke divergentie van de mantelzorg/familie-regels)
+is achterhaald: die regels gaan terug naar het Rijk (Bbl art. 2.30b). Deze module
+draait niet meer als poller — `vhp_poller.py` heeft het overgenomen — maar blijft
+bestaan als bron van de gedeelde SRU-helpers (sru/_get_with_retry/strip_tags/…),
+die de VHP-poller hergebruikt. Niet uitbreiden; nieuwe monitoring in vhp_poller.py.
+
 omgevingsplan_poller.py — signaleert wijzigingen in de vergunningvrij-regels
 (bruidsschat, hoofdstuk 22, art. 22.27 / 22.36) van gemeentelijke omgevingsplannen.
 
