@@ -19,6 +19,42 @@ async function requireUser() {
   return { supabase, user };
 }
 
+const VHP_STATUSSEN = ["niet_vastgesteld", "in_voorbereiding", "vastgesteld", "onbekend"] as const;
+
+/**
+ * VHP-readinessstatus van een gemeente zetten (REDACTIONEEL — mens beslist). Bij
+ * 'vastgesteld' nemen we datum + bron uit het signaal over. Optioneel wordt het
+ * bijbehorende signaal op 'verwerkt' gezet (reviewcirkel rond). Revalideert ook de
+ * publieke site, zodat de readiness op de gemeentepagina meebeweegt.
+ */
+export async function setGemeenteVhpStatus(
+  slug: string,
+  status: string,
+  opts?: { vastgesteldOp?: string | null; bronUrl?: string | null; wijzigingId?: string },
+): Promise<Result> {
+  const { supabase } = await requireUser();
+  if (!(VHP_STATUSSEN as readonly string[]).includes(status)) {
+    return { ok: false, error: "Onbekende VHP-status." };
+  }
+  const patch: Record<string, unknown> = { vhp_status: status };
+  if (status === "vastgesteld") {
+    patch.vhp_vastgesteld_op = opts?.vastgesteldOp || null;
+    patch.vhp_bron_url = opts?.bronUrl || null;
+  }
+  const { error } = await (supabase as any).from("gemeenten").update(patch).eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+
+  if (opts?.wijzigingId && status !== "onbekend") {
+    await (supabase as any)
+      .from("gemeente_wijzigingen")
+      .update({ review_status: "verwerkt" })
+      .eq("id", opts.wijzigingId);
+  }
+  revalidatePath("/regelgeving");
+  await revalidatePublicSite(["/gemeenten", `/gemeenten/${slug}`]);
+  return { ok: true };
+}
+
 /** Review-status van een gesignaleerde wijziging zetten (nieuw → verwerkt/afgewezen). */
 export async function setWijzigingStatus(id: string, status: string): Promise<Result> {
   const { supabase } = await requireUser();

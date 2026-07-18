@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { ReviewButtons } from "./review-buttons";
 import { AnalysePanel } from "./analyse-panel";
 import { BulkRejectIndicatie } from "./bulk-reject";
+import { VhpStatusControl } from "./vhp-status";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ type Wijziging = {
     titel?: string;
     status?: string;
     doctype?: string;
+    datum?: string | null;
     analyse?: {
       omgevingsplan_status: string;
       afwijking_richting: string;
@@ -116,6 +118,7 @@ export default async function RegelgevingPage({
   const gemeenten = (gRaw ?? []) as Gemeente[];
   const tijdlijn = (tRaw ?? []) as Tijdlijn[];
   const naamVan = new Map(gemeenten.map((g) => [g.slug, g.naam]));
+  const vhpStatusVan = new Map(gemeenten.map((g) => [g.slug, g.vhp_status ?? "onbekend"]));
   const wijzPerGemeente = new Map<string, number>();
   for (const w of wijzigingen)
     wijzPerGemeente.set(w.gemeente_slug, (wijzPerGemeente.get(w.gemeente_slug) ?? 0) + 1);
@@ -277,9 +280,17 @@ export default async function RegelgevingPage({
                   </div>
                   <ReviewButtons id={w.id} status={w.review_status} />
                 </div>
-                {/* De AI-analyse vergelijkt artikeltekst met de bruidsschat — dat past
-                    op de oude omgevingsplan-signalen, niet op een VHP-vaststelling. */}
-                {!w.type.startsWith("vhp_") && (
+                {/* VHP-rijen: zet de readinessstatus van de gemeente (mens beslist).
+                    Oude omgevingsplan-rijen: de bruidsschat-AI-analyse. */}
+                {w.type.startsWith("vhp_") ? (
+                  <VhpStatusControl
+                    gemeenteSlug={w.gemeente_slug}
+                    current={vhpStatusVan.get(w.gemeente_slug) ?? "onbekend"}
+                    datum={w.delta?.datum ?? null}
+                    bronUrl={w.bron_url}
+                    wijzigingId={w.id}
+                  />
+                ) : (
                   <AnalysePanel
                     id={w.id}
                     gemeenteSlug={w.gemeente_slug}
