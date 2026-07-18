@@ -18,6 +18,9 @@ type Wijziging = {
   delta: {
     zekerheid?: string;
     signalen?: string[];
+    titel?: string;
+    status?: string;
+    doctype?: string;
     analyse?: {
       omgevingsplan_status: string;
       afwijking_richting: string;
@@ -33,24 +36,43 @@ type Gemeente = {
   naam: string;
   dso_laatst_gepolld: string | null;
   dso_ontwerp_aanwezig: boolean;
-  omgevingsplan_status: string | null;
+  vhp_status: string | null;
   research_status: string;
 };
 
+type Tijdlijn = {
+  sleutel: string;
+  omschrijving: string;
+  datum: string | null;
+  status: string;
+  bron: string | null;
+};
+
 const TYPE_LABEL: Record<string, string> = {
+  // Actief (VHP-readiness)
+  vhp_vastgesteld: "VHP vastgesteld",
+  vhp_ontwerp: "VHP ontwerp",
+  onbekend: "Onbekend",
+  // Deprecated (oude omgevingsplan-content-monitoring; alleen historische rijen)
   ontwerp_nieuw: "Ontwerp (nieuw)",
   ontwerp_gewijzigd: "Ontwerp (gewijzigd)",
   vastgesteld_gewijzigd: "Vastgesteld",
   artikel_verdwenen: "Verplaatst / vervallen",
-  onbekend: "Onbekend",
 };
 const TYPE_STYLE: Record<string, string> = {
+  vhp_vastgesteld: "bg-green-100 text-green-800 ring-green-600/20",
+  vhp_ontwerp: "bg-violet-100 text-violet-800 ring-violet-600/20",
   artikel_verdwenen: "bg-red-100 text-red-700 ring-red-600/20",
   vastgesteld_gewijzigd: "bg-blue-100 text-blue-800 ring-blue-600/20",
   ontwerp_nieuw: "bg-violet-100 text-violet-800 ring-violet-600/20",
   ontwerp_gewijzigd: "bg-violet-100 text-violet-800 ring-violet-600/20",
   onbekend: "bg-slate-100 text-slate-600 ring-slate-400/20",
 };
+
+function datumKort(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("nl-NL", { month: "short", year: "numeric" });
+}
 
 function datumNL(iso: string | null): string {
   if (!iso) return "—";
@@ -85,9 +107,14 @@ export default async function RegelgevingPage({
     .from("gemeenten")
     .select("*")
     .order("naam", { ascending: true });
+  const { data: tRaw } = await (supabase as any)
+    .from("landelijke_tijdlijn")
+    .select("sleutel, omschrijving, datum, status, bron")
+    .order("datum", { ascending: true });
 
   const wijzigingen = (wRaw ?? []) as Wijziging[];
   const gemeenten = (gRaw ?? []) as Gemeente[];
+  const tijdlijn = (tRaw ?? []) as Tijdlijn[];
   const naamVan = new Map(gemeenten.map((g) => [g.slug, g.naam]));
   const wijzPerGemeente = new Map<string, number>();
   for (const w of wijzigingen)
@@ -102,7 +129,8 @@ export default async function RegelgevingPage({
 
   // Filter + prioriteitssortering: artikel_verdwenen eerst, hoog boven indicatie, nieuw eerst, datum.
   const typeRang: Record<string, number> = {
-    artikel_verdwenen: 0, vastgesteld_gewijzigd: 1, ontwerp_nieuw: 2, ontwerp_gewijzigd: 2, onbekend: 3,
+    vhp_vastgesteld: 0, vhp_ontwerp: 1, onbekend: 3,
+    artikel_verdwenen: 0, vastgesteld_gewijzigd: 1, ontwerp_nieuw: 2, ontwerp_gewijzigd: 2,
   };
   const statusRang: Record<string, number> = { nieuw: 0, verwerkt: 1, afgewezen: 2 };
   const signalen = wijzigingen
@@ -128,13 +156,33 @@ export default async function RegelgevingPage({
       <AppHeader email={user?.email} />
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Regelgeving</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Regelgeving — readiness per gemeente</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Monitoring van gemeentelijke wijzigingen in de vergunningvrij-regels voor
-            bijbehorende bouwwerken (bruidsschat). De poller signaleert; jij beoordeelt
-            en werkt de content bij.
+            De vergunningvrije mantelzorg-/familiewoning-regels worden <strong>landelijk</strong>{" "}
+            (Bbl art. 2.30b). Per gemeente verschilt alleen <strong>wanneer</strong> het ingaat — het
+            beste signaal daarvoor is de vaststelling van het volkshuisvestingsprogramma (VHP). De
+            poller signaleert die; jij beoordeelt en zet de readiness-status.
           </p>
         </div>
+
+        {tijdlijn.length > 0 && (
+          <div className="mb-5 flex flex-wrap gap-2">
+            {tijdlijn.map((t) => (
+              <div
+                key={t.sleutel}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+              >
+                <span className="font-semibold text-slate-900">{datumKort(t.datum)}</span>
+                <span className="text-slate-500">{t.omschrijving}</span>
+                {t.status !== "definitief" && (
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800">
+                    nog niet definitief
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mb-4 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
@@ -194,7 +242,15 @@ export default async function RegelgevingPage({
                       </span>
                     </div>
                     <div className="mt-0.5 text-sm text-slate-600">
-                      Vindplaats <span className="font-medium text-slate-800">{w.artikel}</span>
+                      {w.type.startsWith("vhp_") ? (
+                        <span className="font-medium text-slate-800">
+                          {w.delta?.titel ?? "Volkshuisvestingsprogramma"}
+                        </span>
+                      ) : (
+                        <>
+                          Vindplaats <span className="font-medium text-slate-800">{w.artikel}</span>
+                        </>
+                      )}
                       {zekerheid && (
                         <span
                           className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
@@ -221,13 +277,17 @@ export default async function RegelgevingPage({
                   </div>
                   <ReviewButtons id={w.id} status={w.review_status} />
                 </div>
-                <AnalysePanel
-                  id={w.id}
-                  gemeenteSlug={w.gemeente_slug}
-                  artikel={w.artikel}
-                  bronUrl={w.bron_url}
-                  initial={w.delta?.analyse ?? null}
-                />
+                {/* De AI-analyse vergelijkt artikeltekst met de bruidsschat — dat past
+                    op de oude omgevingsplan-signalen, niet op een VHP-vaststelling. */}
+                {!w.type.startsWith("vhp_") && (
+                  <AnalysePanel
+                    id={w.id}
+                    gemeenteSlug={w.gemeente_slug}
+                    artikel={w.artikel}
+                    bronUrl={w.bron_url}
+                    initial={w.delta?.analyse ?? null}
+                  />
+                )}
               </div>
             );
           })}
@@ -241,8 +301,8 @@ export default async function RegelgevingPage({
               <tr>
                 <th className="px-4 py-3 font-medium">Gemeente</th>
                 <th className="px-4 py-3 font-medium">Laatst gecontroleerd</th>
-                <th className="px-4 py-3 font-medium">Ontwerp open</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Status</th>
+                <th className="px-4 py-3 font-medium">Ontwerp-VHP</th>
+                <th className="hidden px-4 py-3 font-medium sm:table-cell">VHP-status</th>
                 <th className="px-4 py-3 font-medium">Signalen</th>
               </tr>
             </thead>
@@ -270,7 +330,19 @@ export default async function RegelgevingPage({
                     )}
                   </td>
                   <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
-                    {g.omgevingsplan_status || <span className="text-slate-300">—</span>}
+                    {g.vhp_status && g.vhp_status !== "onbekend" ? (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                          g.vhp_status === "vastgesteld"
+                            ? "bg-green-100 text-green-800 ring-green-600/20"
+                            : "bg-slate-100 text-slate-600 ring-slate-400/20"
+                        }`}
+                      >
+                        {g.vhp_status.replace("_", " ")}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-700">
                     {wijzPerGemeente.get(g.slug) ?? 0}
