@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { fetchArtikelTekst } from "@/lib/omgevingsplan-fetch";
+import { fetchVhpTekst } from "@/lib/vhp-fetch";
 import { analyseerArtikel, type GemeenteAnalyse } from "@/lib/gemeente-analyse";
+import { analyseerVhp, type VhpAnalyse } from "@/lib/vhp-analyse";
 import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 type Result = { ok: boolean; error?: string };
@@ -116,6 +118,44 @@ export async function analyseerWijziging(id: string): Promise<AnalyseResult> {
     const analyse = await analyseerArtikel(naam, w.artikel, bron.tekst);
     // Concept opslaan in delta zodat het een herlaad overleeft.
     const delta = { ...(w.delta ?? {}), analyse };
+    await (supabase as any).from("gemeente_wijzigingen").update({ delta }).eq("id", id);
+    revalidatePath("/regelgeving");
+    return { ok: true, analyse, bronUrl: bron.bronUrl };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "AI-analyse mislukt." };
+  }
+}
+
+type VhpAnalyseResult = { ok: boolean; error?: string; analyse?: VhpAnalyse; bronUrl?: string };
+
+/**
+ * AI-analyse van een VHP-signaal: haalt de échte publicatietekst op en laat Claude
+ * de twee kernvragen beantwoorden — is het vastgesteld (+ datum), en staan er
+ * bijzondere/afwijkende zaken in (mantelzorg/familie, lokale voorwaarden, welstand/
+ * beschermd). CONCEPT in delta.vhp_analyse; schrijft NIETS naar redactionele velden.
+ */
+export async function analyseerVhpWijziging(id: string): Promise<VhpAnalyseResult> {
+  const { supabase } = await requireUser();
+  const { data: w } = await (supabase as any)
+    .from("gemeente_wijzigingen")
+    .select("id, gemeente_slug, nieuwe_hash, delta")
+    .eq("id", id)
+    .maybeSingle();
+  if (!w) return { ok: false, error: "Signaal niet gevonden." };
+
+  const { data: g } = await (supabase as any)
+    .from("gemeenten")
+    .select("naam")
+    .eq("slug", w.gemeente_slug)
+    .maybeSingle();
+  const naam = g?.naam ?? w.gemeente_slug;
+
+  const bron = await fetchVhpTekst(w.nieuwe_hash);
+  if ("error" in bron) return { ok: false, error: bron.error };
+
+  try {
+    const analyse = await analyseerVhp(naam, bron.tekst);
+    const delta = { ...(w.delta ?? {}), vhp_analyse: analyse };
     await (supabase as any).from("gemeente_wijzigingen").update({ delta }).eq("id", id);
     revalidatePath("/regelgeving");
     return { ok: true, analyse, bronUrl: bron.bronUrl };

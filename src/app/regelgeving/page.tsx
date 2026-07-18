@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { ReviewButtons } from "./review-buttons";
 import { AnalysePanel } from "./analyse-panel";
 import { BulkRejectIndicatie } from "./bulk-reject";
-import { VhpStatusControl } from "./vhp-status";
+import { VhpPanel } from "./vhp-status";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,15 @@ type Wijziging = {
       afwijking_richting: string;
       afwijking_samenvatting: string;
       kernparameters?: { label: string; waarde: string }[];
+      citaten?: string[];
+    };
+    vhp_analyse?: {
+      vastgesteld: string;
+      vaststelling_datum?: string;
+      noemt_mantelzorg_familie: boolean;
+      mantelzorg_familie_samenvatting: string;
+      lokale_bijzonderheden: string;
+      welstand_beschermd: string;
       citaten?: string[];
     };
   } | null;
@@ -283,12 +292,13 @@ export default async function RegelgevingPage({
                 {/* VHP-rijen: zet de readinessstatus van de gemeente (mens beslist).
                     Oude omgevingsplan-rijen: de bruidsschat-AI-analyse. */}
                 {w.type.startsWith("vhp_") ? (
-                  <VhpStatusControl
+                  <VhpPanel
                     gemeenteSlug={w.gemeente_slug}
                     current={vhpStatusVan.get(w.gemeente_slug) ?? "onbekend"}
                     datum={w.delta?.datum ?? null}
                     bronUrl={w.bron_url}
                     wijzigingId={w.id}
+                    initialAnalyse={w.delta?.vhp_analyse ?? null}
                   />
                 ) : (
                   <AnalysePanel
