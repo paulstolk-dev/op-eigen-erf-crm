@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
-import { SequenceEditor } from "./sequence-editor";
+import { FlowInstellingen } from "./flow-instellingen";
 import { SenderForm } from "./sender-form";
 import { ManualSend } from "./manual-send";
 import {
@@ -11,8 +11,8 @@ import {
   DEFAULT_NURTURE_FROM,
   DEFAULT_NURTURE_REPLY_TO,
   DEFAULT_NURTURE_BCC,
+  parseNurtureFlow,
 } from "@/lib/settings";
-import type { EmailSequenceStep } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,7 @@ export default async function EmailFlowPage() {
     getSetting(SETTING_KEYS.nurtureReplyTo, DEFAULT_NURTURE_REPLY_TO),
     getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC),
   ]);
+  const flow = parseNurtureFlow(await getSetting(SETTING_KEYS.nurtureFlow));
 
   // Meetlaag-metrics per stap (via de user-client → is_allowed_user-guard in de RPC).
   type Metric = {
@@ -53,31 +54,16 @@ export default async function EmailFlowPage() {
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
-      <main className="mx-auto max-w-3xl px-4 py-6">
+      <main className="mx-auto max-w-5xl px-4 py-6">
         <Link href="/instellingen" className="text-sm text-slate-500 hover:text-navy">
           ← Terug naar instellingen
         </Link>
-        <div className="mb-5 mt-2">
-          <h1 className="text-lg font-semibold text-slate-900">E-mailflow (opvolging)</h1>
-          <p className="text-sm text-slate-500">
-            Automatische opvolgmails naar leads. De reeks start zodra je het
-            erfcheck-rapport naar de lead <strong>verstuurt</strong>; “Dag” is het
-            aantal dagen daarna. Leads met status gewonnen of verloren vallen
-            automatisch uit de reeks.
-          </p>
-          <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Merge-velden:{" "}
-            <code className="text-slate-700">{"{{voornaam}}"}</code>{" "}
-            <code className="text-slate-700">{"{{adres}}"}</code>{" "}
-            <code className="text-slate-700">{"{{verdict}}"}</code>{" "}
-            <code className="text-slate-700">{"{{perceel_m2}}"}</code>{" "}
-            <code className="text-slate-700">{"{{erfcheck_url}}"}</code>. Zet{" "}
-            <code className="text-slate-700">{"{{erfcheck_url}}"}</code> als CTA-link
-            (of in de tekst) om naar de persoonlijke, trackbare Erf Check-pagina van
-            de lead te verwijzen — een klik verschijnt als bezoek op de lead. Laat de
-            primaire knop/secundaire link leeg om die weg te laten. Tip: houd de
-            eerste stap (levering) op <em>inactief</em> — die verstuur je handmatig.
-          </p>
+
+        <div className="mb-6 mt-3">
+          <FlowInstellingen
+            steps={(steps ?? []) as unknown as Parameters<typeof FlowInstellingen>[0]["steps"]}
+            flow={flow}
+          />
         </div>
 
         <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5">
@@ -142,8 +128,6 @@ export default async function EmailFlowPage() {
             </div>
           )}
         </section>
-
-        <SequenceEditor steps={(steps ?? []) as EmailSequenceStep[]} />
       </main>
     </div>
   );

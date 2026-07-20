@@ -10,6 +10,8 @@ import {
   DEFAULT_NURTURE_FROM,
   DEFAULT_NURTURE_REPLY_TO,
   DEFAULT_NURTURE_BCC,
+  parseNurtureFlow,
+  type NurtureFlow,
 } from "@/lib/settings";
 import type { EmailSequenceStep } from "@/lib/database.types";
 
@@ -144,6 +146,31 @@ function mergeFor(row: ErfscanRow): MergeValues {
   };
 }
 
+// Toegestane erfcheck-conclusies o.b.v. de verdict-instelling (null = alle).
+function verdictSet(v: NurtureFlow["verdict"]): Set<string> | null {
+  if (v === "alle") return null;
+  if (v === "alleen_geschikt") return new Set(["groen"]);
+  return new Set(["groen", "oranje"]); // geschikt_twijfel
+}
+
+// Valt 'nu' (Europe/Amsterdam) binnen het ingestelde verzendvenster?
+function binnenVerzendvenster(flow: NurtureFlow): boolean {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Amsterdam",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const wd = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hh = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
+  const dayKey = ({ Mon: "ma", Tue: "di", Wed: "wo", Thu: "do", Fri: "vr", Sat: "za", Sun: "zo" } as Record<string, string>)[wd];
+  if (!dayKey || !flow.dagen[dayKey as keyof NurtureFlow["dagen"]]) return false;
+  const nu = `${hh}:${mm}`;
+  return nu >= flow.venster_van && nu <= flow.venster_tot;
+}
+
 // Verstuurt per lead maximaal één due-en-nog-niet-verzonden stap (paceert de
 // reeks, voorkomt bursts). Anker = het moment dat het rapport is verstuurd.
 export async function runNurture(opts?: {
@@ -155,6 +182,13 @@ export async function runNurture(opts?: {
   error?: string;
 }> {
   const admin = createAdminClient();
+
+  // Flow-instellingen (master aan/uit, verzendvenster, verdict-doelgroep).
+  const flow = parseNurtureFlow(await getSetting(SETTING_KEYS.nurtureFlow));
+  if (!flow.actief) return { ok: true, verstuurd: 0 };
+  if (!opts?.force && !binnenVerzendvenster(flow)) return { ok: true, verstuurd: 0 };
+  const verdictToegestaan = verdictSet(flow.verdict);
+  const clickedCache = new Map<string, Set<string>>();
 
   const { data: steps } = await admin
     .from("email_sequence_steps")
@@ -200,6 +234,8 @@ export async function runNurture(opts?: {
     if (!lead?.email || !row.sent_at) continue;
     if (lead.status === "gewonnen" || lead.status === "verloren") continue; // exit-on-conversion
     if (suppressed.has(lead.email.toLowerCase())) continue; // bounce/klacht/afmelding
+    // Doelgroep op erf-verdict: erf-ongeschikte leads (rood) standaard uitgesloten.
+    if (verdictToegestaan && !verdictToegestaan.has(row.conclusie ?? "")) continue;
 
     const anchor = new Date(row.sent_at).getTime();
     const v = mergeFor(row);
@@ -212,6 +248,25 @@ export async function runNurture(opts?: {
         (opts?.force || now >= anchor + st.dag_na_start * DAY),
     );
     if (!step) continue;
+
+    // Verzendconditie per stap. 'niet_geklikt_vorige' → alleen sturen als de lead
+    // de vorige stap NIET klikte (meetlaag). 'niet_geconverteerd' is gedekt door de
+    // gewonnen/verloren-uitsluiting hierboven. 'altijd' → geen extra check.
+    if ((step as { send_condition?: string }).send_condition === "niet_geklikt_vorige") {
+      const idx = steps.indexOf(step);
+      const prev = idx > 0 ? steps[idx - 1] : null;
+      if (prev) {
+        let clicked = clickedCache.get(row.lead_id);
+        if (!clicked) {
+          const { data: cl } = await (admin as any).rpc("nurture_clicked_step_ids", {
+            p_lead: row.lead_id,
+          });
+          clicked = new Set(((cl ?? []) as string[]));
+          clickedCache.set(row.lead_id, clicked);
+        }
+        if (clicked.has(prev.id)) continue; // vorige geklikt → deze stap overslaan
+      }
+    }
 
     const { subject, html } = renderNurtureEmail(step as EmailSequenceStep, v);
     const sent = await sendEmail({

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { setSetting, SETTING_KEYS } from "@/lib/settings";
+import { setSetting, SETTING_KEYS, type NurtureFlow } from "@/lib/settings";
 import { runNurture } from "@/lib/nurture";
 
 async function requireCrm() {
@@ -27,6 +27,9 @@ const stepSchema = z.object({
   cta_secondary_label: z.string().optional().transform((v) => v?.trim() || null),
   cta_secondary_url: z.string().optional().transform((v) => v?.trim() || null),
   actief: z.boolean().default(true),
+  send_condition: z
+    .enum(["altijd", "niet_geconverteerd", "niet_geklikt_vorige"])
+    .default("altijd"),
 });
 
 export type StepInput = z.input<typeof stepSchema>;
@@ -42,7 +45,8 @@ export async function saveStep(id: string, input: StepInput): Promise<Result> {
   const admin = createAdminClient();
   const { error } = await admin
     .from("email_sequence_steps")
-    .update(parsed.data)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(parsed.data as any) // send_condition (0031) staat nog niet in de gegenereerde types
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/instellingen/e-mailflow");
@@ -111,4 +115,44 @@ export async function deleteStep(id: string): Promise<Result> {
   if (error) return { ok: false, error: error.message };
   revalidatePath("/instellingen/e-mailflow");
   return { ok: true };
+}
+
+/** Verwissel de volgorde van een stap met zijn buur (omhoog = -1, omlaag = +1). */
+export async function reorderStep(id: string, dir: -1 | 1): Promise<Result> {
+  await requireCrm();
+  const admin = createAdminClient();
+  const { data: steps } = await admin
+    .from("email_sequence_steps")
+    .select("id, volgorde")
+    .order("volgorde", { ascending: true });
+  const list = steps ?? [];
+  const i = list.findIndex((s) => s.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return { ok: true };
+  const a = list[i];
+  const b = list[j];
+  // Wissel de volgorde-waarden (twee losse updates; kleine dataset).
+  const { error: e1 } = await admin
+    .from("email_sequence_steps")
+    .update({ volgorde: b.volgorde })
+    .eq("id", a.id);
+  const { error: e2 } = await admin
+    .from("email_sequence_steps")
+    .update({ volgorde: a.volgorde })
+    .eq("id", b.id);
+  if (e1 || e2) return { ok: false, error: (e1 || e2)!.message };
+  revalidatePath("/instellingen/e-mailflow");
+  return { ok: true };
+}
+
+/** Flow-instellingen (naam/actief/verdict/uitsluitingen/venster) opslaan. */
+export async function saveFlowSettings(flow: NurtureFlow): Promise<Result> {
+  await requireCrm();
+  try {
+    await setSetting(SETTING_KEYS.nurtureFlow, JSON.stringify(flow));
+    revalidatePath("/instellingen/e-mailflow");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Opslaan mislukt." };
+  }
 }

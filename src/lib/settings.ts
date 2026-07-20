@@ -28,6 +28,7 @@ export const SETTING_KEYS = {
   nurtureFrom: "nurture_from",
   nurtureReplyTo: "nurture_reply_to",
   nurtureBcc: "nurture_bcc",
+  nurtureFlow: "nurture_flow",
   partnerPitchSubject: "partner_pitch_subject",
   partnerPitchBody: "partner_pitch_body",
   partnerPitchCtaLabel: "partner_pitch_cta_label",
@@ -185,6 +186,45 @@ export const DEFAULT_NURTURE_REPLY_TO =
   process.env.NURTURE_REPLY_TO || "info@opeigenerf.nl";
 export const DEFAULT_NURTURE_BCC =
   process.env.NURTURE_BCC || "info@opeigenerf.nl";
+
+// Flow-instellingen voor de Erfcheck-nurture (opgeslagen als JSON in app_settings).
+// Verdict: 'alle' | 'geschikt_twijfel' | 'alleen_geschikt' (bepaalt welke leads
+// o.b.v. de erfcheck-conclusie in de flow komen). Venster = verzendtijdvenster.
+export type NurtureFlow = {
+  naam: string;
+  actief: boolean;
+  verdict: "alle" | "geschikt_twijfel" | "alleen_geschikt";
+  excl_klant: boolean;
+  excl_andere: boolean;
+  dagen: { ma: boolean; di: boolean; wo: boolean; do: boolean; vr: boolean; za: boolean; zo: boolean };
+  venster_van: string;
+  venster_tot: string;
+};
+
+export const DEFAULT_NURTURE_FLOW: NurtureFlow = {
+  naam: "Erfcheck-opvolging",
+  actief: true,
+  verdict: "geschikt_twijfel",
+  excl_klant: true,
+  excl_andere: true,
+  dagen: { ma: true, di: true, wo: true, do: true, vr: true, za: false, zo: false },
+  venster_van: "08:00",
+  venster_tot: "20:00",
+};
+
+export function parseNurtureFlow(raw: string | null | undefined): NurtureFlow {
+  if (!raw) return DEFAULT_NURTURE_FLOW;
+  try {
+    const v = JSON.parse(raw) as Partial<NurtureFlow>;
+    return {
+      ...DEFAULT_NURTURE_FLOW,
+      ...v,
+      dagen: { ...DEFAULT_NURTURE_FLOW.dagen, ...(v.dagen ?? {}) },
+    };
+  } catch {
+    return DEFAULT_NURTURE_FLOW;
+  }
+}
 
 export async function getSetting(
   key: string,
