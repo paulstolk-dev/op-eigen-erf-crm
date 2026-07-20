@@ -54,11 +54,16 @@ export async function runPartnerSequence(opts?: {
   const rows = (data ?? []) as AanbiederRow[];
   if (rows.length === 0) return { ok: true, verstuurd: 0 };
 
+  // Suppressie-lijst (bounces/klachten) — nooit meer mailen.
+  const { data: supp } = await (admin as any).rpc("nurture_suppressed_emails");
+  const suppressed = new Set(((supp ?? []) as string[]).map((e) => e.toLowerCase()));
+
   const now = Date.now();
   let verstuurd = 0;
 
   for (const a of rows) {
     if (!a.contact_email || !a.partner_pitch_last_at) continue;
+    if (suppressed.has(a.contact_email.toLowerCase())) continue;
     const last = new Date(a.partner_pitch_last_at).getTime();
 
     let nextStep = 0;
@@ -77,7 +82,7 @@ export async function runPartnerSequence(opts?: {
       naam: a.naam,
       contact_naam: a.contact_naam,
     });
-    const { ok } = await sendEmail({
+    const sent = await sendEmail({
       to: a.contact_email,
       subject,
       html,
@@ -85,13 +90,21 @@ export async function runPartnerSequence(opts?: {
       replyTo,
       ...(bcc ? { bcc } : {}),
     });
-    if (!ok) continue; // RESEND-fout → volgende run opnieuw
+    if (!sent.ok) continue; // RESEND-fout → volgende run opnieuw
 
     const sentAtIso = new Date().toISOString();
     await admin
       .from("aanbieders")
       .update({ partner_pitch_step: nextStep, partner_pitch_last_at: sentAtIso })
       .eq("id", a.id);
+    // Meetlaag: log de verzonden vervolgmail + Resend-id.
+    await (admin as any).rpc("nurture_log_partner_message", {
+      p_aanbieder: a.id,
+      p_stap: nextStep,
+      p_to: a.contact_email,
+      p_subject: subject,
+      p_pmid: sent.id,
+    });
     // Op de HubSpot-tijdlijn loggen (best-effort).
     await syncAanbiederToHubspot(a.id).catch(() => {});
     await logAanbiederEmail(a.id, {

@@ -14,6 +14,14 @@ export type PartnerData = {
   delay2: number;
   delay3: number;
 };
+export type PartnerMetric = {
+  stap: string;
+  verzonden: number;
+  bezorgd: number;
+  geklikt: number;
+  gebounced: number;
+  ctr_pct: number | null;
+};
 
 // Volledige stap-vorm (email_sequence_steps + send_condition uit migratie 0031).
 type Step = {
@@ -53,13 +61,19 @@ export function FlowInstellingen({
   steps,
   flow,
   partner,
+  partnerMetrics,
+  initialGroep,
 }: {
   steps: Step[];
   flow: NurtureFlow;
   partner: PartnerData;
+  partnerMetrics: PartnerMetric[];
+  initialGroep?: string;
 }) {
   const router = useRouter();
-  const [groep, setGroep] = useState("erfcheck");
+  const [groep, setGroep] = useState(
+    LEAD_GROEPEN.some((g) => g.key === initialGroep) ? (initialGroep as string) : "erfcheck",
+  );
   const [f, setF] = useState<NurtureFlow>(flow);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -210,7 +224,7 @@ export function FlowInstellingen({
               </div>
             </>
           ) : groep === "aanbieders" ? (
-            <PartnerView partner={partner} />
+            <PartnerView partner={partner} metrics={partnerMetrics} />
           ) : (
             <EmptyState groep={actieveGroep} />
           )}
@@ -322,7 +336,8 @@ function StepRow({
   );
 }
 
-function PartnerView({ partner }: { partner: PartnerData }) {
+function PartnerView({ partner, metrics }: { partner: PartnerData; metrics: PartnerMetric[] }) {
+  const totVerzonden = metrics.reduce((s, m) => s + Number(m.verzonden), 0);
   return (
     <>
       <div className="oe-panel">
@@ -355,6 +370,37 @@ function PartnerView({ partner }: { partner: PartnerData }) {
           delay2={partner.delay2}
           delay3={partner.delay3}
         />
+      </div>
+
+      <div className="oe-panel">
+        <div className="oe-panel-head">
+          <h2 className="oe-h2">Prestaties per pitch</h2>
+          <span className="oe-count">meetlaag (Resend)</span>
+        </div>
+        {totVerzonden === 0 ? (
+          <p className="oe-help" style={{ margin: 0 }}>
+            Nog geen gemeten pitch-verzendingen. Zodra de webhook events levert, verschijnen hier
+            bezorgd/geklikt/bounced per pitch-stap.
+          </p>
+        ) : (
+          <table className="oe-mtable">
+            <thead>
+              <tr><th>Stap</th><th>Verzonden</th><th>Bezorgd</th><th>Geklikt</th><th>Bounced</th><th>CTR</th></tr>
+            </thead>
+            <tbody>
+              {metrics.map((m) => (
+                <tr key={m.stap}>
+                  <td className="strong">{m.stap}</td>
+                  <td>{m.verzonden}</td>
+                  <td>{m.bezorgd}</td>
+                  <td className="click">{m.geklikt}</td>
+                  <td className={m.gebounced > 0 ? "bad" : ""}>{m.gebounced}</td>
+                  <td>{m.ctr_pct != null ? `${m.ctr_pct}%` : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );
@@ -489,5 +535,11 @@ const css = `
 .oe-empty{background:${C.card};border:1px solid ${C.line};border-radius:13px;padding:40px 28px;text-align:center;}
 .oe-empty-title{font-size:16px;font-weight:700;margin-bottom:8px;}
 .oe-empty-txt{font-size:13.5px;color:${C.mutedInk};max-width:460px;margin:0 auto;line-height:1.6;}
+.oe-mtable{width:100%;border-collapse:collapse;font-size:13px;}
+.oe-mtable th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:${C.muted};font-weight:600;padding:6px 10px 6px 0;}
+.oe-mtable td{padding:8px 10px 8px 0;border-top:1px solid ${C.line};color:${C.navy};}
+.oe-mtable td.strong{font-weight:600;}
+.oe-mtable td.click{font-weight:700;color:${C.sageDeep};}
+.oe-mtable td.bad{color:#B7452E;font-weight:600;}
 @media (max-width:820px){.oe-layout{grid-template-columns:1fr;}.oe-groups{position:static;}.oe-cta-grid{grid-template-columns:1fr;}}
 `;

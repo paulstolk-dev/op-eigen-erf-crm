@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { PartnerRow } from "./partner-row";
-import { PitchEditor } from "./pitch-editor";
-import { getPitchStep, getPitchDelays } from "@/lib/partner-pitch";
 import { PARTNER_STATUS, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
 
 export const dynamic = "force-dynamic";
@@ -33,12 +31,6 @@ export default async function PartnersPage() {
     )
     .order("naam", { ascending: true });
   const rows = (data ?? []) as Row[];
-  const [step1, step2, step3, delays] = await Promise.all([
-    getPitchStep(1),
-    getPitchStep(2),
-    getPitchStep(3),
-    getPitchDelays(),
-  ]);
 
   const telling = (s: string) => rows.filter((r) => r.partner_status === s).length;
 
@@ -73,21 +65,22 @@ export default async function PartnersPage() {
           ))}
         </div>
 
-        {/* Wervingssequence bewerken (3 mails + wachttijden) */}
-        <details className="mb-5 rounded-xl border border-slate-200 bg-white p-5">
-          <summary className="cursor-pointer text-base font-semibold text-slate-900">
-            Wervingssequence bewerken (3 mails + wachttijden)
-          </summary>
-          <div className="mt-4">
-            <PitchEditor
-              step1={step1}
-              step2={step2}
-              step3={step3}
-              delay2={delays.delay2}
-              delay3={delays.delay3}
-            />
+        {/* Wervingssequence beheer je centraal onder Instellingen → E-mailflow. */}
+        <Link
+          href="/instellingen/e-mailflow?groep=aanbieders"
+          className="mb-5 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 transition hover:border-navy/40 hover:shadow-sm"
+        >
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              Wervingssequence bewerken (3 mails + wachttijden)
+            </div>
+            <div className="mt-0.5 text-xs text-slate-500">
+              Beheer de pitch-mails + wachttijden centraal onder Instellingen → E-mailflow →
+              Aanbieder-werving, met prestaties (bezorgd/geklikt) per pitch.
+            </div>
           </div>
-        </details>
+          <span className="shrink-0 text-sm font-medium text-navy">Openen →</span>
+        </Link>
 
         {/* Tabel */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">

@@ -80,6 +80,12 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
   if (!a) return { ok: false, error: "Aanbieder niet gevonden." };
   if (!a.contact_email) return { ok: false, error: "Geen contact-e-mail ingevuld." };
 
+  // Nooit mailen naar een gesupprimeerd adres (bounce/klacht/afmelding).
+  const { data: supp } = await (admin as any).rpc("nurture_suppressed_emails");
+  if (((supp ?? []) as string[]).some((e) => e.toLowerCase() === a.contact_email!.toLowerCase())) {
+    return { ok: false, error: "Dit adres staat op de suppressie-lijst (bounce/klacht/afmelding)." };
+  }
+
   const pitch = await getPitch();
   const { subject, html } = renderPitch(pitch, {
     naam: a.naam,
@@ -92,7 +98,7 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
     getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC),
   ]);
 
-  const { ok } = await sendEmail({
+  const sent = await sendEmail({
     to: a.contact_email,
     subject,
     html,
@@ -100,7 +106,7 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
     replyTo,
     ...(bcc.trim() ? { bcc: bcc.trim() } : {}),
   });
-  if (!ok) return { ok: false, error: "Versturen mislukt (RESEND_API_KEY of adres?)." };
+  if (!sent.ok) return { ok: false, error: "Versturen mislukt (RESEND_API_KEY of adres?)." };
 
   const sentAtIso = new Date().toISOString();
   // Start (of herstart) de wervingssequence op stap 1; anker voor de vervolgmails.
@@ -113,6 +119,14 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
       partner_pitch_last_at: sentAtIso,
     })
     .eq("id", aanbiederId);
+  // Meetlaag: log de verzonden pitch + Resend-id (koppelt de webhooks).
+  await (admin as any).rpc("nurture_log_partner_message", {
+    p_aanbieder: aanbiederId,
+    p_stap: 1,
+    p_to: a.contact_email,
+    p_subject: subject,
+    p_pmid: sent.id,
+  });
   // Eerst company/contact (her)syncen, dan de verstuurde mail op de HubSpot-
   // tijdlijn loggen. Beide best-effort: HubSpot-fouten blokkeren de verzending niet.
   await syncAanbiederToHubspot(aanbiederId).catch(() => {});

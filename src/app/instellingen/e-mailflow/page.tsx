@@ -17,7 +17,12 @@ import { getPitchStep, getPitchDelays } from "@/lib/partner-pitch";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmailFlowPage() {
+export default async function EmailFlowPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ groep?: string }>;
+}) {
+  const { groep } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -67,6 +72,12 @@ export default async function EmailFlowPage() {
   const metrics = (metricsRaw ?? []) as Metric[];
   const totVerzonden = metrics.reduce((s, m) => s + Number(m.verzonden), 0);
 
+  // Partner-pitch-metrics (aanbieder-stroom) voor de FlowInstellingen.
+  const { data: pmRaw } = await (supabase as any).rpc("nurture_partner_performance");
+  const partnerMetrics = (pmRaw ?? []) as Parameters<
+    typeof FlowInstellingen
+  >[0]["partnerMetrics"];
+
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
@@ -80,6 +91,8 @@ export default async function EmailFlowPage() {
             steps={(steps ?? []) as unknown as Parameters<typeof FlowInstellingen>[0]["steps"]}
             flow={flow}
             partner={partner}
+            partnerMetrics={partnerMetrics}
+            initialGroep={groep}
           />
         </div>
 
