@@ -4,6 +4,16 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { NurtureFlow } from "@/lib/settings";
 import { saveFlowSettings, saveStep, addStep, deleteStep, reorderStep } from "./actions";
+import { PitchEditor } from "@/app/aanbieders/partners/pitch-editor";
+
+type PitchStep = { subject: string; body: string; ctaLabel: string; ctaUrl: string };
+export type PartnerData = {
+  step1: PitchStep;
+  step2: PitchStep;
+  step3: PitchStep;
+  delay2: number;
+  delay3: number;
+};
 
 // Volledige stap-vorm (email_sequence_steps + send_condition uit migratie 0031).
 type Step = {
@@ -24,6 +34,7 @@ type Step = {
 
 const LEAD_GROEPEN = [
   { key: "erfcheck", naam: "Erfcheck-lead", status: "actief", meta: "opvolgflow" },
+  { key: "aanbieders", naam: "Aanbieder-werving", status: "actief", meta: "3-mail wervingssequence" },
   { key: "modelofferte", naam: "Modelofferte-lead", status: "doorstuur", meta: "Directe doorstuur — geen nurture" },
   { key: "mijn_erfplan", naam: "Mijn Erfplan", status: "leeg", meta: "Nog niet ingesteld" },
   { key: "tuinkantoor", naam: "Tuinkantoor-ZZP", status: "leeg", meta: "Nog niet ingesteld" },
@@ -38,7 +49,15 @@ const CONDITIES: [string, string][] = [
 
 const DAG_KEYS: (keyof NurtureFlow["dagen"])[] = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 
-export function FlowInstellingen({ steps, flow }: { steps: Step[]; flow: NurtureFlow }) {
+export function FlowInstellingen({
+  steps,
+  flow,
+  partner,
+}: {
+  steps: Step[];
+  flow: NurtureFlow;
+  partner: PartnerData;
+}) {
   const router = useRouter();
   const [groep, setGroep] = useState("erfcheck");
   const [f, setF] = useState<NurtureFlow>(flow);
@@ -190,6 +209,8 @@ export function FlowInstellingen({ steps, flow }: { steps: Step[]; flow: Nurture
                 </div>
               </div>
             </>
+          ) : groep === "aanbieders" ? (
+            <PartnerView partner={partner} />
           ) : (
             <EmptyState groep={actieveGroep} />
           )}
@@ -298,6 +319,44 @@ function StepRow({
 
       <button className="oe-icon danger" onClick={onDelete} disabled={busy} aria-label="Stap verwijderen">✕</button>
     </div>
+  );
+}
+
+function PartnerView({ partner }: { partner: PartnerData }) {
+  return (
+    <>
+      <div className="oe-panel">
+        <div className="oe-panel-row">
+          <div className="oe-field grow">
+            <span className="oe-label">Naam van de flow</span>
+            <div className="oe-input" style={{ background: "#fff" }}>Aanbieder-werving</div>
+          </div>
+          <div className="oe-field">
+            <span className="oe-label">Conversiedoel</span>
+            <span className="oe-goal">Preferred partner</span>
+          </div>
+        </div>
+        <p className="oe-help" style={{ margin: "12px 0 0" }}>
+          Werving van aanbieders. Mail 1 stuur je handmatig per aanbieder (knop “Pitch sturen” bij
+          Aanbieders → Partners); mail 2 en 3 gaan daarna automatisch — mits de aanbieder op status
+          <strong> Benaderd</strong> staat. Reageert iemand (Geïnteresseerd/Partner/Afgewezen), dan stopt de reeks.
+        </p>
+      </div>
+
+      <div className="oe-panel">
+        <div className="oe-panel-head">
+          <h2 className="oe-h2">Stappen &amp; mails</h2>
+          <span className="oe-count">3 e-mails</span>
+        </div>
+        <PitchEditor
+          step1={partner.step1}
+          step2={partner.step2}
+          step3={partner.step3}
+          delay2={partner.delay2}
+          delay3={partner.delay3}
+        />
+      </div>
+    </>
   );
 }
 

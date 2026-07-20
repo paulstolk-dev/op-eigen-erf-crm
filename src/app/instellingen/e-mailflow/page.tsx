@@ -13,6 +13,7 @@ import {
   DEFAULT_NURTURE_BCC,
   parseNurtureFlow,
 } from "@/lib/settings";
+import { getPitchStep, getPitchDelays } from "@/lib/partner-pitch";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,21 @@ export default async function EmailFlowPage() {
     getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC),
   ]);
   const flow = parseNurtureFlow(await getSetting(SETTING_KEYS.nurtureFlow));
+
+  // Aanbieder-wervingssequence (3 pitch-mails + wachttijden) voor de FlowInstellingen.
+  const [pitch1, pitch2, pitch3, pitchDelays] = await Promise.all([
+    getPitchStep(1),
+    getPitchStep(2),
+    getPitchStep(3),
+    getPitchDelays(),
+  ]);
+  const partner = {
+    step1: pitch1,
+    step2: pitch2,
+    step3: pitch3,
+    delay2: pitchDelays.delay2,
+    delay3: pitchDelays.delay3,
+  };
 
   // Meetlaag-metrics per stap (via de user-client → is_allowed_user-guard in de RPC).
   type Metric = {
@@ -63,6 +79,7 @@ export default async function EmailFlowPage() {
           <FlowInstellingen
             steps={(steps ?? []) as unknown as Parameters<typeof FlowInstellingen>[0]["steps"]}
             flow={flow}
+            partner={partner}
           />
         </div>
 
