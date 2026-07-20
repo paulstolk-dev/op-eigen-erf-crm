@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
+  { href: "/email", label: "Email" },
   { href: "/socials", label: "Socials" },
   { href: "/website", label: "Website" },
   { href: "/regelgeving", label: "Regelgeving" },
@@ -42,7 +43,7 @@ export function ContentMenu() {
           actief ? "text-navy" : ""
         }`}
       >
-        Content
+        Marketing
         <svg
           viewBox="0 0 20 20"
           className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
