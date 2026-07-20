@@ -1,7 +1,11 @@
 import "server-only";
 
 // Thin Resend wrapper. No SDK dependency — uses the REST API directly so the
-// app builds without RESEND_API_KEY set. Returns false (no-op) when unconfigured.
+// app builds without RESEND_API_KEY set. Returns { ok, id }: `id` is de Resend
+// email-id, waarmee de nurture-meetlaag de webhook-events koppelt. `ok=false`
+// (no-op) wanneer RESEND_API_KEY ontbreekt of Resend een fout geeft.
+export type SendResult = { ok: boolean; id: string | null };
+
 export async function sendEmail(opts: {
   to: string;
   subject: string;
@@ -10,11 +14,11 @@ export async function sendEmail(opts: {
   bcc?: string;
   replyTo?: string;
   attachments?: { filename: string; content: string }[]; // content = base64
-}): Promise<boolean> {
+}): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("[email] RESEND_API_KEY not set — skipping send:", opts.subject);
-    return false;
+    return { ok: false, id: null };
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -34,7 +38,8 @@ export async function sendEmail(opts: {
   });
   if (!res.ok) {
     console.error("[email] Resend error", res.status, await res.text());
-    return false;
+    return { ok: false, id: null };
   }
-  return true;
+  const data = (await res.json().catch(() => null)) as { id?: string } | null;
+  return { ok: true, id: data?.id ?? null };
 }

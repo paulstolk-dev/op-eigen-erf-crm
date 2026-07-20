@@ -92,7 +92,7 @@ export async function verstuurPitch(aanbiederId: string): Promise<Result> {
     getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC),
   ]);
 
-  const ok = await sendEmail({
+  const { ok } = await sendEmail({
     to: a.contact_email,
     subject,
     html,

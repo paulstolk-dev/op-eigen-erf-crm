@@ -35,6 +35,21 @@ export default async function EmailFlowPage() {
     getSetting(SETTING_KEYS.nurtureBcc, DEFAULT_NURTURE_BCC),
   ]);
 
+  // Meetlaag-metrics per stap (via de user-client → is_allowed_user-guard in de RPC).
+  type Metric = {
+    step_order: number;
+    subject: string;
+    verzonden: number;
+    bezorgd: number;
+    geopend: number;
+    geklikt: number;
+    gebounced: number;
+    ctr_pct: number | null;
+  };
+  const { data: metricsRaw } = await (supabase as any).rpc("nurture_step_performance");
+  const metrics = (metricsRaw ?? []) as Metric[];
+  const totVerzonden = metrics.reduce((s, m) => s + Number(m.verzonden), 0);
+
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
@@ -75,6 +90,58 @@ export default async function EmailFlowPage() {
         <div className="mb-4">
           <ManualSend />
         </div>
+
+        <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold text-slate-900">Prestaties per stap</h2>
+          <p className="mt-0.5 mb-3 text-xs text-slate-500">
+            Meetlaag op basis van Resend-events. <strong>Stuur op klikken</strong>, niet op
+            opens: Apple Mail &amp; Gmail prefetchen de tracking-pixel, dus opens zijn
+            onbetrouwbaar (CTR staat daarom op <em>bezorgd</em>).
+          </p>
+          {totVerzonden === 0 ? (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-400">
+              Nog geen gemeten verzendingen. Zodra de webhook events levert, verschijnen
+              hier bezorgd/geklikt/bounced per stap.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="py-2 pr-3 font-medium">#</th>
+                    <th className="py-2 pr-3 font-medium">Onderwerp</th>
+                    <th className="py-2 pr-3 font-medium">Verzonden</th>
+                    <th className="py-2 pr-3 font-medium">Bezorgd</th>
+                    <th className="py-2 pr-3 font-medium">Geklikt</th>
+                    <th className="py-2 pr-3 font-medium">Bounced</th>
+                    <th className="py-2 pr-3 font-medium">CTR</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {metrics.map((m) => (
+                    <tr key={m.step_order}>
+                      <td className="py-2 pr-3 text-slate-500">{m.step_order}</td>
+                      <td className="py-2 pr-3 font-medium text-slate-800">{m.subject}</td>
+                      <td className="py-2 pr-3 text-slate-700">{m.verzonden}</td>
+                      <td className="py-2 pr-3 text-slate-700">{m.bezorgd}</td>
+                      <td className="py-2 pr-3 font-semibold text-navy">{m.geklikt}</td>
+                      <td className="py-2 pr-3 text-slate-700">
+                        {m.gebounced > 0 ? (
+                          <span className="text-red-600">{m.gebounced}</span>
+                        ) : (
+                          m.gebounced
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-slate-700">
+                        {m.ctr_pct != null ? `${m.ctr_pct}%` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         <SequenceEditor steps={(steps ?? []) as EmailSequenceStep[]} />
       </main>

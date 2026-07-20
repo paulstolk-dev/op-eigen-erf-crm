@@ -179,6 +179,12 @@ export async function runNurture(opts?: {
     .select("lead_id, step_id");
   const gedaan = new Set((sends ?? []).map((s) => `${s.lead_id}:${s.step_id}`));
 
+  // Suppressie-lijst (bounces/klachten/afmeldingen) — nooit meer mailen.
+  const { data: supp } = await (admin as any).rpc("nurture_suppressed_emails");
+  const suppressed = new Set(
+    ((supp ?? []) as string[]).map((e) => e.toLowerCase()),
+  );
+
   // Afzender + reply-to + bcc zijn instelbaar via de UI (app_settings); anders env/default.
   const from = await getSetting(SETTING_KEYS.nurtureFrom, DEFAULT_NURTURE_FROM);
   const replyTo = await getSetting(
@@ -193,6 +199,7 @@ export async function runNurture(opts?: {
     const lead = row.leads;
     if (!lead?.email || !row.sent_at) continue;
     if (lead.status === "gewonnen" || lead.status === "verloren") continue; // exit-on-conversion
+    if (suppressed.has(lead.email.toLowerCase())) continue; // bounce/klacht/afmelding
 
     const anchor = new Date(row.sent_at).getTime();
     const v = mergeFor(row);
@@ -207,7 +214,7 @@ export async function runNurture(opts?: {
     if (!step) continue;
 
     const { subject, html } = renderNurtureEmail(step as EmailSequenceStep, v);
-    const ok = await sendEmail({
+    const sent = await sendEmail({
       to: lead.email,
       subject,
       html,
@@ -215,11 +222,19 @@ export async function runNurture(opts?: {
       replyTo,
       ...(bcc ? { bcc } : {}),
     });
-    if (!ok) continue; // RESEND niet gezet of fout -> later opnieuw proberen
+    if (!sent.ok) continue; // RESEND niet gezet of fout -> later opnieuw proberen
 
     await admin
       .from("email_sequence_sends")
       .insert({ lead_id: row.lead_id, step_id: step.id });
+    // Meetlaag: log het verzonden bericht + het Resend-id (koppelt de webhooks).
+    await (admin as any).rpc("nurture_log_message", {
+      p_lead: row.lead_id,
+      p_step: step.id,
+      p_to: lead.email,
+      p_subject: subject,
+      p_pmid: sent.id,
+    });
     // Verstuurde mail op de HubSpot-tijdlijn van het contact + de deal loggen.
     const logged = await logLeadEmail(row.lead_id, {
       subject,

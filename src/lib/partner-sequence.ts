@@ -77,7 +77,7 @@ export async function runPartnerSequence(opts?: {
       naam: a.naam,
       contact_naam: a.contact_naam,
     });
-    const ok = await sendEmail({
+    const { ok } = await sendEmail({
       to: a.contact_email,
       subject,
       html,
