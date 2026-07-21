@@ -108,11 +108,13 @@ function ReportPdf({
   erfscan,
   content,
   luchtfoto,
+  ingetekend,
   scanUrl,
 }: {
   erfscan: Erfscan;
   content: ReportContent;
   luchtfoto: string | null;
+  ingetekend: boolean;
   scanUrl: string;
 }) {
   const d = (erfscan.dossier ?? {}) as Record<string, any>;
@@ -153,7 +155,9 @@ function ReportPdf({
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image src={luchtfoto} style={s.foto} />
             <Text style={s.fotoBron}>
-              Luchtfoto · bron: PDOK (Beeldmateriaal Nederland)
+              {ingetekend
+                ? "Luchtfoto met ingetekend erf · bron: PDOK (Beeldmateriaal Nederland)"
+                : "Luchtfoto · bron: PDOK (Beeldmateriaal Nederland)"}
             </Text>
           </>
         ) : null}
@@ -240,19 +244,22 @@ export async function renderReportPdf(
   content: ReportContent,
 ): Promise<Buffer> {
   const scanUrl = buildScanUrl(lead);
-  // Luchtfoto uit de privé-bucket ophalen en als data-URI insluiten.
+  // Voorkeur: de ingetekende foto (luchtfoto + kadaster + het getekende erf op
+  // één canvas). Is er niet ingetekend, dan de kale luchtfoto.
+  const ingetekend = Boolean(erfscan.tekening_path);
+  const fotoPath = erfscan.tekening_path ?? erfscan.luchtfoto_path;
   let luchtfoto: string | null = null;
-  if (erfscan.luchtfoto_path) {
+  if (fotoPath) {
     try {
       const admin = createAdminClient();
       const { data: blob } = await admin.storage
         .from("erfscans")
-        .download(erfscan.luchtfoto_path);
+        .download(fotoPath);
       if (blob) {
         const buf = Buffer.from(await blob.arrayBuffer());
         // Mime moet kloppen (engine slaat png óf jpg op), anders rendert de
         // afbeelding niet.
-        const p = erfscan.luchtfoto_path.toLowerCase();
+        const p = fotoPath.toLowerCase();
         const mime =
           blob.type && blob.type.startsWith("image/")
             ? blob.type
@@ -270,6 +277,7 @@ export async function renderReportPdf(
       erfscan={erfscan}
       content={content}
       luchtfoto={luchtfoto}
+      ingetekend={ingetekend && luchtfoto !== null}
       scanUrl={scanUrl}
     />,
   );

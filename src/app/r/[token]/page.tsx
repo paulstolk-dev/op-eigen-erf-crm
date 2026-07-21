@@ -57,11 +57,15 @@ export default async function ErfcheckPage({
   const c = CONCLUSIE[con] ?? CONCLUSIE.oranje;
   const scanUrl = buildScanUrl(lead);
 
+  // Voorkeur: de ingetekende foto (luchtfoto + kadaster + getekend erf op één
+  // canvas). Is er niet ingetekend, dan de kale luchtfoto.
+  const ingetekend = Boolean(erfscan.tekening_path);
+  const fotoPath = erfscan.tekening_path ?? erfscan.luchtfoto_path;
   let luchtfotoUrl: string | null = null;
-  if (erfscan.luchtfoto_path) {
+  if (fotoPath) {
     const { data: signed } = await admin.storage
       .from("erfscans")
-      .createSignedUrl(erfscan.luchtfoto_path, 3600);
+      .createSignedUrl(fotoPath, 3600);
     luchtfotoUrl = signed?.signedUrl ?? null;
   }
 
@@ -118,11 +122,13 @@ export default async function ErfcheckPage({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={luchtfotoUrl}
-                alt="Luchtfoto van het perceel"
+                alt={ingetekend ? "Luchtfoto met ingetekend erf" : "Luchtfoto van het perceel"}
                 className="aspect-square w-full rounded-xl object-cover"
               />
               <p className="mt-1 text-[11px] text-slate-400">
-                Luchtfoto · bron: PDOK (Beeldmateriaal Nederland)
+                {ingetekend
+                  ? "Luchtfoto met ingetekend erf · bron: PDOK (Beeldmateriaal Nederland)"
+                  : "Luchtfoto · bron: PDOK (Beeldmateriaal Nederland)"}
               </p>
             </div>
           )}
