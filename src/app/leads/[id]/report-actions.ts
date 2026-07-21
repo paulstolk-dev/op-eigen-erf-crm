@@ -104,7 +104,7 @@ export async function sendReport(leadId: string): Promise<Result> {
     <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${buttonLabel}</a>
   </td></tr></table>`;
   const html = toHtml(erfscan.draft_email_body || "") + button;
-  const fromEmail = process.env.REPORT_FROM_EMAIL || "opeigenerf <noreply@opeigenerf.nl>";
+  const fromEmail = process.env.REPORT_FROM_EMAIL || "opeigenerf <info@opeigenerf.nl>";
   const cleanSubject = erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl";
 
   const res = await fetch("https://api.resend.com/emails", {
