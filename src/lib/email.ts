@@ -27,7 +27,7 @@ export async function sendEmail(opts: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: opts.from ?? "opeigenerf <noreply@opeigenerf.nl>",
+      from: opts.from ?? "opeigenerf <info@opeigenerf.nl>",
       to: opts.to,
       subject: opts.subject,
       html: opts.html,

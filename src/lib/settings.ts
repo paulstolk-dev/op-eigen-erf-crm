@@ -181,7 +181,7 @@ export const DEFAULT_PARTNER_PITCH_DELAY3 = "14";
 export const DEFAULT_NURTURE_FROM =
   process.env.NURTURE_FROM_EMAIL ||
   process.env.REPORT_FROM_EMAIL ||
-  "opeigenerf <noreply@opeigenerf.nl>";
+  "opeigenerf <info@opeigenerf.nl>";
 export const DEFAULT_NURTURE_REPLY_TO =
   process.env.NURTURE_REPLY_TO || "info@opeigenerf.nl";
 export const DEFAULT_NURTURE_BCC =
