@@ -123,6 +123,9 @@ export async function sendReport(leadId: string): Promise<Result> {
     }),
   });
   if (!res.ok) return { ok: false, error: `Resend: ${await res.text()}` };
+  // Resend-email-id: koppelt de nurture-meetlaag aan de webhook-events (open/klik).
+  const providerMessageId =
+    ((await res.json().catch(() => null)) as { id?: string } | null)?.id ?? null;
 
   const sentAtIso = new Date().toISOString();
 
@@ -143,6 +146,24 @@ export async function sendReport(leadId: string): Promise<Result> {
     .from("erfscans")
     .update({ status: "sent", sent_at: sentAtIso })
     .eq("lead_id", leadId);
+
+  // Meetlaag: de Erf Check-mail loggen (stroom 'erfcheck', geen flow-stap) zodat hij
+  // én z'n opens/kliks via de Resend-webhook meetellen in de nurture-statistieken.
+  // Best-effort en niet in testmodus (dan gaat de mail naar het testadres).
+  if (!testTo && lead?.email && providerMessageId) {
+    try {
+      await (admin as any).rpc("nurture_log_message", {
+        p_lead: leadId,
+        p_step: null,
+        p_to: lead.email,
+        p_subject: cleanSubject,
+        p_pmid: providerMessageId,
+      });
+    } catch {
+      /* meetlaag-log mag de verzending nooit blokkeren */
+    }
+  }
+
   revalidatePath(`/leads/${leadId}`);
   return { ok: true };
 }
