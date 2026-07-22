@@ -356,7 +356,7 @@ export default async function LeadDetailPage({
               </dl>
             </div>
 
-            {(lead.voor_wie || lead.termijn) && (
+            {lead.voor_wie && (
               <div className="rounded-xl border border-erf/30 bg-erf/5 p-5">
                 <div className="mb-4 flex items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold text-slate-900">
@@ -375,7 +375,6 @@ export default async function LeadDetailPage({
                 </div>
                 <dl className="grid grid-cols-2 gap-4">
                   <Field label="Voor wie" value={lead.voor_wie} />
-                  <Field label="Termijn" value={lead.termijn} />
                 </dl>
               </div>
             )}

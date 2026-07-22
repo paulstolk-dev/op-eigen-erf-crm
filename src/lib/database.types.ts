@@ -832,7 +832,6 @@ export type Database = {
           terugbel_verzoek_at: string | null
           terugbel_notitie: string | null
           voor_wie: string | null
-          termijn: string | null
           advies_intake_at: string | null
           grootte_m2: number | null
           estimated_size: string | null
@@ -861,7 +860,6 @@ export type Database = {
           terugbel_verzoek_at?: string | null
           terugbel_notitie?: string | null
           voor_wie?: string | null
-          termijn?: string | null
           advies_intake_at?: string | null
           grootte_m2?: number | null
           estimated_size?: string | null
@@ -890,7 +888,6 @@ export type Database = {
           terugbel_verzoek_at?: string | null
           terugbel_notitie?: string | null
           voor_wie?: string | null
-          termijn?: string | null
           advies_intake_at?: string | null
           grootte_m2?: number | null
           estimated_size?: string | null
