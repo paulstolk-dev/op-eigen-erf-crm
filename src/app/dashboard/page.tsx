@@ -90,9 +90,15 @@ export default async function DashboardPage({
   );
 
   // Alleen erfcheck-leads binnen de gekozen periode meetellen (besluit-alerts
-  // en andere niet-erfcheck-types tellen niet mee in de statistieken).
+  // en andere niet-erfcheck-types tellen niet mee in de statistieken). Handmatig
+  // uitgesloten test-leads (excluded_from_stats) tellen ook niet mee.
   const rows = (leads ?? [])
-    .filter((lead) => lead.type === "erfcheck" && inRange(lead.created_at))
+    .filter(
+      (lead) =>
+        lead.type === "erfcheck" &&
+        !lead.excluded_from_stats &&
+        inRange(lead.created_at),
+    )
     .map((lead) => {
       const erfscan = erfscanByLead.get(lead.id) ?? null;
       return { lead: lead as Lead, erfscan, score: scoreLead(lead as Lead, erfscan) };

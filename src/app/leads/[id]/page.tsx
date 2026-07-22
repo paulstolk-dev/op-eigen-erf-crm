@@ -8,6 +8,7 @@ import { typeLabel, erfscanStatusLabel, ERFSCAN_STATUS_STYLES } from "@/lib/cons
 import { StatusSelect } from "./status-select";
 import { NaamEditor } from "./naam-editor";
 import { DeleteLeadButton } from "./delete-lead-button";
+import { ExcludeLeadButton } from "./exclude-lead-button";
 import { DeelPaneel } from "./deel-paneel";
 import { HubspotPanel } from "./hubspot-panel";
 import { NurturePanel } from "./nurture-panel";
@@ -213,6 +214,11 @@ export default async function LeadDetailPage({
                   {erfscanStatusLabel(erfscan.status)}
                 </span>
               )}
+              {lead.excluded_from_stats && (
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                  Uitgesloten van dashboard
+                </span>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -220,6 +226,10 @@ export default async function LeadDetailPage({
               <span className="text-sm text-slate-500">Status wijzigen:</span>
               <StatusSelect leadId={lead.id} current={lead.status} />
             </div>
+            <ExcludeLeadButton
+              leadId={lead.id}
+              excluded={!!lead.excluded_from_stats}
+            />
             <DeleteLeadButton
               leadId={lead.id}
               leadNaam={

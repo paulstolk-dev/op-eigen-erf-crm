@@ -68,6 +68,25 @@ export async function deleteNote(noteId: string, leadId: string) {
   revalidatePath(`/leads/${leadId}`);
 }
 
+// Een (test-)lead uit- of insluiten in de dashboard-telling. De lead blijft
+// gewoon in de leadslijst en de nurture-flow staan; alleen de statistieken
+// negeren 'm.
+export async function setLeadExcluded(
+  leadId: string,
+  excluded: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  const { supabase } = await requireUser();
+  const { error } = await (supabase as any)
+    .from("leads")
+    .update({ excluded_from_stats: excluded })
+    .eq("id", leadId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/dashboard");
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
 export async function deleteLead(leadId: string) {
   const { supabase } = await requireUser();
   const { error } = await supabase.from("leads").delete().eq("id", leadId);

@@ -837,6 +837,7 @@ export type Database = {
           estimated_size: string | null
           updated_at: string
           voornaam: string | null
+          excluded_from_stats: boolean
         }
         Insert: {
           achternaam?: string | null
@@ -865,6 +866,7 @@ export type Database = {
           estimated_size?: string | null
           updated_at?: string
           voornaam?: string | null
+          excluded_from_stats?: boolean
         }
         Update: {
           achternaam?: string | null
@@ -893,6 +895,7 @@ export type Database = {
           estimated_size?: string | null
           updated_at?: string
           voornaam?: string | null
+          excluded_from_stats?: boolean
         }
         Relationships: []
       }

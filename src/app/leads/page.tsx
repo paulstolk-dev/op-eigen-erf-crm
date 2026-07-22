@@ -180,6 +180,14 @@ export default async function LeadsPage() {
                       >
                         {naam}
                       </Link>
+                      {lead.excluded_from_stats && (
+                        <span
+                          title="Uitgesloten van de dashboard-telling"
+                          className="ml-2 inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800"
+                        >
+                          Test
+                        </span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                       {datum(lead.created_at)}
