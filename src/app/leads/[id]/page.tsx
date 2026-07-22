@@ -18,6 +18,7 @@ import { ErfKaart } from "./erf-kaart";
 import { saveErfTekening, uploadErfSnapshot } from "./erf-actions";
 import { ErfscanReview } from "./erfscan-review";
 import { ReportPanel } from "./report-panel";
+import { portalBaseUrl } from "@/lib/portaal-magic-link";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead, SCORE_ACTIE } from "@/lib/lead-score";
 import type { Lead, LeadNote, Erfscan } from "@/lib/database.types";
@@ -301,7 +302,7 @@ export default async function LeadDetailPage({
                   draftBody={erfscan.draft_email_body ?? ""}
                   pdfUrl={reportPdfUrl}
                   leadEmail={lead.email}
-                  pageUrl={`${(process.env.NEXT_PUBLIC_SITE_URL || "https://crm.opeigenerf.nl").replace(/\/$/, "")}/r/${lead.report_token}`}
+                  pageUrl={`${portalBaseUrl()}/mijn/erf?erf=${lead.report_token}`}
                   viewCount={erfscan.view_count ?? 0}
                   lastViewedAt={erfscan.last_viewed_at}
                   terugbelAt={lead.terugbel_verzoek_at}
