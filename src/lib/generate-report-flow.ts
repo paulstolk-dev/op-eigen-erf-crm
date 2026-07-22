@@ -1,8 +1,13 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateReportContent } from "@/lib/generate-report";
 import { renderReportPdf } from "@/app/leads/[id]/report-pdf";
+import {
+  buildErfcheckMerge,
+  fillErfcheckTemplate,
+  ERFCHECK_FIRST_SUBJECT,
+  ERFCHECK_FIRST_BODY,
+} from "@/lib/erfcheck-email";
 import type { ReportContent } from "@/lib/report-schema";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
@@ -99,8 +104,28 @@ export async function runReportGeneration(
     }
   }
 
-  const content = await generateReportContent(lead, eff);
+  // De compacte PDF gebruikt uit de content alleen de conclusie (rest is
+  // dossier-gedreven), dus die kunnen we deterministisch samenstellen — geen LLM.
+  const content = stubContent(eff);
   const pdf = await renderReportPdf(lead, eff, content);
+
+  // Concept-mail = de vaste eerste-mail-template, gevuld met de leadgegevens.
+  const d = (eff.dossier ?? {}) as {
+    locatie?: { weergavenaam?: string };
+    perceel?: { oppervlakte_m2?: number };
+  };
+  const merge = buildErfcheckMerge({
+    voornaam: lead.voornaam,
+    naam: lead.naam,
+    postcode: lead.postcode,
+    huisnummer: lead.huisnummer,
+    report_token: lead.report_token,
+    conclusie: eff.conclusie,
+    weergavenaam: d.locatie?.weergavenaam ?? null,
+    oppervlakte_m2: d.perceel?.oppervlakte_m2 ?? null,
+  });
+  const draftSubject = fillErfcheckTemplate(ERFCHECK_FIRST_SUBJECT, merge);
+  const draftBody = fillErfcheckTemplate(ERFCHECK_FIRST_BODY, merge);
 
   const path = `${leadId}/rapport.pdf`;
   const { error: upErr } = await admin.storage
@@ -119,8 +144,8 @@ export async function runReportGeneration(
     .update({
       status: "rendered",
       report_pdf_path: path,
-      draft_email_subject: content.concept_mail.onderwerp,
-      draft_email_body: content.concept_mail.body,
+      draft_email_subject: draftSubject,
+      draft_email_body: draftBody,
     })
     .eq("lead_id", leadId);
   if (error) return { ok: false, error: error.message };

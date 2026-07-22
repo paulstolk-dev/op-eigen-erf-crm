@@ -109,11 +109,18 @@ export async function sendReport(leadId: string): Promise<Result> {
         l: "erfcheck-mijn-erf",
       }).toString()}`
     : erfUrl;
-  const buttonLabel = "Bekijk je Erf Check online »";
-  const button = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
-    <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${buttonLabel}</a>
+  const bodyText = erfscan.draft_email_body || "";
+  // De mailtemplate bevat de erfcheck-link doorgaans al inline (de /l/-tracker naar
+  // /mijn/erf); alleen als die ontbreekt plakken we er een knop onder (geen dubbele link).
+  const heeftLink =
+    bodyText.includes("/mijn/erf") ||
+    (token ? bodyText.includes(`/l/${token}`) || bodyText.includes(`/r/${token}`) : false);
+  const button = heeftLink
+    ? ""
+    : `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
+    <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">Bekijk je Erf Check online »</a>
   </td></tr></table>`;
-  const html = toHtml(erfscan.draft_email_body || "") + button;
+  const html = toHtml(bodyText) + button;
   const fromEmail = process.env.REPORT_FROM_EMAIL || "opeigenerf <info@opeigenerf.nl>";
   const cleanSubject = erfscan.draft_email_subject || "Je Erf Check van opeigenerf.nl";
 

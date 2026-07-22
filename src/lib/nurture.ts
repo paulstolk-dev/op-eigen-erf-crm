@@ -13,24 +13,16 @@ import {
   parseNurtureFlow,
   type NurtureFlow,
 } from "@/lib/settings";
+import {
+  buildErfcheckMerge,
+  fillErfcheckTemplate,
+  type ErfcheckMerge,
+} from "@/lib/erfcheck-email";
 import type { EmailSequenceStep } from "@/lib/database.types";
-
-const VERDICT: Record<string, string> = {
-  groen: "Kansrijk",
-  oranje: "Twijfelachtig",
-  rood: "Complex",
-};
 
 const DAY = 86_400_000;
 
-type MergeValues = {
-  voornaam: string;
-  adres: string;
-  verdict: string;
-  perceel_m2: string;
-  erfcheck_url: string;
-  token: string;
-};
+type MergeValues = ErfcheckMerge;
 
 // Herschrijft een externe link naar de klik-redirect /l/<token>?u=…&l=<label>, zodat
 // een klik als bezoek op de lead wordt geregistreerd. CRM-eigen links (bijv. de
@@ -53,15 +45,7 @@ function trackedHref(v: MergeValues, rawUrl: string, label: string): string {
   return `${base}/l/${v.token}?${q.toString()}`;
 }
 
-function applyMerge(text: string, v: MergeValues): string {
-  return text
-    .replace(/\{\{\s*voornaam\s*\}\}/g, v.voornaam)
-    .replace(/\{\{\s*adres\s*\}\}/g, v.adres)
-    .replace(/\{\{\s*verdict\s*\}\}/g, v.verdict)
-    .replace(/\{\{\s*perceel_m2\s*\}\}/g, v.perceel_m2)
-    .replace(/\{\{\s*erfcheck_url\s*\}\}/g, v.erfcheck_url)
-    .replace(/Hoi\s+,/g, "Hoi,"); // nette aanhef als voornaam ontbreekt
-}
+const applyMerge = fillErfcheckTemplate;
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -131,19 +115,16 @@ function mergeFor(row: ErfscanRow): MergeValues {
     perceel?: { oppervlakte_m2?: number };
   };
   const lead = row.leads!;
-  const adres =
-    d.locatie?.weergavenaam ||
-    [lead.postcode, lead.huisnummer].filter(Boolean).join(" ") ||
-    "je erf";
-  const opp = d.perceel?.oppervlakte_m2;
-  return {
-    voornaam: lead.voornaam || lead.naam?.split(" ")[0] || "",
-    adres,
-    verdict: row.conclusie ? VERDICT[row.conclusie] ?? row.conclusie : "nog te bepalen",
-    perceel_m2: opp != null ? `± ${opp} m²` : "n.b.",
-    erfcheck_url: lead.report_token ? `${reportBaseUrl()}/r/${lead.report_token}` : "",
-    token: lead.report_token ?? "",
-  };
+  return buildErfcheckMerge({
+    voornaam: lead.voornaam,
+    naam: lead.naam,
+    postcode: lead.postcode,
+    huisnummer: lead.huisnummer,
+    report_token: lead.report_token,
+    conclusie: row.conclusie,
+    weergavenaam: d.locatie?.weergavenaam ?? null,
+    oppervlakte_m2: d.perceel?.oppervlakte_m2 ?? null,
+  });
 }
 
 // Toegestane erfcheck-conclusies o.b.v. de verdict-instelling (null = alle).
