@@ -340,16 +340,23 @@ export default async function LeadDetailPage({
               </h2>
               <dl className="grid grid-cols-2 gap-4">
                 <Field label="Doelgroep" value={lead.audience} />
-                <Field label="Startdatum" value={lead.startdatum} />
+                <Field
+                  label="Gewenste grootte"
+                  value={
+                    lead.grootte_m2 != null
+                      ? `${lead.grootte_m2} m²`
+                      : lead.estimated_size === "unsure"
+                        ? "Weet ik nog niet"
+                        : lead.estimated_size
+                  }
+                />
                 <Field label="Budget" value={lead.budget} />
+                <Field label="Startdatum" value={lead.startdatum} />
                 <Field label="Planning" value={lead.planning} />
               </dl>
             </div>
 
-            {(lead.gewenst_formaat ||
-              lead.budget_indicatie ||
-              lead.voor_wie ||
-              lead.termijn) && (
+            {(lead.voor_wie || lead.termijn) && (
               <div className="rounded-xl border border-erf/30 bg-erf/5 p-5">
                 <div className="mb-4 flex items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold text-slate-900">
@@ -367,8 +374,6 @@ export default async function LeadDetailPage({
                   )}
                 </div>
                 <dl className="grid grid-cols-2 gap-4">
-                  <Field label="Gewenst formaat" value={lead.gewenst_formaat} />
-                  <Field label="Budgetindicatie" value={lead.budget_indicatie} />
                   <Field label="Voor wie" value={lead.voor_wie} />
                   <Field label="Termijn" value={lead.termijn} />
                 </dl>

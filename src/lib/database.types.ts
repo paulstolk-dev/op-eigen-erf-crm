@@ -831,11 +831,11 @@ export type Database = {
           report_token: string
           terugbel_verzoek_at: string | null
           terugbel_notitie: string | null
-          gewenst_formaat: string | null
-          budget_indicatie: string | null
           voor_wie: string | null
           termijn: string | null
           advies_intake_at: string | null
+          grootte_m2: number | null
+          estimated_size: string | null
           updated_at: string
           voornaam: string | null
         }
@@ -860,11 +860,11 @@ export type Database = {
           report_token?: string
           terugbel_verzoek_at?: string | null
           terugbel_notitie?: string | null
-          gewenst_formaat?: string | null
-          budget_indicatie?: string | null
           voor_wie?: string | null
           termijn?: string | null
           advies_intake_at?: string | null
+          grootte_m2?: number | null
+          estimated_size?: string | null
           updated_at?: string
           voornaam?: string | null
         }
@@ -889,11 +889,11 @@ export type Database = {
           report_token?: string
           terugbel_verzoek_at?: string | null
           terugbel_notitie?: string | null
-          gewenst_formaat?: string | null
-          budget_indicatie?: string | null
           voor_wie?: string | null
           termijn?: string | null
           advies_intake_at?: string | null
+          grootte_m2?: number | null
+          estimated_size?: string | null
           updated_at?: string
           voornaam?: string | null
         }
