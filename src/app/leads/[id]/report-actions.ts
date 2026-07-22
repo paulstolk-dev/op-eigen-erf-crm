@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { runReportGeneration, rerenderReportPdf } from "@/lib/generate-report-flow";
 import { logLeadEmail } from "@/lib/hubspot";
 import { reportBaseUrl } from "@/lib/erfcheck-report";
+import { portalBaseUrl } from "@/lib/portaal-magic-link";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 async function requireUser() {
@@ -96,9 +97,18 @@ export async function sendReport(leadId: string): Promise<Result> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY niet gezet." };
 
-  // De trackbare Erf Check-pagina op het CRM (/r/<token>). Eén klik, geen login,
-  // en elk bezoek telt mee in de meetlaag (view_count + link-kliks).
-  const pageUrl = `${reportBaseUrl()}/r/${lead!.report_token}`;
+  // Klantgerichte Erf Check-pagina op opeigenerf.nl (/mijn/erf?erf=<token>): duurzaam
+  // report_token, geen login, gebrand domein. Verpakt in de /l/<token>-klik-redirect
+  // zodat de klik meetelt in de meetlaag. De /r/<token>-pagina op het CRM blijft als
+  // interne/fallback-view bestaan.
+  const token = lead!.report_token;
+  const erfUrl = `${portalBaseUrl()}/mijn/erf?erf=${token}`;
+  const pageUrl = token
+    ? `${reportBaseUrl()}/l/${token}?${new URLSearchParams({
+        u: Buffer.from(erfUrl, "utf8").toString("base64url"),
+        l: "erfcheck-mijn-erf",
+      }).toString()}`
+    : erfUrl;
   const buttonLabel = "Bekijk je Erf Check online »";
   const button = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0"><tr><td style="border-radius:8px;background:#0a1b2b">
     <a href="${pageUrl}" style="display:inline-block;padding:12px 22px;color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px">${buttonLabel}</a>
