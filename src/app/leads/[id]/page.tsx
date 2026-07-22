@@ -346,6 +346,35 @@ export default async function LeadDetailPage({
               </dl>
             </div>
 
+            {(lead.gewenst_formaat ||
+              lead.budget_indicatie ||
+              lead.voor_wie ||
+              lead.termijn) && (
+              <div className="rounded-xl border border-erf/30 bg-erf/5 p-5">
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Aanvullende wensen (via Mijn Erf)
+                  </h2>
+                  {lead.advies_intake_at && (
+                    <span className="text-xs text-slate-500">
+                      Ingevuld{" "}
+                      {new Date(lead.advies_intake_at).toLocaleDateString("nl-NL", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                </div>
+                <dl className="grid grid-cols-2 gap-4">
+                  <Field label="Gewenst formaat" value={lead.gewenst_formaat} />
+                  <Field label="Budgetindicatie" value={lead.budget_indicatie} />
+                  <Field label="Voor wie" value={lead.voor_wie} />
+                  <Field label="Termijn" value={lead.termijn} />
+                </dl>
+              </div>
+            )}
+
             {detailEntries.length > 0 && (
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <h2 className="mb-4 text-sm font-semibold text-slate-900">
