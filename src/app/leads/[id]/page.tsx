@@ -22,6 +22,7 @@ import { ReportPanel } from "./report-panel";
 import { portalBaseUrl } from "@/lib/portaal-magic-link";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead, SCORE_ACTIE } from "@/lib/lead-score";
+import { volgendeStap } from "@/lib/nurture-flow";
 import type { Lead, LeadNote, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -107,19 +108,28 @@ export default async function LeadDetailPage({
     .maybeSingle();
 
   // Opvolg-flow: eerstvolgende actieve stap voor deze lead.
+  // Alle stappen (ook inactieve): nodig om te bepalen hoe ver de lead al is.
   const { data: flowSteps } = await supabase
     .from("email_sequence_steps")
-    .select("id,sleutel,volgorde")
-    .eq("actief", true)
+    .select("id,sleutel,volgorde,actief")
     .order("volgorde", { ascending: true });
   const { data: flowSends } = await supabase
     .from("email_sequence_sends")
     .select("step_id")
     .eq("lead_id", id);
   const sentStepIds = new Set((flowSends ?? []).map((s) => s.step_id));
+  const alleFlowSteps = (flowSteps ?? []) as {
+    id: string;
+    sleutel: string;
+    volgorde: number;
+    actief: boolean;
+  }[];
   const nextFlowStep =
-    (flowSteps ?? []).find((s) => !sentStepIds.has(s.id))?.sleutel.toUpperCase() ??
-    null;
+    volgendeStap(
+      alleFlowSteps.filter((s) => s.actief),
+      alleFlowSteps,
+      sentStepIds,
+    )?.sleutel.toUpperCase() ?? null;
   const flowDelivered = Boolean(erfscan?.sent_at);
   const flowUitFlow = lead.status === "gewonnen" || lead.status === "verloren";
 

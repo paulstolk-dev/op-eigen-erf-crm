@@ -18,9 +18,11 @@ import {
   fillErfcheckTemplate,
   type ErfcheckMerge,
 } from "@/lib/erfcheck-email";
+import { hoogsteVerzondenVolgorde } from "@/lib/nurture-flow";
 import type { EmailSequenceStep } from "@/lib/database.types";
 
 const DAY = 86_400_000;
+const LEEG: ReadonlySet<string> = new Set<string>();
 
 type MergeValues = ErfcheckMerge;
 
@@ -171,12 +173,14 @@ export async function runNurture(opts?: {
   const verdictToegestaan = verdictSet(flow.verdict);
   const clickedCache = new Map<string, Set<string>>();
 
-  const { data: steps } = await admin
+  // Álle stappen ophalen (ook inactieve): die zijn nodig om de positie van een
+  // lead in de flow te bepalen. Verzenden doen we alleen uit de actieve stappen.
+  const { data: alleSteps } = await admin
     .from("email_sequence_steps")
     .select("*")
-    .eq("actief", true)
     .order("volgorde", { ascending: true });
-  if (!steps || steps.length === 0) return { ok: true, verstuurd: 0 };
+  const steps = (alleSteps ?? []).filter((s) => s.actief);
+  if (steps.length === 0) return { ok: true, verstuurd: 0 };
 
   let q = admin
     .from("erfscans")
@@ -192,7 +196,11 @@ export async function runNurture(opts?: {
   const { data: sends } = await admin
     .from("email_sequence_sends")
     .select("lead_id, step_id");
-  const gedaan = new Set((sends ?? []).map((s) => `${s.lead_id}:${s.step_id}`));
+  const verzondenPerLead = new Map<string, Set<string>>();
+  for (const s of sends ?? []) {
+    if (!verzondenPerLead.has(s.lead_id)) verzondenPerLead.set(s.lead_id, new Set());
+    verzondenPerLead.get(s.lead_id)!.add(s.step_id);
+  }
 
   // Suppressie-lijst (bounces/klachten/afmeldingen) — nooit meer mailen.
   const { data: supp } = await (admin as any).rpc("nurture_suppressed_emails");
@@ -223,9 +231,14 @@ export async function runNurture(opts?: {
 
     // Eerste due-en-onverzonden stap voor deze lead (max. één per run).
     // Met force: negeer de wachttijd en stuur de eerstvolgende onverzonden stap.
+    // De reeks gaat nooit terug: stappen t/m de hoogst al verzonden stap slaan we
+    // over, zodat een later (her)geactiveerde stap geen afgeronde leads mailt.
+    const verzonden = verzondenPerLead.get(row.lead_id) ?? LEEG;
+    const hoogste = hoogsteVerzondenVolgorde(alleSteps ?? [], verzonden);
     const step = steps.find(
       (st) =>
-        !gedaan.has(`${row.lead_id}:${st.id}`) &&
+        st.volgorde > hoogste &&
+        !verzonden.has(st.id) &&
         (opts?.force || now >= anchor + st.dag_na_start * DAY),
     );
     if (!step) continue;

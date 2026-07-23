@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { SyncHubspotButton } from "./sync-hubspot-button";
+import { volgendeStap } from "@/lib/nurture-flow";
 import { StatusBadge } from "@/components/status-badge";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead } from "@/lib/lead-score";
@@ -9,18 +10,19 @@ import { CONCLUSIE_LABELS, CONCLUSIE_STYLES } from "@/lib/constants";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 // Waar staat de lead in de opvolg-flow? Anker = het rapport is verstuurd.
-type FlowStep = { id: string; sleutel: string };
+type FlowStep = { id: string; sleutel: string; volgorde: number; actief: boolean };
 function flowStatus(
   erfscan: Erfscan | null,
   status: string,
   sent: Set<string>,
-  steps: FlowStep[],
+  activeSteps: FlowStep[],
+  alleSteps: FlowStep[],
 ): { label: string; cls: string; plain?: boolean; title?: string } {
   if (!erfscan?.sent_at)
     return { label: "—", cls: "", plain: true, title: "Rapport nog niet verstuurd" };
   if (status === "gewonnen" || status === "verloren")
     return { label: "Uit flow", cls: "bg-slate-100 text-slate-500 ring-slate-400/20" };
-  const next = steps.find((s) => !sent.has(s.id));
+  const next = volgendeStap(activeSteps, alleSteps, sent);
   if (!next)
     return { label: "Afgerond", cls: "bg-green-100 text-green-700 ring-green-600/20" };
   return {
@@ -99,13 +101,14 @@ export default async function LeadsPage() {
     (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
   );
 
-  // Flow-positie: actieve stappen + wat er per lead al verzonden is.
+  // Flow-positie: alle stappen (ook inactieve, voor de positiebepaling) + wat er
+  // per lead al verzonden is.
   const { data: flowSteps } = await supabase
     .from("email_sequence_steps")
-    .select("id,sleutel,volgorde")
-    .eq("actief", true)
+    .select("id,sleutel,volgorde,actief")
     .order("volgorde", { ascending: true });
-  const activeSteps = (flowSteps ?? []) as FlowStep[];
+  const alleSteps = (flowSteps ?? []) as FlowStep[];
+  const activeSteps = alleSteps.filter((s) => s.actief);
   const { data: flowSends } = await supabase
     .from("email_sequence_sends")
     .select("lead_id,step_id");
@@ -256,6 +259,7 @@ export default async function LeadsPage() {
                           lead.status,
                           sentByLead.get(lead.id) ?? EMPTY,
                           activeSteps,
+                          alleSteps,
                         );
                         return flow.plain ? (
                           <span className="text-slate-300" title={flow.title}>
