@@ -157,3 +157,39 @@ export async function syncLeadHubspotNow(leadId: string) {
   revalidatePath(`/leads/${leadId}`);
   return res;
 }
+
+// Backfill: alle bestaande leads (opnieuw) naar HubSpot syncen, zodat ook de
+// aanvullende contact-properties (huisnummer, bronpagina, gewenste grootte,
+// budget, type doelgroep) gevuld worden. Nieuwe leads gaan automatisch via de
+// leads_hubspot_sync-trigger. Idempotent: opnieuw klikken kan altijd.
+export async function syncAllLeadsToHubspot(): Promise<{
+  ok: boolean;
+  synced: number;
+  failed: number;
+  skipped: number;
+  total: number;
+}> {
+  const { supabase } = await requireUser();
+  const { data: allowed } = await supabase.rpc("is_allowed_user");
+  const leeg = { ok: false, synced: 0, failed: 0, skipped: 0, total: 0 };
+  if (allowed !== true) return leeg;
+
+  const { data } = await supabase
+    .from("leads")
+    .select("id")
+    .order("created_at", { ascending: true });
+  const ids = (data ?? []).map((r) => r.id as string);
+
+  let synced = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const id of ids) {
+    const res = await syncLeadToHubspot(id).catch(() => ({ ok: false as const }));
+    if ("skipped" in res && res.skipped) skipped++;
+    else if (res.ok) synced++;
+    else failed++;
+  }
+
+  revalidatePath("/leads");
+  return { ok: failed === 0, synced, failed, skipped, total: ids.length };
+}

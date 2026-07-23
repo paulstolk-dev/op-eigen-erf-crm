@@ -123,6 +123,23 @@ async function ensureContactProperties() {
     fieldType: "number",
     groupName: "erfcheck",
   });
+  // Aanvullende leadvelden (tekst). Bestaan ze al in HubSpot, dan levert de
+  // POST een 409 op en slaat ensureProperty 'm stil over.
+  for (const [name, label] of [
+    ["huisnummer", "Huisnummer"],
+    ["bronpagina", "Bronpagina"],
+    ["gewenste_grootte", "Gewenste grootte"],
+    ["budget_indicatie", "Budget indicatie"],
+    ["type_doelgroep", "Type doelgroep"],
+  ]) {
+    await ensureProperty("contacts", {
+      name,
+      label,
+      type: "string",
+      fieldType: "text",
+      groupName: "erfcheck",
+    });
+  }
   contactPropsEnsured = true;
 }
 
@@ -158,6 +175,14 @@ async function ensureCompanyProperties() {
     groupName: "erfcheck",
   });
   companyPropsEnsured = true;
+}
+
+// Gewenste grootte als leesbare tekst (zelfde weergave als de CRM-leaddetail):
+// het geparste aantal m², of 'Weet ik nog niet' als de lead 'unsure' koos.
+function gewensteGrootte(lead: Lead): string {
+  if (lead.grootte_m2 != null) return `${lead.grootte_m2} m²`;
+  if (lead.estimated_size === "unsure") return "Weet ik nog niet";
+  return lead.estimated_size ?? "";
 }
 
 function reportStatus(erfscan?: Erfscan | null): string {
@@ -229,6 +254,19 @@ export async function syncLeadToHubspot(
     if (lead.postcode) contactProps.zip = lead.postcode;
     if (d.perceel?.oppervlakte_m2)
       contactProps.erfcheck_perceel_m2 = String(d.perceel.oppervlakte_m2);
+
+    // Adres, herkomst en wensen → de aanvullende contact-properties in HubSpot.
+    const huisnr = [lead.huisnummer, lead.toevoeging].filter(Boolean).join("");
+    if (huisnr) contactProps.huisnummer = huisnr;
+    const bronpagina =
+      lead.source_page_url || lead.source_page_path || lead.landing_page;
+    if (bronpagina) contactProps.bronpagina = bronpagina;
+    const grootte = gewensteGrootte(lead);
+    if (grootte) contactProps.gewenste_grootte = grootte;
+    const budgetIndicatie = lead.budget || lead.estimated_budget;
+    if (budgetIndicatie) contactProps.budget_indicatie = budgetIndicatie;
+    // 'Voor wie is de woning' (Ouder/Kind) uit de Mijn Erf-intake.
+    if (lead.voor_wie) contactProps.type_doelgroep = lead.voor_wie;
 
     // Contact upserten op e-mail; zonder e-mail op onthouden id, anders nieuw.
     let contactId: string | undefined = mapping?.contact_id ?? undefined;

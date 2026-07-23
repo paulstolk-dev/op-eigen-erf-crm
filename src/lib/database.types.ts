@@ -838,6 +838,10 @@ export type Database = {
           advies_intake_at: string | null
           grootte_m2: number | null
           estimated_size: string | null
+          estimated_budget: string | null
+          source_page_path: string | null
+          source_page_url: string | null
+          landing_page: string | null
           updated_at: string
           voornaam: string | null
           excluded_from_stats: boolean
@@ -867,6 +871,10 @@ export type Database = {
           advies_intake_at?: string | null
           grootte_m2?: number | null
           estimated_size?: string | null
+          estimated_budget?: string | null
+          source_page_path?: string | null
+          source_page_url?: string | null
+          landing_page?: string | null
           updated_at?: string
           voornaam?: string | null
           excluded_from_stats?: boolean
@@ -896,6 +904,10 @@ export type Database = {
           advies_intake_at?: string | null
           grootte_m2?: number | null
           estimated_size?: string | null
+          estimated_budget?: string | null
+          source_page_path?: string | null
+          source_page_url?: string | null
+          landing_page?: string | null
           updated_at?: string
           voornaam?: string | null
           excluded_from_stats?: boolean

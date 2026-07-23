@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
+import { SyncHubspotButton } from "./sync-hubspot-button";
 import { StatusBadge } from "@/components/status-badge";
 import { ScoreBadge } from "@/components/score-badge";
 import { scoreLead } from "@/lib/lead-score";
@@ -133,11 +134,14 @@ export default async function LeadsPage() {
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-5">
-          <h1 className="text-lg font-semibold text-slate-900">Leads</h1>
-          <p className="text-sm text-slate-500">
-            Leads op datum van binnenkomst (nieuw → oud), met leadscore, erfcheck-conclusie en positie in de opvolg-flow.
-          </p>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900">Leads</h1>
+            <p className="text-sm text-slate-500">
+              Leads op datum van binnenkomst (nieuw → oud), met leadscore, erfcheck-conclusie en positie in de opvolg-flow.
+            </p>
+          </div>
+          <SyncHubspotButton />
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
