@@ -348,13 +348,13 @@ function PartnerView({ partner, metrics }: { partner: PartnerData; metrics: Part
           </div>
           <div className="oe-field">
             <span className="oe-label">Conversiedoel</span>
-            <span className="oe-goal">Preferred partner</span>
+            <span className="oe-goal">Afspraak gepland</span>
           </div>
         </div>
         <p className="oe-help" style={{ margin: "12px 0 0" }}>
           Werving van aanbieders. Mail 1 stuur je handmatig per aanbieder (knop “Pitch sturen” bij
           Aanbieders → Partners); mail 2 en 3 gaan daarna automatisch — mits de aanbieder op status
-          <strong> Benaderd</strong> staat. Reageert iemand (Geïnteresseerd/Partner/Afgewezen), dan stopt de reeks.
+          <strong> Benaderd</strong> staat. Reageert iemand (Afspraak gepland/Partner/Afgewezen), dan stopt de reeks.
         </p>
       </div>
 

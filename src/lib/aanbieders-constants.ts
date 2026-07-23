@@ -28,24 +28,32 @@ export const AANBOD_TYPE_LABELS: Record<string, string> = {
   tweedehands: "Tweedehands",
 };
 
+// Alle geldige partnerstatussen (voor validatie + de status-dropdown).
 export const PARTNER_STATUS = [
-  "prospect",
+  "nieuw",
   "benaderd",
-  "geinteresseerd",
+  "afspraak_gepland",
   "partner",
   "afgewezen",
 ] as const;
+// De funnel-stadia (voorwaartse route); 'afgewezen' is een losse terminale status.
+export const PARTNER_FUNNEL = [
+  "nieuw",
+  "benaderd",
+  "afspraak_gepland",
+  "partner",
+] as const;
 export const PARTNER_STATUS_LABELS: Record<string, string> = {
-  prospect: "Prospect",
+  nieuw: "Nieuw",
   benaderd: "Benaderd",
-  geinteresseerd: "Geïnteresseerd",
+  afspraak_gepland: "Afspraak gepland",
   partner: "Partner",
   afgewezen: "Afgewezen",
 };
 export const PARTNER_STATUS_STYLES: Record<string, string> = {
-  prospect: "bg-slate-100 text-slate-600 ring-slate-400/20",
+  nieuw: "bg-slate-100 text-slate-600 ring-slate-400/20",
   benaderd: "bg-amber-100 text-amber-700 ring-amber-600/20",
-  geinteresseerd: "bg-blue-100 text-blue-700 ring-blue-600/20",
+  afspraak_gepland: "bg-blue-100 text-blue-700 ring-blue-600/20",
   partner: "bg-green-100 text-green-700 ring-green-600/20",
   afgewezen: "bg-red-100 text-red-700 ring-red-600/20",
 };

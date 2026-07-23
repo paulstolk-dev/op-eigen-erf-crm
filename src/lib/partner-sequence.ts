@@ -26,7 +26,7 @@ type AanbiederRow = {
 /**
  * Verstuurt de vervolgmails (2 en 3) van de aanbieder-wervingssequence.
  * Alleen aanbieders met status 'benaderd' schuiven op — zodra je iemand op
- * 'geinteresseerd', 'partner' of 'afgewezen' zet (= gereageerd) stopt de reeks.
+ * 'afspraak_gepland', 'partner' of 'afgewezen' zet (= gereageerd) stopt de reeks.
  * Max. één stap per aanbieder per run. force=true negeert de wachttijd (test).
  */
 export async function runPartnerSequence(opts?: {

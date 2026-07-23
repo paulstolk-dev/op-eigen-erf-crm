@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { PartnerRow } from "./partner-row";
-import { PARTNER_STATUS, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
+import { PARTNER_FUNNEL, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -43,20 +43,20 @@ export default async function PartnersPage() {
         </Link>
         <div className="mb-5 mt-2">
           <h1 className="text-lg font-semibold text-slate-900">
-            Preferred partners — werving
+            Aanbieder-funnel — werving
           </h1>
           <p className="text-sm text-slate-500">
-            Benader aanbieders om preferred partner te worden en leads af te nemen.
-            Vul contactgegevens in, stuur de pitch en volg de status.
+            Benader aanbieders en plan een afspraak om ze preferred partner te maken.
+            Vul contactgegevens in, stuur de pitch en volg de status door de funnel.
           </p>
         </div>
 
-        {/* Funnel-telling */}
-        <div className="mb-5 grid grid-cols-3 gap-3 sm:grid-cols-5">
-          {PARTNER_STATUS.map((s) => (
+        {/* Funnel-telling: nieuw → benaderd → afspraak gepland → partner */}
+        <div className="mb-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {PARTNER_FUNNEL.map((s, i) => (
             <div key={s} className="rounded-xl border border-slate-200 bg-white p-3">
               <div className="text-xs uppercase tracking-wide text-slate-500">
-                {PARTNER_STATUS_LABELS[s]}
+                {i + 1}. {PARTNER_STATUS_LABELS[s]}
               </div>
               <div className="mt-1 text-xl font-semibold text-slate-900">
                 {telling(s)}
@@ -64,6 +64,9 @@ export default async function PartnersPage() {
             </div>
           ))}
         </div>
+        <p className="mb-5 text-xs text-slate-400">
+          Afgewezen / geen match: {telling("afgewezen")}
+        </p>
 
         {/* Wervingssequence beheer je centraal onder Instellingen → E-mailflow. */}
         <Link

@@ -95,7 +95,7 @@ export function PitchEditor({
       <p className="text-xs text-slate-500">
         Mail 1 stuur je handmatig per aanbieder (knop &quot;Pitch sturen&quot;). Mail 2 en 3 gaan
         daarna automatisch — mits de aanbieder nog op status <strong>Benaderd</strong> staat. Zodra
-        je iemand op Geïnteresseerd, Partner of Afgewezen zet, stopt de reeks.
+        je iemand op Afspraak gepland, Partner of Afgewezen zet, stopt de reeks.
       </p>
 
       <StepFields n={1} title="eerste pitch (handmatig)" step={s1} onChange={setS1} />

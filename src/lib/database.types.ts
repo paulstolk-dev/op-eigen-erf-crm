@@ -52,18 +52,21 @@ export type Database = {
         Row: {
           aanbieder_id: string
           company_id: string | null
+          deal_id: string | null
           synced_at: string | null
           error: string | null
         }
         Insert: {
           aanbieder_id: string
           company_id?: string | null
+          deal_id?: string | null
           synced_at?: string | null
           error?: string | null
         }
         Update: {
           aanbieder_id?: string
           company_id?: string | null
+          deal_id?: string | null
           synced_at?: string | null
           error?: string | null
         }
