@@ -48,6 +48,37 @@ export async function setPartnerStatus(
   return { ok: true };
 }
 
+// Backfill: synct alle aanbieders naar HubSpot (company + deal in de 'Aanbieders'-
+// pipeline op de juiste funnel-stage). Handig om de hele funnel in één keer te
+// vullen. Best-effort per aanbieder; telt geslaagd/mislukt/overgeslagen.
+export async function syncAllAanbiedersToHubspot(): Promise<{
+  ok: boolean;
+  synced: number;
+  failed: number;
+  skipped: number;
+  total: number;
+}> {
+  await requireCrm();
+  const admin = createAdminClient();
+  const { data } = await admin.from("aanbieders").select("id").order("naam");
+  const ids = (data ?? []).map((r) => r.id as string);
+
+  let synced = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const id of ids) {
+    const res = await syncAanbiederToHubspot(id).catch(() => ({
+      ok: false as const,
+    }));
+    if ("skipped" in res && res.skipped) skipped++;
+    else if (res.ok) synced++;
+    else failed++;
+  }
+
+  revalidatePath("/aanbieders/partners");
+  return { ok: failed === 0, synced, failed, skipped, total: ids.length };
+}
+
 export async function saveContact(
   aanbiederId: string,
   contactNaam: string,

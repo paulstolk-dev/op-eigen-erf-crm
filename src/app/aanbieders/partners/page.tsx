@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import { PartnerRow } from "./partner-row";
+import { SyncAllButton } from "./sync-all-button";
 import { PARTNER_FUNNEL, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
 
 export const dynamic = "force-dynamic";
@@ -64,9 +65,12 @@ export default async function PartnersPage() {
             </div>
           ))}
         </div>
-        <p className="mb-5 text-xs text-slate-400">
-          Afgewezen / geen match: {telling("afgewezen")}
-        </p>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-slate-400">
+            Afgewezen / geen match: {telling("afgewezen")}
+          </p>
+          <SyncAllButton />
+        </div>
 
         {/* Wervingssequence beheer je centraal onder Instellingen → E-mailflow. */}
         <Link
