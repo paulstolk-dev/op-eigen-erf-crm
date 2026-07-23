@@ -311,112 +311,17 @@ export async function syncLeadToHubspot(
   }
 }
 
-// --- Aanbieder-funnel als aparte HubSpot deal-pipeline -----------------------
-// Stage-labels ↔ onze partner_status. De pipeline heet 'Aanbieders' en heeft de
-// funnel-stadia + de terminale 'Afgewezen'.
-const AANBIEDER_STAGES: {
-  status: string;
-  label: string;
-  isClosed: boolean;
-  probability: string;
-}[] = [
-  { status: "nieuw", label: "Nieuw", isClosed: false, probability: "0.1" },
-  { status: "benaderd", label: "Benaderd", isClosed: false, probability: "0.3" },
-  { status: "afspraak_gepland", label: "Afspraak gepland", isClosed: false, probability: "0.6" },
-  { status: "partner", label: "Partner", isClosed: true, probability: "1.0" },
-  { status: "afgewezen", label: "Afgewezen", isClosed: true, probability: "0.0" },
-];
-const LABEL_TO_STATUS: Record<string, string> = Object.fromEntries(
-  AANBIEDER_STAGES.map((s) => [s.label, s.status]),
-);
-
-type PipelineInfo = { pipelineId: string; stageByStatus: Record<string, string> };
-// undefined = nog niet geprobeerd, null = niet beschikbaar (bv. geen scope).
-let aanbiederPipeline: PipelineInfo | null | undefined;
-
-type HsPipeline = { id: string; label: string; stages?: { id: string; label: string }[] };
-
-// Zorgt (idempotent) voor de 'Aanbieders'-deal-pipeline en cachet id + stages.
-// Faalt zacht (null) als de HubSpot-token geen pipelines mag lezen/aanmaken.
-async function getAanbiederPipeline(): Promise<PipelineInfo | null> {
-  if (aanbiederPipeline !== undefined) return aanbiederPipeline;
-  try {
-    const list = await hs<{ results?: HsPipeline[] }>("/crm/v3/pipelines/deals");
-    let pipe = (list?.results ?? []).find((p) => p.label === "Aanbieders");
-    if (!pipe) {
-      pipe = await hs<HsPipeline>("/crm/v3/pipelines/deals", {
-        method: "POST",
-        body: JSON.stringify({
-          label: "Aanbieders",
-          displayOrder: 1,
-          stages: AANBIEDER_STAGES.map((s, i) => ({
-            label: s.label,
-            displayOrder: i,
-            metadata: { isClosed: String(s.isClosed), probability: s.probability },
-          })),
-        }),
-      }) ?? undefined;
-    }
-    if (!pipe) {
-      aanbiederPipeline = null;
-      return null;
-    }
-    const stageByStatus: Record<string, string> = {};
-    for (const st of pipe.stages ?? []) {
-      const status = LABEL_TO_STATUS[st.label];
-      if (status) stageByStatus[status] = st.id;
-    }
-    aanbiederPipeline = { pipelineId: pipe.id, stageByStatus };
-    return aanbiederPipeline;
-  } catch (e) {
-    console.error("HubSpot: aanbieder-pipeline niet beschikbaar:", e);
-    aanbiederPipeline = null;
-    return null;
-  }
-}
-
-// Maakt/updatet de deal van deze aanbieder in de 'Aanbieders'-pipeline op de
-// stage die bij partner_status hoort. Best-effort; geeft het deal-id terug (of
-// het bestaande) zodat het in hubspot_company_sync bewaard kan worden.
-async function syncAanbiederDeal(
-  a: Aanbieder,
-  companyId: string | undefined,
-  bestaandeDealId: string | undefined,
-): Promise<string | undefined> {
-  const pipe = await getAanbiederPipeline();
-  if (!pipe) return bestaandeDealId;
-  const stageId =
-    pipe.stageByStatus[a.partner_status] ?? pipe.stageByStatus["nieuw"];
-  if (!stageId) return bestaandeDealId;
-  const dealProps = {
-    dealname: `Partner — ${a.naam}`,
-    pipeline: pipe.pipelineId,
-    dealstage: stageId,
-  };
-  if (bestaandeDealId) {
-    await hs(`/crm/v3/objects/deals/${bestaandeDealId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ properties: dealProps }),
-    });
-    return bestaandeDealId;
-  }
-  const created = await hs<{ id: string }>("/crm/v3/objects/deals", {
-    method: "POST",
-    body: JSON.stringify({
-      properties: dealProps,
-      // Deal → Company (HUBSPOT_DEFINED associationTypeId 5).
-      associations: companyId
-        ? [
-            {
-              to: { id: companyId },
-              types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 5 }],
-            },
-          ]
-        : [],
-    }),
-  });
-  return created?.id ?? bestaandeDealId;
-}
+// Aanbieder funnel-status → HubSpot Lifecycle Stage (company-property). We
+// gebruiken de standaard lifecycle-stages, dus er is géén HubSpot-setup of
+// deal-pipeline-scope nodig. Heb je eigen (custom) lifecycle-stages, pas dan de
+// interne waarden hieronder aan.
+const LIFECYCLE_BY_STATUS: Record<string, string> = {
+  nieuw: "lead",
+  benaderd: "marketingqualifiedlead",
+  afspraak_gepland: "salesqualifiedlead",
+  partner: "customer",
+  afgewezen: "other",
+};
 
 // --- Aanbieder -> Company ----------------------------------------------------
 export async function syncAanbiederToHubspot(
@@ -447,6 +352,9 @@ export async function syncAanbiederToHubspot(
     if (a.contact_naam) props.erfcheck_contactpersoon = a.contact_naam;
     if (a.contact_email) props.erfcheck_contact_email = a.contact_email;
     if (a.partner_status) props.erfcheck_partner_status = a.partner_status;
+    // Funnel-stap als HubSpot Lifecycle Stage op de company.
+    if (LIFECYCLE_BY_STATUS[a.partner_status])
+      props.lifecyclestage = LIFECYCLE_BY_STATUS[a.partner_status];
 
     // 'domain' is in HubSpot geen unieke property → niet via batch/upsert.
     // Zoek daarom eerst een bestaande company op domein; anders aanmaken.
@@ -516,20 +424,10 @@ export async function syncAanbiederToHubspot(
       }
     }
 
-    // Aanbieder-deal in de aparte 'Aanbieders'-pipeline op de juiste stage
-    // (best-effort; een pipeline-/deal-fout mag de company-sync niet breken).
-    let dealId: string | undefined = mapping?.deal_id ?? undefined;
-    try {
-      dealId = await syncAanbiederDeal(a, companyId, dealId);
-    } catch (e) {
-      console.error("HubSpot: aanbieder-deal sync mislukt:", e);
-    }
-
     await admin.from("hubspot_company_sync").upsert(
       {
         aanbieder_id: aanbiederId,
         company_id: companyId ?? null,
-        deal_id: dealId ?? null,
         synced_at: new Date().toISOString(),
         error: null,
       },
