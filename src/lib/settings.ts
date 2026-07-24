@@ -164,7 +164,7 @@ export const DEFAULT_NURTURE_FROM =
 export const DEFAULT_NURTURE_REPLY_TO =
   process.env.NURTURE_REPLY_TO || "info@opeigenerf.nl";
 export const DEFAULT_NURTURE_BCC =
-  process.env.NURTURE_BCC || "info@opeigenerf.nl";
+  process.env.NURTURE_BCC || "148836607@bcc.eu1.hubspot.com";
 
 // Flow-instellingen voor de Erfcheck-nurture (opgeslagen als JSON in app_settings).
 // Verdict: 'alle' | 'geschikt_twijfel' | 'alleen_geschikt' (bepaalt welke leads

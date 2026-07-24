@@ -134,7 +134,7 @@ export async function sendReport(leadId: string): Promise<Result> {
       from: fromEmail,
       to,
       // BCC-kopie naar het archief-adres, behalve in testmodus (gaat toch al naar test-adres).
-      ...(!testTo ? { bcc: process.env.REPORT_BCC || "info@opeigenerf.nl" } : {}),
+      ...(!testTo ? { bcc: process.env.REPORT_BCC || "148836607@bcc.eu1.hubspot.com" } : {}),
       subject: (testTo ? `[TEST → ${lead?.email ?? "?"}] ` : "") + cleanSubject,
       html,
     }),
