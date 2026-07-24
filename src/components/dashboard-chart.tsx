@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export type DayPoint = { date: string; leads: number; cost: number };
+export type DayPoint = { date: string; leads: number; besluit: number; cost: number };
 
 const W = 760;
 const H = 260;
@@ -41,7 +41,8 @@ export function DashboardChart({
   const slot = plotW / n;
   const barW = Math.max(2, slot * 0.55);
 
-  const leadsMax = Math.max(1, ...data.map((d) => d.leads));
+  // Balk = erfcheck-leads + besluit-alerts gestapeld, dus de as op de som schalen.
+  const leadsMax = Math.max(1, ...data.map((d) => d.leads + d.besluit));
   const costMax = Math.max(1, ...data.map((d) => d.cost));
 
   const xCenter = (i: number) => x0 + slot * i + slot / 2;
@@ -56,6 +57,7 @@ export function DashboardChart({
   const step = Math.ceil(n / 6);
 
   const totLeads = data.reduce((s, d) => s + d.leads, 0);
+  const totBesluit = data.reduce((s, d) => s + d.besluit, 0);
   const totCost = data.reduce((s, d) => s + d.cost, 0);
 
   return (
@@ -69,6 +71,10 @@ export function DashboardChart({
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-sm bg-navy" />
             Leads · {totLeads}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-slate-400" />
+            Besluit-alerts · {totBesluit}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-0.5 w-4 rounded bg-erf" />
@@ -112,18 +118,34 @@ export function DashboardChart({
           );
         })}
 
-        {/* bars: leads */}
-        {data.map((d, i) => (
-          <rect
-            key={i}
-            x={xCenter(i) - barW / 2}
-            y={leadsY(d.leads)}
-            width={barW}
-            height={Math.max(0, y1 - leadsY(d.leads))}
-            rx={1.5}
-            className={hover === i ? "fill-navy" : "fill-navy/70"}
-          />
-        ))}
+        {/* bars: erfcheck-leads (navy) + besluit-alerts gestapeld erbovenop (grijs) */}
+        {data.map((d, i) => {
+          const xL = xCenter(i) - barW / 2;
+          const yLeads = leadsY(d.leads);
+          const yTop = leadsY(d.leads + d.besluit);
+          return (
+            <g key={i}>
+              <rect
+                x={xL}
+                y={yLeads}
+                width={barW}
+                height={Math.max(0, y1 - yLeads)}
+                rx={1.5}
+                className={hover === i ? "fill-navy" : "fill-navy/70"}
+              />
+              {d.besluit > 0 && (
+                <rect
+                  x={xL}
+                  y={yTop}
+                  width={barW}
+                  height={Math.max(0, yLeads - yTop)}
+                  rx={1.5}
+                  className={hover === i ? "fill-slate-400" : "fill-slate-300"}
+                />
+              )}
+            </g>
+          );
+        })}
 
         {/* lijn: ads-kosten */}
         <polyline
@@ -173,13 +195,13 @@ export function DashboardChart({
             />
             {(() => {
               const d = data[hover];
-              const tw = 118;
+              const tw = 134;
               const tx = Math.min(Math.max(xCenter(hover) - tw / 2, x0), x1 - tw);
               return (
                 <g transform={`translate(${tx}, ${y0})`}>
                   <rect
                     width={tw}
-                    height={44}
+                    height={56}
                     rx={6}
                     className="fill-slate-900"
                     opacity={0.92}
@@ -187,10 +209,13 @@ export function DashboardChart({
                   <text x={8} y={15} className="fill-white" style={{ fontSize: 10, fontWeight: 600 }}>
                     {dayLabel(d.date)}
                   </text>
-                  <text x={8} y={29} className="fill-slate-200" style={{ fontSize: 10 }}>
+                  <text x={8} y={28} className="fill-slate-200" style={{ fontSize: 10 }}>
                     Leads: {d.leads}
                   </text>
                   <text x={8} y={40} className="fill-slate-200" style={{ fontSize: 10 }}>
+                    Besluit-alerts: {d.besluit}
+                  </text>
+                  <text x={8} y={52} className="fill-slate-200" style={{ fontSize: 10 }}>
                     Ad-spend: {euro(d.cost)}
                   </text>
                 </g>

@@ -145,12 +145,30 @@ export default async function DashboardPage({
     if (inRange(s.date))
       costPerDay.set(s.date, (costPerDay.get(s.date) ?? 0) + Number(s.cost_eur));
   }
+
+  // Besluit-alert-leads (grijs in de grafiek). Niet dubbel tellen: is hetzelfde
+  // e-mailadres óók een erfcheck-lead, dan telt alleen de erfcheck-lead.
+  const erfcheckEmails = new Set(
+    (leads ?? [])
+      .filter((l) => l.type === "erfcheck" && l.email)
+      .map((l) => l.email!.toLowerCase()),
+  );
+  const besluitPerDay = new Map<string, number>();
+  for (const l of leads ?? []) {
+    if (l.type !== "besluit-alert" || l.excluded_from_stats) continue;
+    if (!inRange(l.created_at)) continue;
+    if (l.email && erfcheckEmails.has(l.email.toLowerCase())) continue;
+    const d = (l.created_at ?? "").slice(0, 10);
+    if (d) besluitPerDay.set(d, (besluitPerDay.get(d) ?? 0) + 1);
+  }
+
   const fromMs = new Date(from + "T00:00:00Z").getTime();
   const chartData: DayPoint[] = Array.from({ length: nDays }, (_, i) => {
     const iso = isoDay(new Date(fromMs + i * 86400000));
     return {
       date: iso,
       leads: leadsPerDay.get(iso) ?? 0,
+      besluit: besluitPerDay.get(iso) ?? 0,
       cost: costPerDay.get(iso) ?? 0,
     };
   });
