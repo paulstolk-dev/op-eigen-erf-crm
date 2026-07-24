@@ -125,6 +125,7 @@ export type Database = {
           bron_url: string | null
           laatst_gecontroleerd: string | null
           is_partner: boolean
+          partner_tier: string | null
           contact_naam: string | null
           contact_email: string | null
           partner_status: string
@@ -163,6 +164,7 @@ export type Database = {
           bron_url?: string | null
           laatst_gecontroleerd?: string | null
           is_partner?: boolean
+          partner_tier?: string | null
           contact_naam?: string | null
           contact_email?: string | null
           partner_status?: string
@@ -200,6 +202,7 @@ export type Database = {
           bron_url?: string | null
           laatst_gecontroleerd?: string | null
           is_partner?: boolean
+          partner_tier?: string | null
           contact_naam?: string | null
           contact_email?: string | null
           partner_status?: string

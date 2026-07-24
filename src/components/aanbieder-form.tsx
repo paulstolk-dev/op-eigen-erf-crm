@@ -64,6 +64,7 @@ export function AanbiederForm({
     bron_url: str(initial?.bron_url),
     laatst_gecontroleerd: str(initial?.laatst_gecontroleerd),
     is_partner: initial?.is_partner ?? false,
+    partner_tier: str(initial?.partner_tier),
     actief: initial?.actief ?? true,
     sortering: str(initial?.sortering ?? 0),
   });
@@ -112,6 +113,7 @@ export function AanbiederForm({
     const payload = {
       ...f,
       prijsklasse: f.prijsklasse || null,
+      partner_tier: (f.partner_tier || null) as "brons" | "zilver" | "goud" | null,
     } as unknown as AanbiederInput;
     startTransition(async () => {
       const res = await saveAanbieder(payload, initial?.id);
@@ -463,6 +465,19 @@ export function AanbiederForm({
           />
           Partner
         </label>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600">Partnerniveau</label>
+          <select
+            className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
+            value={f.partner_tier}
+            onChange={(e) => set("partner_tier", e.target.value)}
+          >
+            <option value="">— geen —</option>
+            <option value="brons">Brons</option>
+            <option value="zilver">Zilver</option>
+            <option value="goud">Goud</option>
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-600">Sortering</label>
           <input

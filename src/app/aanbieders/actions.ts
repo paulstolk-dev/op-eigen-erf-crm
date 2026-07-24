@@ -77,6 +77,11 @@ const aanbiederSchema = z.object({
   bron_url: z.string().optional().transform((v) => nul(v) as string | null),
   laatst_gecontroleerd: z.string().optional().transform((v) => nul(v) as string | null),
   is_partner: z.boolean().default(false),
+  partner_tier: z
+    .enum(["brons", "zilver", "goud"])
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
   actief: z.boolean().default(true),
   sortering: z.coerce.number().int().default(0),
 });
@@ -107,12 +112,14 @@ export async function saveAanbieder(input: AanbiederInput, id?: string): Promise
     const {
       slug: _slug,
       is_partner: _p,
+      partner_tier: _pt,
       actief: _a,
       sortering: _s,
       ...profiel
     } = data;
     void _slug;
     void _p;
+    void _pt;
     void _a;
     void _s;
     const admin = createAdminClient();
