@@ -302,13 +302,7 @@ export async function syncLeadToHubspot(
       pipeline: "default",
       dealstage: dealStage(lead.status),
     };
-    let dealId: string | undefined = mapping?.deal_id ?? undefined;
-    if (dealId) {
-      await hs(`/crm/v3/objects/deals/${dealId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ properties: dealProps }),
-      });
-    } else {
+    const maakDeal = async () => {
       const created = await hs<{ id: string }>("/crm/v3/objects/deals", {
         method: "POST",
         body: JSON.stringify({
@@ -325,7 +319,22 @@ export async function syncLeadToHubspot(
             : [],
         }),
       });
-      dealId = created?.id;
+      return created?.id;
+    };
+    let dealId: string | undefined = mapping?.deal_id ?? undefined;
+    if (dealId) {
+      try {
+        await hs(`/crm/v3/objects/deals/${dealId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ properties: dealProps }),
+        });
+      } catch (e) {
+        // Deal is in HubSpot verwijderd (stale id) → opnieuw aanmaken i.p.v. falen.
+        if (String(e).includes("404")) dealId = await maakDeal();
+        else throw e;
+      }
+    } else {
+      dealId = await maakDeal();
     }
 
     await admin.from("hubspot_sync").upsert(
