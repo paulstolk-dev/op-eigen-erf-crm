@@ -96,19 +96,26 @@ export async function savePaginaSeo(
   await requireCrm();
   const p = normaliseerPad(pad);
   if (!p) return { ok: false, error: "Pad is verplicht (bijv. /aanbieders)." };
-  const trimOrNull = (s: string) => (s.trim() ? s.trim() : null);
+  const titel = seoTitel.trim();
+  const desc = metaDescription.trim();
 
   const admin = createAdminClient();
-  const { error } = await admin.from("pagina_seo").upsert(
-    {
-      pad: p,
-      seo_titel: trimOrNull(seoTitel),
-      meta_description: trimOrNull(metaDescription),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "pad" },
-  );
-  if (error) return { ok: false, error: error.message };
+  // Beide leeg → geen override meer: rij verwijderen (site valt terug op hardcoded).
+  if (!titel && !desc) {
+    const { error } = await admin.from("pagina_seo").delete().eq("pad", p);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await admin.from("pagina_seo").upsert(
+      {
+        pad: p,
+        seo_titel: titel || null,
+        meta_description: desc || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "pad" },
+    );
+    if (error) return { ok: false, error: error.message };
+  }
   revalidatePath("/website");
   await revalidatePublicSite([p]);
   return { ok: true };

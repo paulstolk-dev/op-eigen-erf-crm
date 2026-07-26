@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { savePaginaSeo, deletePaginaSeo } from "./actions";
+import { savePaginaSeo } from "./actions";
+import { SITE_PAGINAS, SITE_PAGINA_GROEPEN } from "@/lib/site-paginas";
 
 export type PaginaSeoRow = {
   pad: string;
@@ -17,178 +18,140 @@ const DESC_MAX = 155;
 
 function Teller({ n, max }: { n: number; max: number }) {
   return (
-    <span className={`text-[11px] ${n > max ? "text-red-600" : "text-slate-400"}`}>
+    <span className={`text-[11px] tabular-nums ${n > max ? "text-red-600" : "text-slate-400"}`}>
       {n}/{max}
     </span>
   );
 }
 
-function RijEditor({
-  initialPad,
+function PaginaRij({
+  pad,
+  label,
   initialTitel,
   initialDesc,
-  isNew,
-  onDone,
 }: {
-  initialPad: string;
+  pad: string;
+  label: string;
   initialTitel: string;
   initialDesc: string;
-  isNew: boolean;
-  onDone: () => void;
 }) {
   const router = useRouter();
-  const [pad, setPad] = useState(initialPad);
   const [titel, setTitel] = useState(initialTitel);
   const [desc, setDesc] = useState(initialDesc);
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
+  const gewijzigd = titel !== initialTitel || desc !== initialDesc;
+  const heeftOverride = Boolean(initialTitel || initialDesc);
+
   function opslaan() {
     setMsg("");
     start(async () => {
       const r = await savePaginaSeo(pad, titel, desc);
-      if (!r.ok) {
-        setMsg(r.error ?? "Opslaan mislukt.");
-        return;
-      }
-      if (isNew) {
-        setPad("");
-        setTitel("");
-        setDesc("");
-      }
-      router.refresh();
-      onDone();
-    });
-  }
-
-  function verwijderen() {
-    setMsg("");
-    start(async () => {
-      const r = await deletePaginaSeo(initialPad);
-      if (!r.ok) {
-        setMsg(r.error ?? "Verwijderen mislukt.");
-        return;
-      }
-      router.refresh();
-      onDone();
+      setMsg(r.ok ? "Opgeslagen." : (r.error ?? "Opslaan mislukt."));
+      if (r.ok) router.refresh();
     });
   }
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="grid gap-3">
-        <label className="block">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Pad
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-900">{label}</span>
+          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{pad}</code>
+        </div>
+        {heeftOverride && (
+          <span className="rounded-full bg-erf/10 px-2 py-0.5 text-[11px] font-medium text-erf">
+            override actief
           </span>
-          <input
-            value={pad}
-            onChange={(e) => setPad(e.target.value)}
-            readOnly={!isNew}
-            placeholder="/aanbieders"
-            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-slate-900 ${
-              isNew ? "border-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"
-            }`}
-          />
-        </label>
-        <label className="block">
-          <span className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              SEO-titel
-            </span>
-            <Teller n={titel.length} max={TITEL_MAX} />
-          </span>
-          <input
-            value={titel}
-            onChange={(e) => setTitel(e.target.value)}
-            placeholder="Laat leeg om de hardcoded titel te gebruiken"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-          />
-        </label>
-        <label className="block">
-          <span className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Meta-description
-            </span>
-            <Teller n={desc.length} max={DESC_MAX} />
-          </span>
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            rows={2}
-            placeholder="Laat leeg om de hardcoded description te gebruiken"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-          />
-        </label>
+        )}
       </div>
-      <div className="mt-3 flex items-center gap-2">
+
+      <label className="block">
+        <span className="flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">SEO-titel</span>
+          <Teller n={titel.length} max={TITEL_MAX} />
+        </span>
+        <input
+          value={titel}
+          onChange={(e) => setTitel(e.target.value)}
+          placeholder="Leeg = hardcoded titel van de pagina"
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+        />
+      </label>
+
+      <label className="mt-2 block">
+        <span className="flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Meta-description</span>
+          <Teller n={desc.length} max={DESC_MAX} />
+        </span>
+        <textarea
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          rows={2}
+          placeholder="Leeg = hardcoded description van de pagina"
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+        />
+      </label>
+
+      <div className="mt-2 flex items-center gap-3">
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || !gewijzigd}
           onClick={opslaan}
-          className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-50"
+          className="rounded-lg bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-40"
         >
-          {pending ? "Opslaan…" : isNew ? "Toevoegen" : "Opslaan"}
+          {pending ? "Opslaan…" : "Opslaan"}
         </button>
-        {!isNew && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={verwijderen}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-          >
-            Verwijderen
-          </button>
+        {msg && (
+          <span className={`text-xs ${msg.includes("mislukt") ? "text-red-600" : "text-green-600"}`}>
+            {msg}
+          </span>
         )}
-        {msg && <span className="text-sm text-red-600">{msg}</span>}
       </div>
     </div>
   );
 }
 
 export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
-  const [nonce, setNonce] = useState(0);
-  const done = () => setNonce((n) => n + 1);
+  const byPad = new Map(rows.map((r) => [r.pad, r]));
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <h2 className="text-sm font-semibold text-slate-900">SEO per pagina</h2>
       <p className="mb-4 mt-0.5 text-xs text-slate-500">
-        Per-pagina overrides voor de <strong>titel</strong> en{" "}
-        <strong>meta-description</strong> op de site. Leeg laten of geen rij =
-        de site gebruikt de hardcoded waarde. Het pad is de URL na het domein
-        (bijv. <code>/aanbieders</code>, <code>/mantelzorgwoning/40m2</code>).
+        Titel + meta-description per pagina op de site. Leeg laten = de pagina
+        gebruikt zijn eigen (hardcoded) waarde. Opslaan ververst de betreffende
+        pagina op de site.
       </p>
 
-      <div className="mb-4">
-        <RijEditor
-          key={`new-${nonce}`}
-          initialPad=""
-          initialTitel=""
-          initialDesc=""
-          isNew
-          onDone={done}
-        />
+      <div className="space-y-6">
+        {SITE_PAGINA_GROEPEN.map((groep) => {
+          const paginas = SITE_PAGINAS.filter((p) => p.groep === groep);
+          if (paginas.length === 0) return null;
+          return (
+            <div key={groep}>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {groep}
+              </h3>
+              <div className="space-y-3">
+                {paginas.map((p) => {
+                  const ov = byPad.get(p.pad);
+                  return (
+                    <PaginaRij
+                      key={p.pad}
+                      pad={p.pad}
+                      label={p.label}
+                      initialTitel={ov?.seo_titel ?? ""}
+                      initialDesc={ov?.meta_description ?? ""}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
-
-      {rows.length === 0 ? (
-        <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-400">
-          Nog geen overrides. Voeg er hierboven een toe.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {rows.map((r) => (
-            <RijEditor
-              key={r.pad}
-              initialPad={r.pad}
-              initialTitel={r.seo_titel ?? ""}
-              initialDesc={r.meta_description ?? ""}
-              isNew={false}
-              onDone={done}
-            />
-          ))}
-        </div>
-      )}
     </section>
   );
 }
