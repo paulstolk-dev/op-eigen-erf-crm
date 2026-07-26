@@ -24,6 +24,27 @@ export type Database = {
         Update: { key?: string; value?: string; updated_at?: string }
         Relationships: []
       }
+      pagina_seo: {
+        Row: {
+          pad: string
+          seo_titel: string | null
+          meta_description: string | null
+          updated_at: string
+        }
+        Insert: {
+          pad: string
+          seo_titel?: string | null
+          meta_description?: string | null
+          updated_at?: string
+        }
+        Update: {
+          pad?: string
+          seo_titel?: string | null
+          meta_description?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hubspot_sync: {
         Row: {
           lead_id: string

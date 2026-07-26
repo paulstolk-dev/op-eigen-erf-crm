@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 async function requireCrm() {
   const supabase = await createClient();
@@ -72,6 +73,56 @@ export async function saveArtikelContent(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/website");
   revalidatePath("/socials");
+  return { ok: true };
+}
+
+// Normaliseert een pad: begint met '/', geen trailing slash (behalve root).
+function normaliseerPad(raw: string): string {
+  let p = raw.trim();
+  if (!p) return "";
+  if (!p.startsWith("/")) p = "/" + p;
+  p = p.replace(/\s+/g, "");
+  if (p.length > 1) p = p.replace(/\/+$/, "");
+  return p;
+}
+
+/** SEO-override voor één pagina opslaan (upsert op pad). Lege velden → null,
+ *  waardoor de site terugvalt op de hardcoded waarde. */
+export async function savePaginaSeo(
+  pad: string,
+  seoTitel: string,
+  metaDescription: string,
+): Promise<Result> {
+  await requireCrm();
+  const p = normaliseerPad(pad);
+  if (!p) return { ok: false, error: "Pad is verplicht (bijv. /aanbieders)." };
+  const trimOrNull = (s: string) => (s.trim() ? s.trim() : null);
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("pagina_seo").upsert(
+    {
+      pad: p,
+      seo_titel: trimOrNull(seoTitel),
+      meta_description: trimOrNull(metaDescription),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "pad" },
+  );
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/website");
+  await revalidatePublicSite([p]);
+  return { ok: true };
+}
+
+/** SEO-override verwijderen (site valt terug op de hardcoded waarde). */
+export async function deletePaginaSeo(pad: string): Promise<Result> {
+  await requireCrm();
+  const p = normaliseerPad(pad);
+  const admin = createAdminClient();
+  const { error } = await admin.from("pagina_seo").delete().eq("pad", p);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/website");
+  await revalidatePublicSite([p]);
   return { ok: true };
 }
 

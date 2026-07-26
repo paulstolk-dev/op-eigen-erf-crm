@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import type { Artikel } from "@/lib/database.types";
 import { ArtikelAfbeelding } from "./artikel-afbeelding";
 import { ArtikelContent } from "./artikel-content";
+import { PaginaSeoEditor, type PaginaSeoRow } from "./pagina-seo-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,13 @@ export default async function WebsitePage() {
     .order("publicatiedatum", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   const artikelen = (data ?? []) as Artikel[];
+
+  // Per-pagina SEO-overrides (titel + meta-description).
+  const { data: seoData } = await admin
+    .from("pagina_seo")
+    .select("pad, seo_titel, meta_description, updated_at")
+    .order("pad", { ascending: true });
+  const seoRows = (seoData ?? []) as PaginaSeoRow[];
 
   // Gekoppelde video-afleveringen (per artikel) uit de content-queue — we linken
   // enkel naar de social content op /socials; de details staan daar.
@@ -83,6 +91,10 @@ export default async function WebsitePage() {
               <span className="font-bold">{telling(s)}</span>
             </span>
           ))}
+        </div>
+
+        <div className="mb-6">
+          <PaginaSeoEditor rows={seoRows} />
         </div>
 
         {artikelen.length === 0 ? (
