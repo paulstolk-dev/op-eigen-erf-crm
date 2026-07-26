@@ -121,6 +121,30 @@ export async function savePaginaSeo(
   return { ok: true };
 }
 
+/** SEO van één kennisbank-artikel opslaan (eigen kolommen seo_titel +
+ *  beschrijving in de artikelen-tabel; niet via pagina_seo). */
+export async function saveArtikelSeo(
+  artikelId: string,
+  seoTitel: string,
+  beschrijving: string,
+): Promise<Result> {
+  await requireCrm();
+  if (!artikelId) return { ok: false, error: "Geen artikel." };
+  const trimOrNull = (s: string) => (s.trim() ? s.trim() : null);
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artikelen")
+    .update({
+      seo_titel: trimOrNull(seoTitel),
+      beschrijving: trimOrNull(beschrijving),
+    })
+    .eq("id", artikelId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/website");
+  await revalidatePublicSite(["/kennisbank"]);
+  return { ok: true };
+}
+
 /** SEO-override verwijderen (site valt terug op de hardcoded waarde). */
 export async function deletePaginaSeo(pad: string): Promise<Result> {
   await requireCrm();

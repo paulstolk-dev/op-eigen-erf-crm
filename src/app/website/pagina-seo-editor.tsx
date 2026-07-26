@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { savePaginaSeo } from "./actions";
+import { savePaginaSeo, saveArtikelSeo } from "./actions";
 import { SITE_PAGINAS, SITE_PAGINA_GROEPEN } from "@/lib/site-paginas";
 
 export type PaginaSeoRow = {
@@ -12,7 +12,16 @@ export type PaginaSeoRow = {
   updated_at: string;
 };
 
-// Aanbevolen lengtes (Google kapt ongeveer hier af).
+export type ArtikelSeoRow = {
+  id: string;
+  titel: string;
+  slug: string | null;
+  seo_titel: string | null;
+  beschrijving: string | null;
+};
+
+type Result = { ok: boolean; error?: string };
+
 const TITEL_MAX = 60;
 const DESC_MAX = 155;
 
@@ -24,20 +33,22 @@ function Teller({ n, max }: { n: number; max: number }) {
   );
 }
 
-function PaginaRij({
-  pad,
+function Rij({
   label,
+  subtitel,
   initialTitel,
   initialDesc,
   open,
   onToggle,
+  onSave,
 }: {
-  pad: string;
   label: string;
+  subtitel: string;
   initialTitel: string;
   initialDesc: string;
   open: boolean;
   onToggle: () => void;
+  onSave: (titel: string, desc: string) => Promise<Result>;
 }) {
   const router = useRouter();
   const [titel, setTitel] = useState(initialTitel);
@@ -46,12 +57,12 @@ function PaginaRij({
   const [pending, start] = useTransition();
 
   const gewijzigd = titel !== initialTitel || desc !== initialDesc;
-  const heeftOverride = Boolean(initialTitel || initialDesc);
+  const heeftWaarde = Boolean(initialTitel || initialDesc);
 
   function opslaan() {
     setMsg("");
     start(async () => {
-      const r = await savePaginaSeo(pad, titel, desc);
+      const r = await onSave(titel, desc);
       setMsg(r.ok ? "Opgeslagen." : (r.error ?? "Opslaan mislukt."));
       if (r.ok) router.refresh();
     });
@@ -59,7 +70,6 @@ function PaginaRij({
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      {/* Kop: altijd zichtbaar, klikbaar om uit te klappen. */}
       <button
         type="button"
         onClick={onToggle}
@@ -69,11 +79,11 @@ function PaginaRij({
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-sm font-medium text-slate-900">{label}</span>
           <code className="hidden shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 sm:inline">
-            {pad}
+            {subtitel}
           </code>
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          {heeftOverride && (
+          {heeftWaarde && (
             <span className="rounded-full bg-erf/10 px-2 py-0.5 text-[11px] font-medium text-erf">
               ingevuld
             </span>
@@ -93,7 +103,6 @@ function PaginaRij({
         </span>
       </button>
 
-      {/* Uitklap: de invoer. Blijft gemount (state behouden), alleen verborgen. */}
       {open && (
         <div className="border-t border-slate-100 p-4">
           <label className="block">
@@ -104,7 +113,7 @@ function PaginaRij({
             <input
               value={titel}
               onChange={(e) => setTitel(e.target.value)}
-              placeholder="Leeg = hardcoded titel van de pagina"
+              placeholder="Leeg = standaardtitel"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
             />
           </label>
@@ -118,7 +127,7 @@ function PaginaRij({
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               rows={2}
-              placeholder="Leeg = hardcoded description van de pagina"
+              placeholder="Leeg = standaard-description"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
             />
           </label>
@@ -144,17 +153,24 @@ function PaginaRij({
   );
 }
 
-export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
+export function PaginaSeoEditor({
+  rows,
+  artikelen,
+}: {
+  rows: PaginaSeoRow[];
+  artikelen: ArtikelSeoRow[];
+}) {
   const byPad = new Map(rows.map((r) => [r.pad, r]));
-  const [openPad, setOpenPad] = useState<string | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const toggle = (k: string) => setOpenKey((cur) => (cur === k ? null : k));
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <h2 className="text-sm font-semibold text-slate-900">SEO per pagina</h2>
       <p className="mb-4 mt-0.5 text-xs text-slate-500">
         Klik een pagina open om de titel + meta-description in te voeren. Leeg
-        laten = de pagina gebruikt zijn eigen (hardcoded) waarde. Opslaan ververst
-        de betreffende pagina op de site.
+        laten = de standaardwaarde van de pagina. Opslaan ververst de betreffende
+        pagina op de site.
       </p>
 
       <div className="space-y-6">
@@ -170,14 +186,15 @@ export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
                 {paginas.map((p) => {
                   const ov = byPad.get(p.pad);
                   return (
-                    <PaginaRij
+                    <Rij
                       key={p.pad}
-                      pad={p.pad}
                       label={p.label}
+                      subtitel={p.pad}
                       initialTitel={ov?.seo_titel ?? ""}
                       initialDesc={ov?.meta_description ?? ""}
-                      open={openPad === p.pad}
-                      onToggle={() => setOpenPad((cur) => (cur === p.pad ? null : p.pad))}
+                      open={openKey === p.pad}
+                      onToggle={() => toggle(p.pad)}
+                      onSave={(t, d) => savePaginaSeo(p.pad, t, d)}
                     />
                   );
                 })}
@@ -185,6 +202,29 @@ export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
             </div>
           );
         })}
+
+        {/* Kennisbank-artikelen: eigen seo_titel/beschrijving in de artikelen-tabel. */}
+        {artikelen.length > 0 && (
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Kennisbank-artikelen
+            </h3>
+            <div className="space-y-2">
+              {artikelen.map((a) => (
+                <Rij
+                  key={`art-${a.id}`}
+                  label={a.titel}
+                  subtitel={a.slug ?? "—"}
+                  initialTitel={a.seo_titel ?? ""}
+                  initialDesc={a.beschrijving ?? ""}
+                  open={openKey === `art-${a.id}`}
+                  onToggle={() => toggle(`art-${a.id}`)}
+                  onSave={(t, d) => saveArtikelSeo(a.id, t, d)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

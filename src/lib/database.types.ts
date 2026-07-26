@@ -590,6 +590,8 @@ export type Database = {
         Update: {
           slug?: string | null
           titel?: string
+          seo_titel?: string | null
+          beschrijving?: string | null
           categorie?: string | null
           status?: string
           afbeelding_url?: string | null

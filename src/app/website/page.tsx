@@ -4,7 +4,11 @@ import { AppHeader } from "@/components/app-header";
 import type { Artikel } from "@/lib/database.types";
 import { ArtikelAfbeelding } from "./artikel-afbeelding";
 import { ArtikelContent } from "./artikel-content";
-import { PaginaSeoEditor, type PaginaSeoRow } from "./pagina-seo-editor";
+import {
+  PaginaSeoEditor,
+  type PaginaSeoRow,
+  type ArtikelSeoRow,
+} from "./pagina-seo-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +98,18 @@ export default async function WebsitePage() {
         </div>
 
         <div className="mb-6">
-          <PaginaSeoEditor rows={seoRows} />
+          <PaginaSeoEditor
+            rows={seoRows}
+            artikelen={artikelen.map(
+              (a): ArtikelSeoRow => ({
+                id: a.id,
+                titel: a.titel,
+                slug: a.slug,
+                seo_titel: a.seo_titel,
+                beschrijving: a.beschrijving,
+              }),
+            )}
+          />
         </div>
 
         {artikelen.length === 0 ? (
