@@ -29,11 +29,15 @@ function PaginaRij({
   label,
   initialTitel,
   initialDesc,
+  open,
+  onToggle,
 }: {
   pad: string;
   label: string;
   initialTitel: string;
   initialDesc: string;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const router = useRouter();
   const [titel, setTitel] = useState(initialTitel);
@@ -54,75 +58,103 @@ function PaginaRij({
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">{label}</span>
-          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{pad}</code>
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      {/* Kop: altijd zichtbaar, klikbaar om uit te klappen. */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-slate-50"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-sm font-medium text-slate-900">{label}</span>
+          <code className="hidden shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 sm:inline">
+            {pad}
+          </code>
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          {heeftOverride && (
+            <span className="rounded-full bg-erf/10 px-2 py-0.5 text-[11px] font-medium text-erf">
+              ingevuld
+            </span>
+          )}
+          <svg
+            viewBox="0 0 20 20"
+            className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </span>
+      </button>
+
+      {/* Uitklap: de invoer. Blijft gemount (state behouden), alleen verborgen. */}
+      {open && (
+        <div className="border-t border-slate-100 p-4">
+          <label className="block">
+            <span className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">SEO-titel</span>
+              <Teller n={titel.length} max={TITEL_MAX} />
+            </span>
+            <input
+              value={titel}
+              onChange={(e) => setTitel(e.target.value)}
+              placeholder="Leeg = hardcoded titel van de pagina"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+            />
+          </label>
+
+          <label className="mt-2 block">
+            <span className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Meta-description</span>
+              <Teller n={desc.length} max={DESC_MAX} />
+            </span>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              rows={2}
+              placeholder="Leeg = hardcoded description van de pagina"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+            />
+          </label>
+
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              type="button"
+              disabled={pending || !gewijzigd}
+              onClick={opslaan}
+              className="rounded-lg bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-40"
+            >
+              {pending ? "Opslaan…" : "Opslaan"}
+            </button>
+            {msg && (
+              <span className={`text-xs ${msg.includes("mislukt") ? "text-red-600" : "text-green-600"}`}>
+                {msg}
+              </span>
+            )}
+          </div>
         </div>
-        {heeftOverride && (
-          <span className="rounded-full bg-erf/10 px-2 py-0.5 text-[11px] font-medium text-erf">
-            override actief
-          </span>
-        )}
-      </div>
-
-      <label className="block">
-        <span className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">SEO-titel</span>
-          <Teller n={titel.length} max={TITEL_MAX} />
-        </span>
-        <input
-          value={titel}
-          onChange={(e) => setTitel(e.target.value)}
-          placeholder="Leeg = hardcoded titel van de pagina"
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-        />
-      </label>
-
-      <label className="mt-2 block">
-        <span className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Meta-description</span>
-          <Teller n={desc.length} max={DESC_MAX} />
-        </span>
-        <textarea
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          rows={2}
-          placeholder="Leeg = hardcoded description van de pagina"
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-        />
-      </label>
-
-      <div className="mt-2 flex items-center gap-3">
-        <button
-          type="button"
-          disabled={pending || !gewijzigd}
-          onClick={opslaan}
-          className="rounded-lg bg-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy-700 disabled:opacity-40"
-        >
-          {pending ? "Opslaan…" : "Opslaan"}
-        </button>
-        {msg && (
-          <span className={`text-xs ${msg.includes("mislukt") ? "text-red-600" : "text-green-600"}`}>
-            {msg}
-          </span>
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
 export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
   const byPad = new Map(rows.map((r) => [r.pad, r]));
+  const [openPad, setOpenPad] = useState<string | null>(null);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <h2 className="text-sm font-semibold text-slate-900">SEO per pagina</h2>
       <p className="mb-4 mt-0.5 text-xs text-slate-500">
-        Titel + meta-description per pagina op de site. Leeg laten = de pagina
-        gebruikt zijn eigen (hardcoded) waarde. Opslaan ververst de betreffende
-        pagina op de site.
+        Klik een pagina open om de titel + meta-description in te voeren. Leeg
+        laten = de pagina gebruikt zijn eigen (hardcoded) waarde. Opslaan ververst
+        de betreffende pagina op de site.
       </p>
 
       <div className="space-y-6">
@@ -134,7 +166,7 @@ export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {groep}
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {paginas.map((p) => {
                   const ov = byPad.get(p.pad);
                   return (
@@ -144,6 +176,8 @@ export function PaginaSeoEditor({ rows }: { rows: PaginaSeoRow[] }) {
                       label={p.label}
                       initialTitel={ov?.seo_titel ?? ""}
                       initialDesc={ov?.meta_description ?? ""}
+                      open={openPad === p.pad}
+                      onToggle={() => setOpenPad((cur) => (cur === p.pad ? null : p.pad))}
                     />
                   );
                 })}
