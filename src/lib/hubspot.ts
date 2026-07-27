@@ -131,6 +131,7 @@ async function ensureContactProperties() {
     ["gewenste_grootte", "Gewenste grootte"],
     ["budget_indicatie", "Budget indicatie"],
     ["type_doelgroep", "Type doelgroep"],
+    ["planning", "Planning"],
   ]) {
     await ensureProperty("contacts", {
       name,
@@ -267,6 +268,8 @@ export async function syncLeadToHubspot(
     if (budgetIndicatie) contactProps.budget_indicatie = budgetIndicatie;
     // 'Voor wie is de woning' (Ouder/Kind) uit de Mijn Erf-intake.
     if (lead.voor_wie) contactProps.type_doelgroep = lead.voor_wie;
+    // Gewenste termijn / planning van de lead.
+    if (lead.planning) contactProps.planning = lead.planning;
 
     // Contact upserten op e-mail; zonder e-mail op onthouden id, anders nieuw.
     let contactId: string | undefined = mapping?.contact_id ?? undefined;
