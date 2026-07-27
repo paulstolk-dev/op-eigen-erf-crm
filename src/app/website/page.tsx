@@ -2,13 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/app-header";
 import type { Artikel } from "@/lib/database.types";
-import { ArtikelAfbeelding } from "./artikel-afbeelding";
-import { ArtikelContent } from "./artikel-content";
 import {
-  PaginaSeoEditor,
+  WebsiteLijst,
   type PaginaSeoRow,
-  type ArtikelSeoRow,
-} from "./pagina-seo-editor";
+  type ArtikelRow,
+} from "./website-lijst";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +15,6 @@ const STATUS_STYLE: Record<string, string> = {
   concept: "bg-slate-100 text-slate-600 ring-slate-400/20",
   gearchiveerd: "bg-amber-100 text-amber-800 ring-amber-600/20",
 };
-
-function datumNL(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export default async function WebsitePage() {
   const supabase = await createClient();
@@ -41,7 +30,7 @@ export default async function WebsitePage() {
     .order("created_at", { ascending: false });
   const artikelen = (data ?? []) as Artikel[];
 
-  // Per-pagina SEO-overrides (titel + meta-description).
+  // Per-pagina SEO-overrides (titel + meta-description) voor de statische pagina's.
   const { data: seoData } = await admin
     .from("pagina_seo")
     .select("pad, seo_titel, meta_description, updated_at")
@@ -61,13 +50,25 @@ export default async function WebsitePage() {
       .order("created_at", { ascending: false });
     afleveringen = (aflData ?? []) as Afl[];
   }
-  const aflByArtikel = new Map<string, Afl[]>();
+  const eersteAflevering = new Map<string, string>();
   for (const r of afleveringen) {
-    if (!r.artikel_id) continue;
-    const arr = aflByArtikel.get(r.artikel_id) ?? [];
-    arr.push(r);
-    aflByArtikel.set(r.artikel_id, arr);
+    if (!r.artikel_id || eersteAflevering.has(r.artikel_id)) continue;
+    eersteAflevering.set(r.artikel_id, r.id);
   }
+
+  const artikelRijen: ArtikelRow[] = artikelen.map((a) => ({
+    id: a.id,
+    titel: a.titel,
+    slug: a.slug,
+    seo_titel: a.seo_titel,
+    beschrijving: a.beschrijving,
+    categorie: a.categorie,
+    status: a.status,
+    publicatiedatum: a.publicatiedatum,
+    afbeelding_url: a.afbeelding_url,
+    content_processed: a.content_processed,
+    afleveringId: eersteAflevering.get(a.id) ?? null,
+  }));
 
   const telling = (s: string) => artikelen.filter((a) => a.status === s).length;
 
@@ -76,10 +77,10 @@ export default async function WebsitePage() {
       <AppHeader email={user?.email} />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-5">
-          <h1 className="text-lg font-semibold text-slate-900">Website — artikelen</h1>
+          <h1 className="text-lg font-semibold text-slate-900">Website</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Alle kennisbank-artikelen uit Supabase. Voeg per artikel een uitgelichte
-            afbeelding toe.
+            Alles per pagina op één plek: SEO-titel + meta-description, en per
+            artikel ook de uitgelichte afbeelding en de social content.
           </p>
         </div>
 
@@ -97,69 +98,7 @@ export default async function WebsitePage() {
           ))}
         </div>
 
-        <div className="mb-6">
-          <PaginaSeoEditor
-            rows={seoRows}
-            artikelen={artikelen.map(
-              (a): ArtikelSeoRow => ({
-                id: a.id,
-                titel: a.titel,
-                slug: a.slug,
-                seo_titel: a.seo_titel,
-                beschrijving: a.beschrijving,
-              }),
-            )}
-          />
-        </div>
-
-        {artikelen.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-            Nog geen artikelen.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {artikelen.map((a) => (
-              <li key={a.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  <ArtikelAfbeelding artikelId={a.id} url={a.afbeelding_url} />
-                  <div className="min-w-[14rem] flex-1">
-                    <p className="text-sm font-semibold text-slate-900">{a.titel}</p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {a.categorie ?? "—"} · {datumNL(a.publicatiedatum)}
-                      {a.slug ? ` · /${a.slug}` : ""}
-                    </p>
-                  </div>
-                  <span
-                    className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                      a.content_processed
-                        ? "bg-green-100 text-green-800 ring-green-600/20"
-                        : "bg-slate-100 text-slate-500 ring-slate-400/20"
-                    }`}
-                  >
-                    {a.content_processed ? "✓ verwerkt" : "niet verwerkt"}
-                  </span>
-                  <span
-                    className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                      STATUS_STYLE[a.status] ?? STATUS_STYLE.concept
-                    }`}
-                  >
-                    {a.status}
-                  </span>
-                </div>
-
-                <details className="mt-1">
-                  <summary className="cursor-pointer text-xs font-medium text-navy hover:underline">
-                    Social content
-                  </summary>
-                  <ArtikelContent
-                    artikelId={a.id}
-                    afleveringId={(aflByArtikel.get(a.id) ?? [])[0]?.id ?? null}
-                  />
-                </details>
-              </li>
-            ))}
-          </ul>
-        )}
+        <WebsiteLijst seoRows={seoRows} artikelen={artikelRijen} />
       </main>
     </div>
   );
