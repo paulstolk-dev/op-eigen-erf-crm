@@ -5,6 +5,7 @@ import { DashboardChart, type DayPoint } from "@/components/dashboard-chart";
 import { DashboardFilter } from "@/components/dashboard-filter";
 import { AdsSyncButton } from "./ads-sync-button";
 import { scoreLead } from "@/lib/lead-score";
+import { PARTNER_FUNNEL, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,25 @@ export default async function DashboardPage({
   const { data: adSpend } = await supabase
     .from("ad_spend")
     .select("date,cost_eur,clicks");
+
+  // Aanbieders: wat staat er live op de site + waar staat de wervingsfunnel.
+  const { data: aanbiedersData } = await supabase
+    .from("aanbieders")
+    .select("actief,partner_status");
+  const alleAanbieders = (aanbiedersData ?? []) as {
+    actief: boolean;
+    partner_status: string;
+  }[];
+  const aanbiedersLive = alleAanbieders.filter((a) => a.actief).length;
+  const funnelTelling = (s: string) =>
+    alleAanbieders.filter((a) => a.partner_status === s).length;
+
+  // Modellen die daadwerkelijk op de site staan: actief model bij actieve aanbieder.
+  const { count: modellenLive } = await supabase
+    .from("woningen")
+    .select("id, aanbieders!inner(actief)", { count: "exact", head: true })
+    .eq("actief", true)
+    .eq("aanbieders.actief", true);
   const erfscanByLead = new Map<string, Erfscan>(
     (erfscans ?? []).map((e) => [e.lead_id, e as Erfscan]),
   );
@@ -240,6 +260,32 @@ export default async function DashboardPage({
 
         <div className="mb-5">
           <DashboardChart data={chartData} periodLabel={periodLabel} />
+        </div>
+
+        {/* Aanbieders: aanbod op de site + de wervingsfunnel (altijd actueel,
+            niet afhankelijk van de gekozen periode). */}
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Aanbieders
+          </h2>
+          <Link
+            href="/aanbieders/partners"
+            className="text-xs font-medium text-navy hover:underline"
+          >
+            Naar de funnel →
+          </Link>
+        </div>
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <StatCard label="Aanbieders live" value={aanbiedersLive} />
+          <StatCard label="Modellen live" value={modellenLive ?? 0} />
+          {PARTNER_FUNNEL.map((s, i) => (
+            <StatCard
+              key={s}
+              label={`${i + 1}. ${PARTNER_STATUS_LABELS[s]}`}
+              value={funnelTelling(s)}
+              tone={s === "partner" ? "groen" : undefined}
+            />
+          ))}
         </div>
 
         <div className="flex justify-end">
