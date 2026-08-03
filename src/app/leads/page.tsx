@@ -127,15 +127,23 @@ export default async function LeadsPage() {
     .limit(5000);
   const kliksByLead = new Map<
     string,
-    { totaal: number; laatste: string | null; perLabel: Map<string, number> }
+    {
+      erfcheck: number;
+      nurture: number;
+      laatste: string | null;
+      perLabel: Map<string, number>;
+    }
   >();
   for (const k of klikRijen ?? []) {
     let entry = kliksByLead.get(k.lead_id);
     if (!entry) {
-      entry = { totaal: 0, laatste: null, perLabel: new Map() };
+      entry = { erfcheck: 0, nurture: 0, laatste: null, perLabel: new Map() };
       kliksByLead.set(k.lead_id, entry);
     }
-    entry.totaal++;
+    // De Erf Check-mail linkt met label 'erfcheck-mijn-erf'; al het andere komt
+    // uit de opvolgmails (nurture-flow).
+    if ((k.label ?? "").startsWith("erfcheck")) entry.erfcheck++;
+    else entry.nurture++;
     // Rijen komen nieuw → oud binnen, dus de eerste is de laatste klik.
     if (!entry.laatste) entry.laatste = k.clicked_at;
     const label = k.label || "Link";
@@ -263,12 +271,30 @@ export default async function LeadsPage() {
                           .join("\n");
                         return (
                           <span
-                            className="font-medium text-erf"
+                            className="text-xs"
                             title={`${uitsplitsing}${
                               k.laatste ? `\n\nLaatste klik: ${datum(k.laatste)}` : ""
                             }`}
                           >
-                            {k.totaal}×
+                            <span
+                              className={
+                                k.erfcheck
+                                  ? "font-medium text-slate-900"
+                                  : "text-slate-300"
+                              }
+                            >
+                              {k.erfcheck}
+                            </span>
+                            <span className="text-slate-400"> erfcheck</span>
+                            <span className="text-slate-300"> / </span>
+                            <span
+                              className={
+                                k.nurture ? "font-medium text-erf" : "text-slate-300"
+                              }
+                            >
+                              {k.nurture}
+                            </span>
+                            <span className="text-slate-400"> nurture</span>
                           </span>
                         );
                       })()}
