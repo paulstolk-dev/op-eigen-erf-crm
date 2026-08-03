@@ -118,6 +118,30 @@ export default async function LeadsPage() {
     sentByLead.get(s.lead_id)!.add(s.step_id);
   }
 
+  // Klikken op links in de mails (via de /l/-redirect): per lead het totaal +
+  // een uitsplitsing per link, zodat je in één oogopslag ziet wie er reageert.
+  const { data: klikRijen } = await supabase
+    .from("lead_link_clicks")
+    .select("lead_id,label,clicked_at")
+    .order("clicked_at", { ascending: false })
+    .limit(5000);
+  const kliksByLead = new Map<
+    string,
+    { totaal: number; laatste: string | null; perLabel: Map<string, number> }
+  >();
+  for (const k of klikRijen ?? []) {
+    let entry = kliksByLead.get(k.lead_id);
+    if (!entry) {
+      entry = { totaal: 0, laatste: null, perLabel: new Map() };
+      kliksByLead.set(k.lead_id, entry);
+    }
+    entry.totaal++;
+    // Rijen komen nieuw → oud binnen, dus de eerste is de laatste klik.
+    if (!entry.laatste) entry.laatste = k.clicked_at;
+    const label = k.label || "Link";
+    entry.perLabel.set(label, (entry.perLabel.get(label) ?? 0) + 1);
+  }
+
   const rows = (leads ?? [])
     .map((lead) => {
       const erfscan = erfscanByLead.get(lead.id) ?? null;
@@ -157,6 +181,7 @@ export default async function LeadsPage() {
                 <th className="px-4 py-3 font-medium">Achtererf</th>
                 <th className="px-4 py-3 font-medium">Score</th>
                 <th className="px-4 py-3 font-medium">Geopend</th>
+                <th className="px-4 py-3 font-medium">Kliks</th>
                 <th className="px-4 py-3 font-medium">Conclusie</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Rapport</th>
                 <th className="px-4 py-3 font-medium">Flow</th>
@@ -165,7 +190,7 @@ export default async function LeadsPage() {
             <tbody className="divide-y divide-slate-100">
               {leadRows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
                     Nog geen leads.
                   </td>
                 </tr>
@@ -224,6 +249,27 @@ export default async function LeadsPage() {
                           </span>
                         ) : (
                           <span className="text-slate-300">0</span>
+                        );
+                      })()}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {(() => {
+                        const k = kliksByLead.get(lead.id);
+                        if (!k) return <span className="text-slate-300">0</span>;
+                        // Tooltip: welke links, hoe vaak + wanneer voor het laatst.
+                        const uitsplitsing = Array.from(k.perLabel.entries())
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([label, n]) => `${label}: ${n}×`)
+                          .join("\n");
+                        return (
+                          <span
+                            className="font-medium text-erf"
+                            title={`${uitsplitsing}${
+                              k.laatste ? `\n\nLaatste klik: ${datum(k.laatste)}` : ""
+                            }`}
+                          >
+                            {k.totaal}×
+                          </span>
                         );
                       })()}
                     </td>
