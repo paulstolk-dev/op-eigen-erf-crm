@@ -67,6 +67,7 @@ export default async function EmailFlowPage({
     geklikt: number;
     gebounced: number;
     ctr_pct: number | null;
+    geconverteerd: number;
   };
   const { data: metricsRaw } = await (supabase as any).rpc("nurture_step_performance");
   const metrics = (metricsRaw ?? []) as Metric[];
@@ -112,7 +113,9 @@ export default async function EmailFlowPage({
           <p className="mt-0.5 mb-3 text-xs text-slate-500">
             Meetlaag op basis van Resend-events. <strong>Stuur op klikken</strong>, niet op
             opens: Apple Mail &amp; Gmail prefetchen de tracking-pixel, dus opens zijn
-            onbetrouwbaar (CTR staat daarom op <em>bezorgd</em>).
+            onbetrouwbaar (CTR staat daarom op <em>bezorgd</em>).{" "}
+            <strong>Gesprek</strong> = aangevraagde kennismakingsgesprekken,
+            toegerekend aan de mail via de UTM van de CTA-link.
           </p>
           {totVerzonden === 0 ? (
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-400">
@@ -131,6 +134,7 @@ export default async function EmailFlowPage({
                     <th className="py-2 pr-3 font-medium">Geklikt</th>
                     <th className="py-2 pr-3 font-medium">Bounced</th>
                     <th className="py-2 pr-3 font-medium">CTR</th>
+                    <th className="py-2 pr-3 font-medium">Gesprek</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -150,6 +154,18 @@ export default async function EmailFlowPage({
                       </td>
                       <td className="py-2 pr-3 text-slate-700">
                         {m.ctr_pct != null ? `${m.ctr_pct}%` : "—"}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {m.geconverteerd > 0 ? (
+                          <span
+                            className="font-semibold text-green-700"
+                            title="Kennismakingsgesprekken uit deze mail (op UTM van de CTA-link)"
+                          >
+                            {m.geconverteerd}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">0</span>
+                        )}
                       </td>
                     </tr>
                   ))}
