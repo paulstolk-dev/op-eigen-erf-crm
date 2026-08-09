@@ -182,6 +182,17 @@ export default async function DashboardPage({
     if (d) besluitPerDay.set(d, (besluitPerDay.get(d) ?? 0) + 1);
   }
 
+  // Kennismakingsgesprek-aanvragen (het conversiedoel van de erfcheck-opvolging).
+  // Niet ontdubbeld tegen de erfcheck-lead: het gesprek ís juist de conversie van
+  // die lead en hoort als eigen gebeurtenis op z'n eigen dag zichtbaar te zijn.
+  const gesprekPerDay = new Map<string, number>();
+  for (const l of leads ?? []) {
+    if (l.type !== "kennismaking" || l.excluded_from_stats) continue;
+    if (!inRange(l.created_at)) continue;
+    const d = (l.created_at ?? "").slice(0, 10);
+    if (d) gesprekPerDay.set(d, (gesprekPerDay.get(d) ?? 0) + 1);
+  }
+
   const fromMs = new Date(from + "T00:00:00Z").getTime();
   const chartData: DayPoint[] = Array.from({ length: nDays }, (_, i) => {
     const iso = isoDay(new Date(fromMs + i * 86400000));
@@ -189,6 +200,7 @@ export default async function DashboardPage({
       date: iso,
       leads: leadsPerDay.get(iso) ?? 0,
       besluit: besluitPerDay.get(iso) ?? 0,
+      gesprek: gesprekPerDay.get(iso) ?? 0,
       cost: costPerDay.get(iso) ?? 0,
     };
   });

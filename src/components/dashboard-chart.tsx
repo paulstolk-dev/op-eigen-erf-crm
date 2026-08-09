@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-export type DayPoint = { date: string; leads: number; besluit: number; cost: number };
+export type DayPoint = {
+  date: string;
+  leads: number;
+  besluit: number;
+  gesprek: number;
+  cost: number;
+};
 
 const W = 760;
 const H = 260;
@@ -41,8 +47,9 @@ export function DashboardChart({
   const slot = plotW / n;
   const barW = Math.max(2, slot * 0.55);
 
-  // Balk = erfcheck-leads + besluit-alerts gestapeld, dus de as op de som schalen.
-  const leadsMax = Math.max(1, ...data.map((d) => d.leads + d.besluit));
+  // Balk = erfcheck-leads + besluit-alerts + gespreksaanvragen gestapeld, dus de
+  // as op de som schalen.
+  const leadsMax = Math.max(1, ...data.map((d) => d.leads + d.besluit + d.gesprek));
   const costMax = Math.max(1, ...data.map((d) => d.cost));
 
   const xCenter = (i: number) => x0 + slot * i + slot / 2;
@@ -58,6 +65,7 @@ export function DashboardChart({
 
   const totLeads = data.reduce((s, d) => s + d.leads, 0);
   const totBesluit = data.reduce((s, d) => s + d.besluit, 0);
+  const totGesprek = data.reduce((s, d) => s + d.gesprek, 0);
   const totCost = data.reduce((s, d) => s + d.cost, 0);
 
   return (
@@ -75,6 +83,10 @@ export function DashboardChart({
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-sm bg-slate-400" />
             Besluit-alerts · {totBesluit}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-500" />
+            Gesprekken · {totGesprek}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-0.5 w-4 rounded bg-erf" />
@@ -118,11 +130,13 @@ export function DashboardChart({
           );
         })}
 
-        {/* bars: erfcheck-leads (navy) + besluit-alerts gestapeld erbovenop (grijs) */}
+        {/* bars: erfcheck-leads (navy) + besluit-alerts (grijs) + gespreksaanvragen
+            (groen) gestapeld erbovenop */}
         {data.map((d, i) => {
           const xL = xCenter(i) - barW / 2;
           const yLeads = leadsY(d.leads);
-          const yTop = leadsY(d.leads + d.besluit);
+          const yBesluit = leadsY(d.leads + d.besluit);
+          const yGesprek = leadsY(d.leads + d.besluit + d.gesprek);
           return (
             <g key={i}>
               <rect
@@ -136,11 +150,21 @@ export function DashboardChart({
               {d.besluit > 0 && (
                 <rect
                   x={xL}
-                  y={yTop}
+                  y={yBesluit}
                   width={barW}
-                  height={Math.max(0, yLeads - yTop)}
+                  height={Math.max(0, yLeads - yBesluit)}
                   rx={1.5}
                   className={hover === i ? "fill-slate-400" : "fill-slate-300"}
+                />
+              )}
+              {d.gesprek > 0 && (
+                <rect
+                  x={xL}
+                  y={yGesprek}
+                  width={barW}
+                  height={Math.max(0, yBesluit - yGesprek)}
+                  rx={1.5}
+                  className={hover === i ? "fill-green-600" : "fill-green-500"}
                 />
               )}
             </g>
@@ -201,7 +225,7 @@ export function DashboardChart({
                 <g transform={`translate(${tx}, ${y0})`}>
                   <rect
                     width={tw}
-                    height={56}
+                    height={68}
                     rx={6}
                     className="fill-slate-900"
                     opacity={0.92}
@@ -215,7 +239,10 @@ export function DashboardChart({
                   <text x={8} y={40} className="fill-slate-200" style={{ fontSize: 10 }}>
                     Besluit-alerts: {d.besluit}
                   </text>
-                  <text x={8} y={52} className="fill-slate-200" style={{ fontSize: 10 }}>
+                  <text x={8} y={52} className="fill-green-300" style={{ fontSize: 10 }}>
+                    Gesprekken: {d.gesprek}
+                  </text>
+                  <text x={8} y={64} className="fill-slate-200" style={{ fontSize: 10 }}>
                     Ad-spend: {euro(d.cost)}
                   </text>
                 </g>
