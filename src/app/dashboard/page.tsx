@@ -31,7 +31,9 @@ function StatCard({
           : "text-slate-400";
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="break-words text-xs uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
       <div className="mt-1 flex items-baseline gap-2">
         <span className="text-2xl font-semibold text-slate-900">{value}</span>
         {sub && <span className={`text-sm font-medium ${subColor}`}>{sub}</span>}
@@ -129,6 +131,15 @@ export default async function DashboardPage({
   const gewonnen = rows.filter((r) => r.lead.status === "gewonnen").length;
   const verloren = rows.filter((r) => r.lead.status === "verloren").length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+
+  // Vervolgaanvragen in dezelfde periode: het kennismakingsgesprek en de betaalde
+  // haalbaarheidsscan zijn de twee conversiedoelen van de erfcheck-opvolging.
+  const aanvragenVanType = (type: string) =>
+    (leads ?? []).filter(
+      (l) => l.type === type && !l.excluded_from_stats && inRange(l.created_at),
+    ).length;
+  const gesprekken = aanvragenVanType("kennismaking");
+  const scans = aanvragenVanType("haalbaarheidsscan");
 
   // Marketing: ads-spend en kosten per lead over dezelfde periode.
   const spend = (adSpend ?? [])
@@ -230,7 +241,7 @@ export default async function DashboardPage({
           <DashboardFilter from={from} to={to} activeDays={presetDays} />
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Aantal leads" value={total} />
           <StatCard
             label="Qualified (score ≥ 40)"
@@ -248,6 +259,18 @@ export default async function DashboardPage({
             label="Gewonnen"
             value={gewonnen}
             sub={`${pct(gewonnen)}%`}
+            tone="groen"
+          />
+          <StatCard
+            label="Gesprekken"
+            value={gesprekken}
+            sub={`${pct(gesprekken)}%`}
+            tone="groen"
+          />
+          <StatCard
+            label="Haalbaarheidsscans"
+            value={scans}
+            sub={`${pct(scans)}%`}
             tone="groen"
           />
         </div>
