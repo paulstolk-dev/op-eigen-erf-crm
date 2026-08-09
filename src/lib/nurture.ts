@@ -202,6 +202,17 @@ export async function runNurture(opts?: {
     verzondenPerLead.get(s.lead_id)!.add(s.step_id);
   }
 
+  // Geconverteerd: een gekoppeld kennismakingsgesprek is het doel van deze flow —
+  // die leads krijgen geen opvolgmails meer (exit-on-conversion).
+  const { data: gesprekken } = await (admin as any)
+    .from("leads")
+    .select("parent_lead_id")
+    .eq("type", "kennismaking")
+    .not("parent_lead_id", "is", null);
+  const heeftGesprek = new Set(
+    ((gesprekken ?? []) as { parent_lead_id: string }[]).map((g) => g.parent_lead_id),
+  );
+
   // Suppressie-lijst (bounces/klachten/afmeldingen) — nooit meer mailen.
   const { data: supp } = await (admin as any).rpc("nurture_suppressed_emails");
   const suppressed = new Set(
@@ -222,6 +233,7 @@ export async function runNurture(opts?: {
     const lead = row.leads;
     if (!lead?.email || !row.sent_at) continue;
     if (lead.status === "gewonnen" || lead.status === "verloren") continue; // exit-on-conversion
+    if (heeftGesprek.has(row.lead_id)) continue; // kennismaking geboekt = geconverteerd
     if (suppressed.has(lead.email.toLowerCase())) continue; // bounce/klacht/afmelding
     // Doelgroep op erf-verdict: erf-ongeschikte leads (rood) standaard uitgesloten.
     if (verdictToegestaan && !verdictToegestaan.has(row.conclusie ?? "")) continue;

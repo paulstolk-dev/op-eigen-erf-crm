@@ -17,9 +17,17 @@ function flowStatus(
   sent: Set<string>,
   activeSteps: FlowStep[],
   alleSteps: FlowStep[],
+  geconverteerd = false,
 ): { label: string; cls: string; plain?: boolean; title?: string } {
   if (!erfscan?.sent_at)
     return { label: "—", cls: "", plain: true, title: "Rapport nog niet verstuurd" };
+  // Kennismakingsgesprek geboekt = het doel van de flow bereikt; er gaat niets meer uit.
+  if (geconverteerd)
+    return {
+      label: "Gesprek",
+      cls: "bg-green-100 text-green-700 ring-green-600/20",
+      title: "Kennismakingsgesprek aangevraagd — uit de flow",
+    };
   if (status === "gewonnen" || status === "verloren")
     return { label: "Uit flow", cls: "bg-slate-100 text-slate-500 ring-slate-400/20" };
   const next = volgendeStap(activeSteps, alleSteps, sent);
@@ -149,6 +157,13 @@ export default async function LeadsPage() {
     const label = k.label || "Link";
     entry.perLabel.set(label, (entry.perLabel.get(label) ?? 0) + 1);
   }
+
+  // Erfcheck-leads met een gekoppeld kennismakingsgesprek: doel van de flow bereikt.
+  const metGesprek = new Set(
+    ((leads ?? []) as Lead[])
+      .filter((l) => l.type === "kennismaking" && l.parent_lead_id)
+      .map((l) => l.parent_lead_id as string),
+  );
 
   const rows = (leads ?? [])
     .map((lead) => {
@@ -332,6 +347,7 @@ export default async function LeadsPage() {
                           sentByLead.get(lead.id) ?? EMPTY,
                           activeSteps,
                           alleSteps,
+                          metGesprek.has(lead.id),
                         );
                         return flow.plain ? (
                           <span className="text-slate-300" title={flow.title}>

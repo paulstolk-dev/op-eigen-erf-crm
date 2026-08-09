@@ -871,6 +871,7 @@ export type Database = {
           updated_at: string
           voornaam: string | null
           excluded_from_stats: boolean
+          parent_lead_id: string | null
         }
         Insert: {
           achternaam?: string | null
@@ -904,6 +905,7 @@ export type Database = {
           updated_at?: string
           voornaam?: string | null
           excluded_from_stats?: boolean
+          parent_lead_id?: string | null
         }
         Update: {
           achternaam?: string | null
@@ -937,6 +939,7 @@ export type Database = {
           updated_at?: string
           voornaam?: string | null
           excluded_from_stats?: boolean
+          parent_lead_id?: string | null
         }
         Relationships: []
       }

@@ -75,6 +75,31 @@ export default async function LeadDetailPage({
     .order("clicked_at", { ascending: false })
     .limit(50);
 
+  // Gekoppelde vervolgaanvragen van dezelfde persoon (kennismakingsgesprek,
+  // besluit-alert) en — als dit zelf zo'n aanvraag is — de erfcheck-lead erboven.
+  const { data: gekoppeld } = await (supabase as any)
+    .from("leads")
+    .select("id,type,status,startdatum,created_at,details")
+    .eq("parent_lead_id", id)
+    .order("created_at", { ascending: false });
+  const kinderen = (gekoppeld ?? []) as {
+    id: string;
+    type: string;
+    status: string;
+    startdatum: string | null;
+    created_at: string;
+    details: Record<string, unknown> | null;
+  }[];
+  const kennismaking = kinderen.find((k) => k.type === "kennismaking") ?? null;
+
+  const { data: ouderLead } = lead.parent_lead_id
+    ? await (supabase as any)
+        .from("leads")
+        .select("id,type,email,postcode,huisnummer")
+        .eq("id", lead.parent_lead_id)
+        .maybeSingle()
+    : { data: null };
+
   const leadScore = scoreLead(lead, erfscan);
 
   // Deling met aanbieders (voor het deel-paneel).
@@ -224,6 +249,11 @@ export default async function LeadDetailPage({
                   {erfscanStatusLabel(erfscan.status)}
                 </span>
               )}
+              {kennismaking && (
+                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-600/20">
+                  Geconverteerd · kennismaking
+                </span>
+              )}
               {lead.excluded_from_stats && (
                 <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
                   Uitgesloten van dashboard
@@ -251,6 +281,58 @@ export default async function LeadDetailPage({
             />
           </div>
         </div>
+
+        {/* Gekoppeld kennismakingsgesprek — het doel van de erfcheck-opvolging. */}
+        {kennismaking && (
+          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-green-800">
+                  Kennismakingsgesprek aangevraagd
+                </p>
+                <p className="mt-1 text-sm text-slate-700">
+                  {(kennismaking.details?.datumLabel as string) ||
+                    kennismaking.startdatum ||
+                    "Datum onbekend"}
+                  {kennismaking.details?.tijd
+                    ? ` om ${kennismaking.details.tijd as string}`
+                    : ""}
+                </p>
+                {typeof kennismaking.details?.bericht === "string" &&
+                  kennismaking.details.bericht && (
+                    <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                      “{kennismaking.details.bericht}”
+                    </p>
+                  )}
+              </div>
+              <Link
+                href={`/leads/${kennismaking.id}`}
+                className="shrink-0 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-sm font-medium text-green-800 transition hover:bg-green-100"
+              >
+                Open aanvraag →
+              </Link>
+            </div>
+            <p className="mt-3 text-xs text-green-800/70">
+              Telt als conversie in de erfcheck-nurtureflow; opvolgmails zijn gestopt.
+            </p>
+          </div>
+        )}
+
+        {/* Dit ís een vervolgaanvraag → terug naar de erfcheck-lead. */}
+        {ouderLead && (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <span className="text-slate-500">Hoort bij de erfcheck-lead van </span>
+            <Link
+              href={`/leads/${ouderLead.id}`}
+              className="font-medium text-navy hover:underline"
+            >
+              {ouderLead.email ?? "deze lead"}
+              {ouderLead.postcode
+                ? ` — ${[ouderLead.postcode, ouderLead.huisnummer].filter(Boolean).join(" ")}`
+                : ""}
+            </Link>
+          </div>
+        )}
 
         <div className="mt-6 grid gap-6 md:grid-cols-3">
           {/* Lead info */}
