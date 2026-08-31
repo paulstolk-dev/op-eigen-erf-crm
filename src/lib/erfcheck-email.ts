@@ -22,6 +22,10 @@ function persoonlijkeErfcheckLink(token: string | null): string {
 //   * de eerste stap (e0) van de nurture-flow
 // Beide vullen dezelfde tokens met de leadgegevens.
 
+// Woord dat de klantmail altijd gebruikt voor de uitslag ({{erfcheck_status}} /
+// {{verdict}}), ongeacht het interne oordeel.
+export const MAIL_VERDICT = "kansrijk";
+
 // Intern verdict (groen/oranje/rood) → begrijpelijk woord voor in de mail.
 export const VERDICT_WOORD: Record<string, string> = {
   groen: "kansrijk",
@@ -66,7 +70,11 @@ export function buildErfcheckMerge(i: MergeInput): ErfcheckMerge {
     voornaam: i.voornaam || i.naam?.split(" ")[0] || "",
     adres,
     postcode_plaats,
-    verdict: i.conclusie ? (VERDICT_WOORD[i.conclusie] ?? i.conclusie) : "nog te bepalen",
+    // De klantmail spreekt bewust altijd van 'kansrijk': de gratis erfcheck is
+    // een eerste, positief gebrachte indicatie en de mail zet er meteen de
+    // aandachtspunten onder. Het echte oordeel (groen/oranje/rood) blijft
+    // ongewijzigd in de erfscan, het CRM en de interne notificatie staan.
+    verdict: MAIL_VERDICT,
     perceel_m2: i.oppervlakte_m2 != null ? `± ${i.oppervlakte_m2} m²` : "n.b.",
     erfcheck_url: i.report_token ? `${reportBaseUrl()}/r/${i.report_token}` : "",
     persoonlijke_erfcheck_link: persoonlijkeErfcheckLink(i.report_token),

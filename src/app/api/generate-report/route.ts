@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runReportGeneration } from "@/lib/generate-report-flow";
+import { verstuurErfcheckRapport } from "@/lib/send-erfcheck-report";
 import { sendEmail } from "@/lib/email";
 import { scoreLead } from "@/lib/lead-score";
 import { reportBaseUrl } from "@/lib/erfcheck-report";
@@ -41,6 +42,22 @@ export async function POST(request: NextRequest) {
   const gen = await runReportGeneration(leadId);
   if (!gen.ok) {
     return NextResponse.json({ error: gen.error }, { status: 500 });
+  }
+
+  // Direct na de generatie de Erf Check naar de lead sturen. Uit te zetten
+  // zonder deploy met ERFCHECK_AUTO_SEND=0; dan blijft het concept staan om
+  // handmatig te versturen vanaf de leaddetail. De verzendfunctie zelf slaat
+  // over als er al een sent_at is, dus een retry stuurt nooit dubbel.
+  const autoSendAan = (process.env.ERFCHECK_AUTO_SEND ?? "1").trim() !== "0";
+  let autoSend: { ok: boolean; error?: string } | null = null;
+  if (autoSendAan) {
+    autoSend = await verstuurErfcheckRapport(leadId).catch((e) => ({
+      ok: false,
+      error: e instanceof Error ? e.message : "Onbekende fout",
+    }));
+    if (!autoSend.ok) {
+      console.error("[generate-report] auto-verzenden mislukt:", autoSend.error);
+    }
   }
 
   // Interne notificatie (faalt stil — mag de generatie niet ongedaan maken).
@@ -97,6 +114,13 @@ export async function POST(request: NextRequest) {
     <tr><td style="padding:2px 16px 2px 0;color:#64748b">Perceelgrootte</td><td>${m2(perceel)}</td></tr>
     <tr><td style="padding:2px 16px 2px 0;color:#64748b">Achtererf (indicatie)</td><td>${m2(achtererf)}</td></tr>
     <tr><td style="padding:2px 16px 2px 0;color:#64748b">Max. vergunningvrij (indicatie)</td><td>${m2(maxvv)}</td></tr>
+    <tr><td style="padding:2px 16px 2px 0;color:#64748b">Naar de lead verstuurd</td><td>${
+      !autoSendAan
+        ? "nee — automatisch verzenden staat uit"
+        : autoSend?.ok
+          ? "ja, automatisch"
+          : `NEE — mislukt: ${esc(autoSend?.error ?? "onbekend")}`
+    }</td></tr>
   </table>
 
   <h3 style="margin:0 0 6px;font-size:14px">Concept-mail aan de lead</h3>
