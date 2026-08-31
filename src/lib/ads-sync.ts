@@ -14,18 +14,38 @@ export type AdsSyncResult = {
   status?: number;
 };
 
+// Env-waarden krijgen bij het plakken (Vercel/.env) makkelijk een spatie of
+// newline mee; die maakt de OAuth-call ongeldig. Daarom altijd trimmen.
+function env(key: string): string {
+  return (process.env[key] ?? "").trim();
+}
+
 async function getAccessToken(): Promise<string> {
   const r = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_ADS_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET!,
-      refresh_token: process.env.GOOGLE_ADS_REFRESH_TOKEN!,
+      client_id: env("GOOGLE_ADS_CLIENT_ID"),
+      client_secret: env("GOOGLE_ADS_CLIENT_SECRET"),
+      refresh_token: env("GOOGLE_ADS_REFRESH_TOKEN"),
       grant_type: "refresh_token",
     }),
   });
-  if (!r.ok) throw new Error(`OAuth-token verversen mislukt: ${await r.text()}`);
+  if (!r.ok) {
+    const body = await r.text();
+    // 'invalid_grant' = Google weigert de refresh token zelf: ingetrokken,
+    // verlopen (OAuth-app in 'Testing' → token vervalt na 7 dagen) of het
+    // Google-wachtwoord is gewijzigd. Alleen een nieuwe token helpt.
+    if (body.includes("invalid_grant")) {
+      throw new Error(
+        "Google Ads-koppeling verlopen: Google accepteert de refresh token niet meer " +
+          "(ingetrokken, verlopen of wachtwoord gewijzigd). Maak een nieuwe refresh token " +
+          "aan en zet die in GOOGLE_ADS_REFRESH_TOKEN. Staat de OAuth-app in Google Cloud " +
+          "nog op 'Testing'? Publiceer hem — anders vervalt de token elke 7 dagen.",
+      );
+    }
+    throw new Error(`OAuth-token verversen mislukt: ${body}`);
+  }
   const j = await r.json();
   return j.access_token as string;
 }
@@ -38,7 +58,7 @@ export async function runAdsSync(): Promise<AdsSyncResult> {
     "GOOGLE_ADS_REFRESH_TOKEN",
     "GOOGLE_ADS_CUSTOMER_ID",
   ];
-  const missing = need.filter((k) => !process.env[k]);
+  const missing = need.filter((k) => !env(k));
   if (missing.length) {
     return {
       ok: false,
@@ -49,8 +69,8 @@ export async function runAdsSync(): Promise<AdsSyncResult> {
 
   try {
     const token = await getAccessToken();
-    const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID!.replace(/[^0-9]/g, "");
-    const loginId = (process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID || "").replace(/[^0-9]/g, "");
+    const customerId = env("GOOGLE_ADS_CUSTOMER_ID").replace(/[^0-9]/g, "");
+    const loginId = env("GOOGLE_ADS_LOGIN_CUSTOMER_ID").replace(/[^0-9]/g, "");
 
     // GAQL kent geen LAST_90_DAYS-literal → expliciete datumrange.
     const end = new Date().toISOString().slice(0, 10);
@@ -61,7 +81,7 @@ export async function runAdsSync(): Promise<AdsSyncResult> {
 
     // API-versies verlopen; probeer de gepinde versie, val terug op recente.
     const versions = [
-      process.env.GOOGLE_ADS_API_VERSION,
+      env("GOOGLE_ADS_API_VERSION"),
       "v22",
       "v21",
       "v20",
@@ -82,7 +102,7 @@ export async function runAdsSync(): Promise<AdsSyncResult> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+            "developer-token": env("GOOGLE_ADS_DEVELOPER_TOKEN"),
             ...(loginId ? { "login-customer-id": loginId } : {}),
             Authorization: `Bearer ${token}`,
           },
