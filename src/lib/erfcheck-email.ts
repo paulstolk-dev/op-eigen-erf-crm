@@ -22,16 +22,22 @@ function persoonlijkeErfcheckLink(token: string | null): string {
 //   * de eerste stap (e0) van de nurture-flow
 // Beide vullen dezelfde tokens met de leadgegevens.
 
-// Woord dat de klantmail altijd gebruikt voor de uitslag ({{erfcheck_status}} /
-// {{verdict}}), ongeacht het interne oordeel.
-export const MAIL_VERDICT = "kansrijk";
-
 // Intern verdict (groen/oranje/rood) → begrijpelijk woord voor in de mail.
 export const VERDICT_WOORD: Record<string, string> = {
   groen: "kansrijk",
   oranje: "twijfelachtig",
   rood: "complex",
 };
+
+// Woord dat de klantmail gebruikt voor de uitslag ({{erfcheck_status}} /
+// {{verdict}}). Standaard positief: groen én oranje worden 'kansrijk'. Alleen
+// bij rood — een erf met echte blokkades — houden we het eerlijke woord aan,
+// zodat we niemand op kosten jagen voor een plan dat vastloopt.
+export const MAIL_VERDICT_STANDAARD = "kansrijk";
+
+export function mailVerdict(conclusie: string | null | undefined): string {
+  return conclusie === "rood" ? VERDICT_WOORD.rood : MAIL_VERDICT_STANDAARD;
+}
 
 export type ErfcheckMerge = {
   voornaam: string;
@@ -70,11 +76,9 @@ export function buildErfcheckMerge(i: MergeInput): ErfcheckMerge {
     voornaam: i.voornaam || i.naam?.split(" ")[0] || "",
     adres,
     postcode_plaats,
-    // De klantmail spreekt bewust altijd van 'kansrijk': de gratis erfcheck is
-    // een eerste, positief gebrachte indicatie en de mail zet er meteen de
-    // aandachtspunten onder. Het echte oordeel (groen/oranje/rood) blijft
-    // ongewijzigd in de erfscan, het CRM en de interne notificatie staan.
-    verdict: MAIL_VERDICT,
+    // Positief gebracht (kansrijk), behalve bij rood. Het echte oordeel blijft
+    // ongewijzigd in de erfscan, het CRM, de PDF en de interne notificatie.
+    verdict: mailVerdict(i.conclusie),
     perceel_m2: i.oppervlakte_m2 != null ? `± ${i.oppervlakte_m2} m²` : "n.b.",
     erfcheck_url: i.report_token ? `${reportBaseUrl()}/r/${i.report_token}` : "",
     persoonlijke_erfcheck_link: persoonlijkeErfcheckLink(i.report_token),
