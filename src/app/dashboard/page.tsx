@@ -7,6 +7,7 @@ import { AdsSyncButton } from "./ads-sync-button";
 import { scoreLead } from "@/lib/lead-score";
 import { PARTNER_FUNNEL, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
 import { telPerBron } from "@/lib/lead-bron";
+import { telGrootte, telBudget, ONBEKEND, NIET_INGEVULD } from "@/lib/lead-wensen";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,65 @@ function StatCard({
         {sub && <span className={`text-sm font-medium ${subColor}`}>{sub}</span>}
       </div>
     </div>
+  );
+}
+
+// Verdelingslijst met balkjes (bron, gewenste grootte, budget). Percentage is
+// t.o.v. het totaal aantal leads, niet t.o.v. de ingevulde antwoorden.
+function VerdelingLijst({
+  items,
+  totaal,
+  leeg,
+}: {
+  items: { label: string; aantal: number }[];
+  totaal: number;
+  leeg: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-400">{leeg}</p>
+    );
+  }
+  const max = Math.max(1, ...items.map((i) => i.aantal));
+  return (
+    <ul className="space-y-1.5">
+      {items.map((i) => {
+        // 'Weet ik nog niet' / 'Niet ingevuld' zijn geen antwoord: grijs, zodat de
+        // echte keuzes het beeld bepalen (anders trekt de restcategorie de aandacht).
+        const geenAntwoord = i.label === ONBEKEND || i.label === NIET_INGEVULD;
+        return (
+        <li key={i.label} className="flex items-center gap-3">
+          <span
+            className={`min-w-0 flex-1 truncate text-sm sm:w-44 sm:flex-none ${
+              geenAntwoord ? "text-slate-400" : "text-slate-700"
+            }`}
+            title={i.label}
+          >
+            {i.label}
+          </span>
+          {/* Balk alleen waar er ruimte voor is; op mobiel telt de lijst zelf. */}
+          <span className="hidden h-2 flex-1 overflow-hidden rounded-full bg-slate-100 sm:block">
+            <span
+              className={`block h-full rounded-full ${
+                geenAntwoord ? "bg-slate-300" : "bg-navy/70"
+              }`}
+              style={{ width: `${(i.aantal / max) * 100}%` }}
+            />
+          </span>
+          <span
+            className={`w-10 shrink-0 text-right text-sm font-semibold ${
+              geenAntwoord ? "text-slate-400" : "text-slate-900"
+            }`}
+          >
+            {i.aantal}
+          </span>
+          <span className="w-12 shrink-0 text-right text-xs text-slate-400">
+            {totaal ? Math.round((i.aantal / totaal) * 100) : 0}%
+          </span>
+        </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -144,8 +204,28 @@ export default async function DashboardPage({
 
   // Via welk kanaal kwamen de leads binnen (Google Ads, organisch, ChatGPT, …).
   // Zelfde set als de kaart 'Aantal leads', zodat de totalen op elkaar aansluiten.
-  const bronnen = telPerBron(rows.map((r) => r.lead));
-  const bronMax = Math.max(1, ...bronnen.map((b) => b.aantal));
+  const bronnen = telPerBron(rows.map((r) => r.lead)).map((b) => ({
+    label: b.bron,
+    aantal: b.aantal,
+  }));
+
+  // Opgegeven wensen: gewenste grootte en budget uit het erfcheck-formulier.
+  const grootteVerdeling = telGrootte(rows.map((r) => r.lead.estimated_size));
+  const budgetVerdeling = telBudget(rows.map((r) => r.lead.estimated_budget));
+  // 'Ingevuld' = een concreet antwoord; 'weet ik nog niet' telt daar bewust niet in mee.
+  const concreet = (items: { label: string; aantal: number }[]) =>
+    items
+      .filter((i) => i.label !== ONBEKEND && i.label !== NIET_INGEVULD)
+      .reduce((s, i) => s + i.aantal, 0);
+  const grootteConcreet = concreet(grootteVerdeling);
+  const budgetConcreet = concreet(budgetVerdeling);
+  const beideConcreet = rows.filter(
+    (r) =>
+      r.lead.estimated_size &&
+      r.lead.estimated_size !== "unsure" &&
+      r.lead.estimated_budget &&
+      r.lead.estimated_budget !== "unsure",
+  ).length;
 
   // Marketing: ads-spend en kosten per lead over dezelfde periode.
   const spend = (adSpend ?? [])
@@ -313,38 +393,42 @@ export default async function DashboardPage({
             <strong>Direct</strong> = geen herkomst meegegeven (ingetypt, bookmark of
             referrer weggevallen).
           </p>
-          {bronnen.length === 0 ? (
-            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-400">
-              Geen leads in deze periode.
-            </p>
-          ) : (
-            <ul className="space-y-1.5">
-              {bronnen.map((b) => (
-                <li key={b.bron} className="flex items-center gap-3">
-                  <span
-                    className="min-w-0 flex-1 truncate text-sm text-slate-700 sm:w-44 sm:flex-none"
-                    title={b.bron}
-                  >
-                    {b.bron}
-                  </span>
-                  {/* Balk alleen waar er ruimte voor is; op mobiel telt de lijst zelf. */}
-                  <span className="hidden h-2 flex-1 overflow-hidden rounded-full bg-slate-100 sm:block">
-                    <span
-                      className="block h-full rounded-full bg-navy/70"
-                      style={{ width: `${(b.aantal / bronMax) * 100}%` }}
-                    />
-                  </span>
-                  <span className="w-10 shrink-0 text-right text-sm font-semibold text-slate-900">
-                    {b.aantal}
-                  </span>
-                  <span className="w-12 shrink-0 text-right text-xs text-slate-400">
-                    {pct(b.aantal)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <VerdelingLijst
+            items={bronnen}
+            totaal={total}
+            leeg="Geen leads in deze periode."
+          />
         </section>
+
+        {/* Wat de lead zelf opgaf in het erfcheck-formulier. */}
+        <div className="mb-5 grid gap-3 lg:grid-cols-2">
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <h2 className="text-base font-semibold text-slate-900">Gewenste grootte</h2>
+            <p className="mt-0.5 mb-3 text-xs text-slate-500">
+              {grootteConcreet} van {total} leads ({pct(grootteConcreet)}%) gaf een
+              concrete maat op.
+            </p>
+            <VerdelingLijst
+              items={grootteVerdeling}
+              totaal={total}
+              leeg="Geen leads in deze periode."
+            />
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <h2 className="text-base font-semibold text-slate-900">Budget</h2>
+            <p className="mt-0.5 mb-3 text-xs text-slate-500">
+              {budgetConcreet} van {total} leads ({pct(budgetConcreet)}%) gaf een
+              concrete band op; {beideConcreet} ({pct(beideConcreet)}%) gaf zowel maat
+              als budget.
+            </p>
+            <VerdelingLijst
+              items={budgetVerdeling}
+              totaal={total}
+              leeg="Geen leads in deze periode."
+            />
+          </section>
+        </div>
 
         {/* Aanbieders: aanbod op de site + de wervingsfunnel (altijd actueel,
             niet afhankelijk van de gekozen periode). */}
