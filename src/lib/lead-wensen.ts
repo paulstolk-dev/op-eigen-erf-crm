@@ -71,3 +71,58 @@ export function telGrootte(waarden: (string | null | undefined)[]): Verdeling[] 
 export function telBudget(waarden: (string | null | undefined)[]): Verdeling[] {
   return tel(waarden, BUDGET_VOLGORDE, BUDGET_LABELS);
 }
+
+// --- Modellen-link op maat -------------------------------------------------
+//
+// De modellencatalogus op de site filtert via /modellen?grootte=…&budget=…
+// (zie src/lib/modellen-filters.ts in de site-repo). Die kent andere waarden dan
+// het erfcheck-formulier, dus we vertalen expliciet:
+//
+//   grootte : de band waar de gewenste maat in valt
+//   budget  : een PLAFOND (tot € 75.000 / 125.000 / 200.000)
+//
+// Bij budget kiezen we bewust het kleinste plafond dat de bovenkant van de band
+// van de lead nog omvat. Zo filteren we nooit woningen weg die hij zich kan
+// veroorloven; hooguit tonen we er een paar te veel.
+
+const GROOTTE_NAAR_PARAM: Record<string, string> = {
+  "40": "tot50",
+  "60": "50-75",
+  "80": "75-100",
+  "100": "100m2",
+};
+
+const BUDGET_NAAR_PARAM: Record<string, string> = {
+  lt_50000: "75",
+  "50000_100000": "125",
+  "100000_150000": "200",
+  "150000_200000": "200",
+  // Boven € 200.000 heeft de catalogus geen plafond meer: alles tonen.
+  "200000_250000": "",
+  "250000_plus": "",
+};
+
+/**
+ * Bouwt de modellen-link met de wensen van de lead voorgefilterd. Onbekende of
+ * 'weet ik nog niet'-antwoorden laten we weg: dan toont de catalogus gewoon
+ * alles, wat beter is dan een lege of misleidende selectie.
+ *
+ * De link krijgt UTM-tags mee, zodat een lead die hierlangs terugkomt in het
+ * bron-overzicht als 'E-mail' herkend wordt en niet als 'Direct'.
+ */
+export function modellenUrl(
+  basis: string,
+  grootte: string | null | undefined,
+  budget: string | null | undefined,
+): string {
+  const p = new URLSearchParams();
+  const g = grootte ? GROOTTE_NAAR_PARAM[grootte] : undefined;
+  if (g) p.set("grootte", g);
+  const b = budget ? BUDGET_NAAR_PARAM[budget] : undefined;
+  if (b) p.set("budget", b);
+  p.set("utm_source", "email");
+  p.set("utm_medium", "nurture");
+  p.set("utm_campaign", "erfcheck-followup");
+  p.set("utm_content", "modellen");
+  return `${basis}/modellen?${p.toString()}`;
+}

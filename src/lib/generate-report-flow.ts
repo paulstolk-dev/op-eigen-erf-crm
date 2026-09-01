@@ -123,6 +123,8 @@ export async function runReportGeneration(
     conclusie: eff.conclusie,
     weergavenaam: d.locatie?.weergavenaam ?? null,
     oppervlakte_m2: d.perceel?.oppervlakte_m2 ?? null,
+    estimated_size: lead.estimated_size,
+    estimated_budget: lead.estimated_budget,
   });
   const draftSubject = fillErfcheckTemplate(ERFCHECK_FIRST_SUBJECT, merge);
   const draftBody = fillErfcheckTemplate(ERFCHECK_FIRST_BODY, merge);

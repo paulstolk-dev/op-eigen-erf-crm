@@ -321,7 +321,12 @@ function StepRow({
               <label className="oe-mini2"><span>Secundaire link — URL</span>
                 <input className="oe-input" value={s.cta_secondary_url} onChange={(e) => set("cta_secondary_url", e.target.value)} /></label>
             </div>
-            <p className="oe-hint">Merge: {"{{voornaam}} {{adres}} {{verdict}} {{perceel_m2}} {{erfcheck_url}}"}.</p>
+            <p className="oe-hint">
+              Merge: {"{{voornaam}} {{adres}} {{verdict}} {{perceel_m2}} {{erfcheck_url}} {{persoonlijke_erfcheck_link}} {{modellen_url}}"}.{" "}
+              {"{{modellen_url}}"} linkt naar de modellencatalogus, voorgefilterd op de
+              gewenste grootte en het budget van de lead (staan die er niet, dan toont
+              hij alle modellen).
+            </p>
           </div>
         )}
 

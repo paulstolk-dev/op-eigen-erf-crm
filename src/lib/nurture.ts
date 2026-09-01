@@ -108,6 +108,8 @@ type ErfscanRow = {
     postcode: string | null;
     huisnummer: string | null;
     report_token: string | null;
+    estimated_size: string | null;
+    estimated_budget: string | null;
   } | null;
 };
 
@@ -126,6 +128,8 @@ function mergeFor(row: ErfscanRow): MergeValues {
     conclusie: row.conclusie,
     weergavenaam: d.locatie?.weergavenaam ?? null,
     oppervlakte_m2: d.perceel?.oppervlakte_m2 ?? null,
+    estimated_size: lead.estimated_size,
+    estimated_budget: lead.estimated_budget,
   });
 }
 
@@ -185,7 +189,7 @@ export async function runNurture(opts?: {
   let q = admin
     .from("erfscans")
     .select(
-      "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer,report_token)",
+      "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer,report_token,estimated_size,estimated_budget)",
     )
     .not("sent_at", "is", null);
   if (opts?.leadId) q = q.eq("lead_id", opts.leadId);
@@ -352,7 +356,7 @@ export async function backfillNurtureHubspot(): Promise<{
     const { data: scan } = await admin
       .from("erfscans")
       .select(
-        "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer,report_token)",
+        "lead_id, sent_at, conclusie, dossier, leads(voornaam,naam,email,status,postcode,huisnummer,report_token,estimated_size,estimated_budget)",
       )
       .eq("lead_id", s.lead_id)
       .maybeSingle();

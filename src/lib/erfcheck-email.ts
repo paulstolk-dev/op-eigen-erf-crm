@@ -2,6 +2,7 @@ import "server-only";
 
 import { reportBaseUrl } from "@/lib/erfcheck-report";
 import { portalBaseUrl } from "@/lib/portaal-magic-link";
+import { modellenUrl } from "@/lib/lead-wensen";
 
 // Gebrande, duurzame erfcheck-link voor de klant: opeigenerf.nl/mijn/erf?erf=<token>
 // (geen login, report_token is niet-eenmalig), verpakt in de /l/<token>-klik-redirect
@@ -47,6 +48,7 @@ export type ErfcheckMerge = {
   perceel_m2: string;
   erfcheck_url: string; // CRM /r/<token>-pagina (interne/fallback-view)
   persoonlijke_erfcheck_link: string; // gebrande /mijn/erf-link via /l/-tracker
+  modellen_url: string; // /modellen voorgefilterd op de wensen van de lead
   token: string;
 };
 
@@ -59,6 +61,8 @@ type MergeInput = {
   conclusie: string | null;
   weergavenaam?: string | null;
   oppervlakte_m2?: number | null;
+  estimated_size?: string | null;
+  estimated_budget?: string | null;
 };
 
 // Bouwt de merge-waarden uit lead + erfscan. Splitst de weergavenaam
@@ -82,6 +86,7 @@ export function buildErfcheckMerge(i: MergeInput): ErfcheckMerge {
     perceel_m2: i.oppervlakte_m2 != null ? `± ${i.oppervlakte_m2} m²` : "n.b.",
     erfcheck_url: i.report_token ? `${reportBaseUrl()}/r/${i.report_token}` : "",
     persoonlijke_erfcheck_link: persoonlijkeErfcheckLink(i.report_token),
+    modellen_url: modellenUrl(portalBaseUrl(), i.estimated_size, i.estimated_budget),
     token: i.report_token ?? "",
   };
 }
@@ -98,6 +103,7 @@ export function fillErfcheckTemplate(text: string, m: ErfcheckMerge): string {
     .replace(/\{\{\s*perceel_m2\s*\}\}/g, m.perceel_m2)
     .replace(/\{\{\s*erfcheck_url\s*\}\}/g, m.erfcheck_url)
     .replace(/\{\{\s*persoonlijke_erfcheck_link\s*\}\}/g, m.persoonlijke_erfcheck_link)
+    .replace(/\{\{\s*modellen_url\s*\}\}/g, m.modellen_url)
     .replace(/Beste\s+,/g, "Beste,")
     .replace(/Hoi\s+,/g, "Hoi,");
 }
