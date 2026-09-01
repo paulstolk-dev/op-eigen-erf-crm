@@ -6,6 +6,7 @@ import { DashboardFilter } from "@/components/dashboard-filter";
 import { AdsSyncButton } from "./ads-sync-button";
 import { scoreLead } from "@/lib/lead-score";
 import { PARTNER_FUNNEL, PARTNER_STATUS_LABELS } from "@/lib/aanbieders-constants";
+import { telPerBron } from "@/lib/lead-bron";
 import type { Lead, Erfscan } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -140,6 +141,11 @@ export default async function DashboardPage({
     ).length;
   const gesprekken = aanvragenVanType("kennismaking");
   const scans = aanvragenVanType("haalbaarheidsscan");
+
+  // Via welk kanaal kwamen de leads binnen (Google Ads, organisch, ChatGPT, …).
+  // Zelfde set als de kaart 'Aantal leads', zodat de totalen op elkaar aansluiten.
+  const bronnen = telPerBron(rows.map((r) => r.lead));
+  const bronMax = Math.max(1, ...bronnen.map((b) => b.aantal));
 
   // Marketing: ads-spend en kosten per lead over dezelfde periode.
   const spend = (adSpend ?? [])
@@ -296,6 +302,49 @@ export default async function DashboardPage({
         <div className="mb-5">
           <DashboardChart data={chartData} periodLabel={periodLabel} />
         </div>
+
+        {/* Waar komen de leads vandaan: het kanaal dat de bezoeker naar de site
+            bracht (UTM/gclid/referrer), niet het formulier waar hij invulde. */}
+        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold text-slate-900">Leads per bron</h2>
+          <p className="mt-0.5 mb-3 text-xs text-slate-500">
+            Kanaal waarlangs de bezoeker binnenkwam ({periodLabel}). Afgeleid uit
+            UTM-tags, de Google-klik-id en de verwijzende site.{" "}
+            <strong>Direct</strong> = geen herkomst meegegeven (ingetypt, bookmark of
+            referrer weggevallen).
+          </p>
+          {bronnen.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-400">
+              Geen leads in deze periode.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {bronnen.map((b) => (
+                <li key={b.bron} className="flex items-center gap-3">
+                  <span
+                    className="min-w-0 flex-1 truncate text-sm text-slate-700 sm:w-44 sm:flex-none"
+                    title={b.bron}
+                  >
+                    {b.bron}
+                  </span>
+                  {/* Balk alleen waar er ruimte voor is; op mobiel telt de lijst zelf. */}
+                  <span className="hidden h-2 flex-1 overflow-hidden rounded-full bg-slate-100 sm:block">
+                    <span
+                      className="block h-full rounded-full bg-navy/70"
+                      style={{ width: `${(b.aantal / bronMax) * 100}%` }}
+                    />
+                  </span>
+                  <span className="w-10 shrink-0 text-right text-sm font-semibold text-slate-900">
+                    {b.aantal}
+                  </span>
+                  <span className="w-12 shrink-0 text-right text-xs text-slate-400">
+                    {pct(b.aantal)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         {/* Aanbieders: aanbod op de site + de wervingsfunnel (altijd actueel,
             niet afhankelijk van de gekozen periode). */}
