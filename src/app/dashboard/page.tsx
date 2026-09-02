@@ -195,10 +195,20 @@ export default async function DashboardPage({
 
   // Vervolgaanvragen in dezelfde periode: het kennismakingsgesprek en de betaalde
   // haalbaarheidsscan zijn de twee conversiedoelen van de erfcheck-opvolging.
-  const aanvragenVanType = (type: string) =>
-    (leads ?? []).filter(
-      (l) => l.type === type && !l.excluded_from_stats && inRange(l.created_at),
-    ).length;
+  // Telt op uniek e-mailadres: wie het formulier twee keer verstuurt is één
+  // aanvraag, geen twee. Rijen zonder e-mailadres kunnen we niet ontdubbelen en
+  // tellen daarom elk apart.
+  const aanvragenVanType = (type: string) => {
+    const emails = new Set<string>();
+    let zonderEmail = 0;
+    for (const l of leads ?? []) {
+      if (l.type !== type || l.excluded_from_stats || !inRange(l.created_at)) continue;
+      const e = l.email?.trim().toLowerCase();
+      if (e) emails.add(e);
+      else zonderEmail++;
+    }
+    return emails.size + zonderEmail;
+  };
   const gesprekken = aanvragenVanType("kennismaking");
   const scans = aanvragenVanType("haalbaarheidsscan");
 
