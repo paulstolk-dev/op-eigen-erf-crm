@@ -176,9 +176,13 @@ export default async function LeadsPage() {
         new Date(a.lead.created_at ?? 0).getTime(),
     );
 
-  // Besluit-alert-inschrijvingen krijgen geen erfcheck; los weergeven.
-  const leadRows = rows.filter((r) => r.lead.type !== "besluit-alert");
+  // Besluit-alerts en haalbaarheidsscan-aanvragen krijgen geen eigen erfcheck;
+  // in de hoofdtabel zouden score/conclusie/rapport dus leeg blijven. Los tonen.
+  const leadRows = rows.filter(
+    (r) => r.lead.type !== "besluit-alert" && r.lead.type !== "haalbaarheidsscan",
+  );
   const besluitRows = rows.filter((r) => r.lead.type === "besluit-alert");
+  const scanRows = rows.filter((r) => r.lead.type === "haalbaarheidsscan");
 
   return (
     <div className="min-h-screen">
@@ -369,6 +373,78 @@ export default async function LeadsPage() {
             </tbody>
           </table>
         </div>
+
+        {scanRows.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Haalbaarheidsscans
+              </h2>
+              <p className="text-xs text-slate-500">
+                Betaalde scan-aanvragen (€99). Hiervoor wordt geen eigen erfcheck
+                aangemaakt; waar bekend staat de erfcheck van dezelfde persoon erbij.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Naam</th>
+                    <th className="px-4 py-3 font-medium">E-mail</th>
+                    <th className="hidden px-4 py-3 font-medium sm:table-cell">Telefoon</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">Adres</th>
+                    <th className="px-4 py-3 font-medium">Ontvangen</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">Erfcheck</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {scanRows.map(({ lead }) => (
+                    <tr key={lead.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/leads/${lead.id}`}
+                          className="font-medium text-slate-900 hover:underline"
+                        >
+                          {lead.naam ||
+                            [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
+                            "—"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{lead.email || "—"}</td>
+                      <td className="hidden whitespace-nowrap px-4 py-3 text-slate-600 sm:table-cell">
+                        {lead.telefoon || "—"}
+                      </td>
+                      <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
+                        {[lead.postcode, lead.huisnummer, lead.toevoeging]
+                          .filter(Boolean)
+                          .join(" ") || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        {datum(lead.created_at)}
+                      </td>
+                      <td className="hidden px-4 py-3 md:table-cell">
+                        {lead.parent_lead_id ? (
+                          <Link
+                            href={`/leads/${lead.parent_lead_id}`}
+                            className="text-navy hover:underline"
+                          >
+                            Bekijk →
+                          </Link>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={lead.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {besluitRows.length > 0 && (
           <div className="mt-8">
