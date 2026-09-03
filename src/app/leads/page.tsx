@@ -43,6 +43,20 @@ const EMPTY = new Set<string>();
 
 export const dynamic = "force-dynamic";
 
+// Afspraakmoment van een kennismakingsgesprek ("2026-09-11 17:00").
+function afspraak(waarde: string | null): string {
+  if (!waarde) return "—";
+  const [dag, tijd] = waarde.split(" ");
+  const d = new Date(dag + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return waarde;
+  const datumNL = d.toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return tijd ? `${datumNL}, ${tijd}` : datumNL;
+}
+
 function datum(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", {
@@ -179,10 +193,20 @@ export default async function LeadsPage() {
   // Besluit-alerts en haalbaarheidsscan-aanvragen krijgen geen eigen erfcheck;
   // in de hoofdtabel zouden score/conclusie/rapport dus leeg blijven. Los tonen.
   const leadRows = rows.filter(
-    (r) => r.lead.type !== "besluit-alert" && r.lead.type !== "haalbaarheidsscan",
+    (r) =>
+      r.lead.type !== "besluit-alert" &&
+      r.lead.type !== "haalbaarheidsscan" &&
+      r.lead.type !== "kennismaking",
   );
   const besluitRows = rows.filter((r) => r.lead.type === "besluit-alert");
   const scanRows = rows.filter((r) => r.lead.type === "haalbaarheidsscan");
+  // Geplande kennismakingsgesprekken: sorteren op het afspraakmoment, niet op
+  // aanvraagdatum — je wilt zien wanneer het gesprek is.
+  const gesprekRows = rows
+    .filter((r) => r.lead.type === "kennismaking")
+    .sort((a, b) =>
+      (b.lead.startdatum ?? "").localeCompare(a.lead.startdatum ?? ""),
+    );
 
   return (
     <div className="min-h-screen">
@@ -373,6 +397,90 @@ export default async function LeadsPage() {
             </tbody>
           </table>
         </div>
+
+        {gesprekRows.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Kennismakingsgesprekken
+              </h2>
+              <p className="text-xs text-slate-500">
+                Ingeplande gratis adviesgesprekken, op afspraakmoment. Hiervoor
+                wordt geen eigen erfcheck aangemaakt; waar bekend staat de
+                erfcheck van dezelfde persoon erbij.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Naam</th>
+                    <th className="px-4 py-3 font-medium">Afspraak</th>
+                    <th className="hidden px-4 py-3 font-medium sm:table-cell">Telefoon</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">E-mail</th>
+                    <th className="hidden px-4 py-3 font-medium lg:table-cell">Vraag</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">Erfcheck</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {gesprekRows.map(({ lead }) => {
+                    const d = (lead.details ?? {}) as Record<string, unknown>;
+                    const bericht = typeof d.bericht === "string" ? d.bericht : "";
+                    return (
+                      <tr key={lead.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/leads/${lead.id}`}
+                            className="font-medium text-slate-900 hover:underline"
+                          >
+                            {lead.naam ||
+                              [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
+                              lead.email ||
+                              "—"}
+                          </Link>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">
+                          {afspraak(lead.startdatum)}
+                        </td>
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-slate-600 sm:table-cell">
+                          {lead.telefoon || "—"}
+                        </td>
+                        <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
+                          {lead.email || "—"}
+                        </td>
+                        <td className="hidden max-w-[22rem] px-4 py-3 text-slate-600 lg:table-cell">
+                          {bericht ? (
+                            <span className="line-clamp-2" title={bericht}>
+                              {bericht}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="hidden px-4 py-3 md:table-cell">
+                          {lead.parent_lead_id ? (
+                            <Link
+                              href={`/leads/${lead.parent_lead_id}`}
+                              className="text-navy hover:underline"
+                            >
+                              Bekijk →
+                            </Link>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={lead.status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {scanRows.length > 0 && (
           <div className="mt-8">
