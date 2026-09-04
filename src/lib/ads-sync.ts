@@ -1,18 +1,17 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  runWindsorAdsSync,
+  windsorGeconfigureerd,
+  type AdsSyncResult,
+} from "@/lib/windsor-sync";
 
 // Google Ads spend-sync (accountniveau). Haalt de dagelijkse kosten van de
 // laatste 90 dagen op en upsert ze in public.ad_spend. Gebruikt door de cron-
 // route én de handmatige "Nu bijwerken"-knop op het dashboard.
 
-export type AdsSyncResult = {
-  ok: boolean;
-  dagen?: number;
-  totaal_eur?: number;
-  error?: string;
-  status?: number;
-};
+export type { AdsSyncResult } from "@/lib/windsor-sync";
 
 // Env-waarden krijgen bij het plakken (Vercel/.env) makkelijk een spatie of
 // newline mee; die maakt de OAuth-call ongeldig. Daarom altijd trimmen.
@@ -51,6 +50,11 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function runAdsSync(): Promise<AdsSyncResult> {
+  // Windsor.ai is de voorkeursbron: die onderhoudt de Google-koppeling zelf, dus
+  // geen OAuth-refresh-token die om de zoveel tijd verloopt. Zonder Windsor-key
+  // vallen we terug op de directe Google Ads API hieronder.
+  if (windsorGeconfigureerd()) return runWindsorAdsSync();
+
   const need = [
     "GOOGLE_ADS_DEVELOPER_TOKEN",
     "GOOGLE_ADS_CLIENT_ID",
