@@ -147,6 +147,8 @@ export type Database = {
           laatst_gecontroleerd: string | null
           is_partner: boolean
           partner_tier: string | null
+          leads_afspraak_getekend_at: string | null
+          lead_prijs_eur: number | null
           contact_naam: string | null
           contact_email: string | null
           partner_status: string
@@ -186,6 +188,8 @@ export type Database = {
           laatst_gecontroleerd?: string | null
           is_partner?: boolean
           partner_tier?: string | null
+          leads_afspraak_getekend_at?: string | null
+          lead_prijs_eur?: number | null
           contact_naam?: string | null
           contact_email?: string | null
           partner_status?: string
@@ -224,6 +228,8 @@ export type Database = {
           laatst_gecontroleerd?: string | null
           is_partner?: boolean
           partner_tier?: string | null
+          leads_afspraak_getekend_at?: string | null
+          lead_prijs_eur?: number | null
           contact_naam?: string | null
           contact_email?: string | null
           partner_status?: string

@@ -239,3 +239,43 @@ export async function savePartnerSequence(payload: {
     return { ok: false, error: e instanceof Error ? e.message : "Opslaan mislukt." };
   }
 }
+
+// Afnameafspraak voor doorverwijzingen. Losgekoppeld van partner_status en
+// partner_tier: die gaan over weergave op de site, dit over de vraag of een
+// aanbieder leads mág ontvangen. Datum leeg = ontvangt niets.
+export async function saveLeadafspraak(
+  aanbiederId: string,
+  getekendAt: string,
+  prijsEur: string,
+): Promise<Result> {
+  await requireCrm();
+
+  const datum = getekendAt.trim();
+  if (datum && !/^\d{4}-\d{2}-\d{2}$/.test(datum)) {
+    return { ok: false, error: "Ongeldige datum." };
+  }
+
+  const ruw = prijsEur.trim().replace(",", ".");
+  let prijs: number | null = null;
+  if (ruw) {
+    prijs = Number(ruw);
+    if (!Number.isFinite(prijs) || prijs < 0) {
+      return { ok: false, error: "Ongeldige prijs." };
+    }
+  }
+  // Een prijs zonder getekende afspraak is betekenisloos en zou de indruk wekken
+  // dat deze aanbieder leads kan ontvangen. Weiger die combinatie expliciet.
+  if (prijs !== null && !datum) {
+    return { ok: false, error: "Vul eerst de datum van de getekende afspraak in." };
+  }
+
+  const admin = createAdminClient();
+  const patch: TablesUpdate<"aanbieders"> = {
+    leads_afspraak_getekend_at: datum ? new Date(`${datum}T12:00:00Z`).toISOString() : null,
+    lead_prijs_eur: prijs,
+  };
+  const { error } = await admin.from("aanbieders").update(patch).eq("id", aanbiederId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/aanbieders/partners");
+  return { ok: true };
+}

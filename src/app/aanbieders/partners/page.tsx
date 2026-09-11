@@ -16,6 +16,8 @@ type Row = {
   partner_status: string;
   partner_benaderd_at: string | null;
   partner_pitch_step: number | null;
+  leads_afspraak_getekend_at: string | null;
+  lead_prijs_eur: number | null;
 };
 
 export default async function PartnersPage() {
@@ -28,7 +30,7 @@ export default async function PartnersPage() {
   const { data } = await admin
     .from("aanbieders")
     .select(
-      "id,naam,contact_naam,contact_email,partner_status,partner_benaderd_at,partner_pitch_step",
+      "id,naam,contact_naam,contact_email,partner_status,partner_benaderd_at,partner_pitch_step,leads_afspraak_getekend_at,lead_prijs_eur",
     )
     .order("naam", { ascending: true });
   const rows = (data ?? []) as Row[];
@@ -38,7 +40,7 @@ export default async function PartnersPage() {
   return (
     <div className="min-h-screen">
       <AppHeader email={user?.email} />
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-7xl px-4 py-6">
         <Link href="/aanbieders" className="text-sm text-slate-500 hover:text-navy">
           ← Terug naar aanbieders
         </Link>
@@ -99,13 +101,14 @@ export default async function PartnersPage() {
                 <th className="px-3 py-3 font-medium">E-mail</th>
                 <th className="px-3 py-3 font-medium">Status</th>
                 <th className="hidden px-3 py-3 font-medium md:table-cell">Benaderd</th>
+                <th className="px-3 py-3 font-medium">Leadafspraak</th>
                 <th className="px-3 py-3 text-right font-medium">Actie</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-3 py-10 text-center text-slate-400">
+                  <td colSpan={7} className="px-3 py-10 text-center text-slate-400">
                     Geen aanbieders.
                   </td>
                 </tr>

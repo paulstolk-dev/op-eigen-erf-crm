@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setPartnerStatus, saveContact, verstuurPitch } from "../partner-actions";
+import {
+  setPartnerStatus,
+  saveContact,
+  verstuurPitch,
+  saveLeadafspraak,
+} from "../partner-actions";
 import {
   PARTNER_STATUS,
   PARTNER_STATUS_LABELS,
@@ -17,6 +22,8 @@ type Row = {
   partner_status: string;
   partner_benaderd_at: string | null;
   partner_pitch_step: number | null;
+  leads_afspraak_getekend_at: string | null;
+  lead_prijs_eur: number | null;
 };
 
 const inp =
@@ -29,6 +36,22 @@ export function PartnerRow({ row }: { row: Row }) {
   const [email, setEmail] = useState(row.contact_email ?? "");
   const [status, setStatus] = useState(row.partner_status);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // Afnameafspraak: datum als YYYY-MM-DD voor <input type="date">.
+  const afspraakInit = (row.leads_afspraak_getekend_at ?? "").slice(0, 10);
+  const prijsInit = row.lead_prijs_eur != null ? String(row.lead_prijs_eur) : "";
+  const [afspraak, setAfspraak] = useState(afspraakInit);
+  const [prijs, setPrijs] = useState(prijsInit);
+  const afspraakDirty = afspraak !== afspraakInit || prijs !== prijsInit;
+
+  function opslaanAfspraak() {
+    setMsg(null);
+    startTransition(async () => {
+      const res = await saveLeadafspraak(row.id, afspraak, prijs);
+      if (res.ok) router.refresh();
+      else setMsg(res.error ?? "Mislukt");
+    });
+  }
 
   const dirty = naam !== (row.contact_naam ?? "") || email !== (row.contact_email ?? "");
   const savedEmail = (row.contact_email ?? "").trim();
@@ -120,6 +143,46 @@ export function PartnerRow({ row }: { row: Row }) {
             mail {row.partner_pitch_step}/3
           </span>
         )}
+      </td>
+      {/* Afnameafspraak voor doorverwijzingen: bepaalt of deze aanbieder leads
+          mag ontvangen. Staat los van partner_status/partner_tier, die alleen
+          over de weergave op de site gaan. */}
+      <td className="px-3 py-3 min-w-[15rem]">
+        <div className="flex items-center gap-1">
+          <input
+            type="date"
+            className={inp}
+            value={afspraak}
+            onChange={(e) => setAfspraak(e.target.value)}
+            title="Datum waarop de afnameafspraak is getekend. Leeg = ontvangt geen leads."
+          />
+          <input
+            className={`${inp.replace("w-full", "w-24")} shrink-0`}
+            value={prijs}
+            onChange={(e) => setPrijs(e.target.value)}
+            placeholder="€/lead"
+            title="Vaste prijs per doorverwijzing. Leeg = prijs volgens budget-band."
+          />
+          <button
+            onClick={opslaanAfspraak}
+            disabled={isPending}
+            title="Leadafspraak opslaan"
+            className={`shrink-0 rounded px-2 py-1 text-xs font-medium disabled:opacity-50 ${
+              afspraakDirty
+                ? "bg-navy text-white"
+                : "border border-slate-300 text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            ✓
+          </button>
+        </div>
+        <div className="mt-1 text-[10px] font-medium uppercase tracking-wide">
+          {afspraakInit ? (
+            <span className="text-emerald-600">Ontvangt leads</span>
+          ) : (
+            <span className="text-slate-400">Ontvangt geen leads</span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-3 text-right">
         <button
