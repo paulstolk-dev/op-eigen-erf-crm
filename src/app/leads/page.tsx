@@ -57,6 +57,16 @@ function afspraak(waarde: string | null): string {
   return tijd ? `${datumNL}, ${tijd}` : datumNL;
 }
 
+// Prijsopgave-aanvraag: welk woningtype en via welke knop (hero/sticky/...).
+// Staat alleen in details (type_woning) en source ("prijsindicatie:tuinkantoor-hero").
+function prijsopgaveInfo(lead: Lead): { type: string; knop: string | null } {
+  const d = (lead.details ?? {}) as { type_woning?: string; bericht?: string };
+  const bron = (lead.source ?? "").replace(/^prijsindicatie:/, "");
+  const knop = bron.includes("-") ? bron.slice(bron.lastIndexOf("-") + 1) : null;
+  const type = d.type_woning || d.bericht?.replace(/^Prijsindicatie:\s*/, "") || "—";
+  return { type, knop };
+}
+
 function datum(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", {
@@ -196,10 +206,12 @@ export default async function LeadsPage() {
     (r) =>
       r.lead.type !== "besluit-alert" &&
       r.lead.type !== "haalbaarheidsscan" &&
-      r.lead.type !== "kennismaking",
+      r.lead.type !== "kennismaking" &&
+      r.lead.type !== "offerte",
   );
   const besluitRows = rows.filter((r) => r.lead.type === "besluit-alert");
   const scanRows = rows.filter((r) => r.lead.type === "haalbaarheidsscan");
+  const offerteRows = rows.filter((r) => r.lead.type === "offerte");
   // Geplande kennismakingsgesprekken: sorteren op het afspraakmoment, niet op
   // aanvraagdatum — je wilt zien wanneer het gesprek is.
   const gesprekRows = rows
@@ -469,6 +481,91 @@ export default async function LeadsPage() {
                           ) : (
                             <span className="text-slate-300">—</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={lead.status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {offerteRows.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Prijsopgave-aanvragen
+              </h2>
+              <p className="text-xs text-slate-500">
+                Aanvragen via het prijsindicatie-formulier op de site. Hiervoor wordt
+                geen erfcheck aangemaakt.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Naam</th>
+                    <th className="px-4 py-3 font-medium">Woningtype</th>
+                    <th className="hidden px-4 py-3 font-medium sm:table-cell">Grootte</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">Budget</th>
+                    <th className="hidden px-4 py-3 font-medium sm:table-cell">Telefoon</th>
+                    <th className="hidden px-4 py-3 font-medium lg:table-cell">E-mail</th>
+                    <th className="hidden px-4 py-3 font-medium md:table-cell">Adres</th>
+                    <th className="px-4 py-3 font-medium">Ontvangen</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {offerteRows.map(({ lead }) => {
+                    const info = prijsopgaveInfo(lead);
+                    return (
+                      <tr key={lead.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/leads/${lead.id}`}
+                            className="font-medium text-slate-900 hover:underline"
+                          >
+                            {lead.naam ||
+                              [lead.voornaam, lead.achternaam].filter(Boolean).join(" ") ||
+                              lead.email ||
+                              "—"}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {info.type}
+                          {info.knop && (
+                            <span
+                              className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500"
+                              title="Via welke knop op de pagina"
+                            >
+                              {info.knop}
+                            </span>
+                          )}
+                        </td>
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-slate-600 sm:table-cell">
+                          {lead.grootte_m2 ? `${lead.grootte_m2} m²` : "—"}
+                        </td>
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-slate-600 md:table-cell">
+                          {lead.budget || "—"}
+                        </td>
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-slate-600 sm:table-cell">
+                          {lead.telefoon || "—"}
+                        </td>
+                        <td className="hidden px-4 py-3 text-slate-600 lg:table-cell">
+                          {lead.email || "—"}
+                        </td>
+                        <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
+                          {[lead.postcode, lead.huisnummer, lead.toevoeging]
+                            .filter(Boolean)
+                            .join(" ") || "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                          {datum(lead.created_at)}
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={lead.status} />
